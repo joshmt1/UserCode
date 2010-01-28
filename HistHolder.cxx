@@ -4,6 +4,10 @@ Goal of this class is to make a class to hold a number of histograms
 The base data structure is a map using a string (the name of the histogram)
 as a key, that references to a pointer that holds the histogram
 
+We also have a secondary data structure to map by both string and
+TFile*, to allow this class to hold a bunch of histograms with the
+same name
+
 Utilities should be provided that call Sumw2() and do other useful things
 Creating a histogram should be as easy calling a function and passing the name, title, and
 other standard arguments
@@ -41,8 +45,8 @@ public :
 
   //load histograms from files
   //note that if the file is closed, the histo pointer may go away
-  void load(TString name, const TFile* file);
-  void load2(TString name, const TFile* file);
+  //void load(TString name, const TFile* file);
+  //  void load2(TString name, const TFile* file);
 
  //select a group of histograms for the next operation
   void select(std::string name) {select_=name;}
@@ -61,6 +65,9 @@ public :
 private :
   std::map< std::string, TH1F*> histHolder_;
   std::map< std::string, TH2F*> histHolder2_;
+
+  //std::map< std::pair< std::string, TFile*>, TH1F* > histHolderP_;
+
   std::string select_;
 };
 
@@ -93,20 +100,21 @@ HistHolder::make2(std::string name, std::string title, Int_t nx, Double_t minx, 
   histHolder2_[name] = hist;
 }
 
-void
-HistHolder::load(TString name, const TFile* file) {
+// void
+// HistHolder::load(TString name, const TFile* file) {
 
-  TH1F* hist = ((TH1F*)file->Get(name));
-  histHolder_[std::string(name.Data())] = hist;
+//   TH1F* hist = ((TH1F*)file->Get(name));
+//   histHolderP_[make_pair(std::string(name.Data()),file)] = hist;
 
-}
-void
-HistHolder::load2(TString name, const TFile* file) {
+// }
 
-  TH2F* hist = ((TH2F*)file->Get(name));
-  histHolder2_[std::string(name.Data())] = hist;
+// void
+// HistHolder::load2(TString name, const TFile* file) {
 
-}
+//   TH2F* hist = ((TH2F*)file->Get(name));
+//   histHolder2_[std::string(name.Data())] = hist;
+
+// }
 
 void
 HistHolder::make(std::string name, std::string title, Int_t nbins, Double_t min, Double_t max, std::string xtitle) {
