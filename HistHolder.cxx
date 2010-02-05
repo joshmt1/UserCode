@@ -77,8 +77,13 @@ public :
   TH1F* find(TString name) {return find(std::string(name.Data()));}
   TH1F* find(TString name, TFile* file) {return find( std::string(name.Data()),file); }
   TH2F* find2(TString name) {return find2( std::string(name.Data()));} 
+
+  TH1F* find(const char* name) {return find(std::string(name));}
+  TH1F* find(const char* name, TFile* file) {return find( std::string(name),file); }
+  TH2F* find2(const char* name) {return find2( std::string(name));} 
  
   void print();
+  void reset();
 
 private :
   bool passesFilter(const std::string mystr, TFile* filep=0);
@@ -106,6 +111,14 @@ HistHolder::~HistHolder()
   for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i )
     delete i->second;
   */
+  reset();
+}
+
+void HistHolder::reset() {
+  std::cout<<"HistHolder reset()"<<std::endl;
+  histHolder_.clear();
+  histHolder2_.clear();
+  histHolderP_.clear();
 }
 
 void
@@ -316,4 +329,7 @@ private :
 
 FileHolder::FileHolder() {}
 
-FileHolder::~FileHolder() {}
+FileHolder::~FileHolder() {
+  files_.clear();
+
+}
