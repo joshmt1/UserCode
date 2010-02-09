@@ -175,6 +175,7 @@ void setCutsStandard() {
 }
 
 void setCutsDon() {
+  cuts_="Don";
   std::cout<<"Setting cuts for 'Don' mode!"<<std::endl;
 
   minJetPT_=50;
@@ -452,6 +453,10 @@ void eventLoop() {
   histo.make("H_jetPT1","Jet PT 1",nbins,jetptmin,jetptmax);
   histo.make("H_jetPT2","Jet PT 2",nbins,jetptmin,jetptmax);
   histo.make("H_jetPT3","Jet PT 3",nbins,jetptmin,jetptmax);
+
+  histo.make("H_jetPT1_good","Jet PT 1",nbins,jetptmin,jetptmax);
+  histo.make("H_jetPT2_good","Jet PT 2",nbins,jetptmin,jetptmax);
+  histo.make("H_jetPT3_good","Jet PT 3",nbins,jetptmin,jetptmax);
   
   histo.make("H_eta1","eta of lead jet",nbins,-maxJetEta_,maxJetEta_);
   histo.make("H_eta1_b","eta of lead b jet",nbins,-maxJetEta_,maxJetEta_);
@@ -1023,12 +1028,18 @@ void eventLoop() {
       histo["H_jetPT1"]->Fill(ijet1P->pt);
       histo["H_jetPT2"]->Fill(ijet2P->pt);
       histo["H_jetPT3"]->Fill(ijet3P->pt);
+
+      histo["H_jetPT1_good"]->Fill(ijet1->pt);
+      histo["H_jetPT2_good"]->Fill(ijet2->pt);
+      histo["H_jetPT3_good"]->Fill(ijet3->pt);
+
       histo["H_NJets_ObjDef"]->Fill(ngoodjets);
       npassObjectDefinition++;
       //preselection
       //RA2 uses the three lead jets, period
-      if (cuts_=="RA2") if (!(passRA2JetCuts(ijet1P,ijet2P,ijet3P))) continue;
-      else      if (!passPreselection(ijet1,ijet2)) continue;
+      if (cuts_=="RA2") {if (!(passRA2JetCuts(ijet1P,ijet2P,ijet3P))) continue;}
+      else  {if (!passPreselection(ijet1,ijet2)) continue; }
+
       npassPreselection++;
 
       //========================<<<<>>>><<<<>>>><<<<>>>><<<<>>>>==========================
