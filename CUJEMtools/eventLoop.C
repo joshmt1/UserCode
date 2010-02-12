@@ -6,8 +6,8 @@ gSystem->Load("eventLoop_C.so");
 init()
 selectData(sample);
 setCutsStandard()
-setCutsDon()
-setCutsRA2()
+//setCutsDon()
+//setCutsRA2()
 eventLoop()
 
 */
@@ -76,6 +76,7 @@ using namespace std;
 
 TFile* file;
 vector<string> fileNames;
+int fileindex_;
 //variables to "turn off" parts of the event loop
 bool useTriggerInfo_;
 bool useScInfo_;
@@ -89,6 +90,7 @@ bool useTrackInfo_;
    float minEMfrac_;
    float maxEMfrac_;
    float maxJetEta_;
+   float maxWideJetEta_;
    unsigned int minGoodJets_;
    bool badJetVeto_;
    bool leptonVeto_;
@@ -142,17 +144,19 @@ void init() {
 void setCutsStandard() {
    // begin custom code
    //object definition cuts
-  cuts_="JMT";
+  cuts_="JMT"; //this is *not* an arbitrary string...(don't change it at will)
 
   minJetPT_ = 50;
   minLooseJetPT_ = 30;
   minEMfrac_ = 0.05;
   maxEMfrac_ = 0.95;
   maxJetEta_ = 2.4;
+  maxWideJetEta_ = 5;
   minGoodJets_ = 3;
-  badJetVeto_ = true;
+  badJetVeto_ = false;
   leptonVeto_ = true;
   photonVeto_ = false; //should probably turn this on, after i implement some better selection for photons
+  //(really, should only turn it on if there is a good motivation to do so)
 
   useTrackInfo_=true;
   requirePrimaryVertex_=true;
@@ -168,8 +172,8 @@ void setCutsStandard() {
   minSSV_ = 1.74; //7TeV
   minbjets_ = 2;
   minBJetPT_ = 50;
-  // end custom code
-  sampleid_+= "_CutsJMT";
+
+  sampleid_+= "_CutsJMTNoJetVeto"; //this will go into the output filename
 
   
 }
@@ -182,6 +186,7 @@ void setCutsDon() {
   minEMfrac_=-1; //no cut
   maxEMfrac_=2; //no cut
   maxJetEta_=2.4;
+  maxWideJetEta_ = 5;
   minGoodJets_=4;
   badJetVeto_=false;
   leptonVeto_=false;
@@ -208,6 +213,7 @@ void setCutsRA2() {
   minEMfrac_=0.05;
   maxEMfrac_=0.95;
   maxJetEta_=2.5;
+  maxWideJetEta_ = 5; //not used for this analysis
 
   //preselection cuts
   minJetPT1_preSel_=50;
@@ -245,8 +251,6 @@ void setCutsRA2() {
 
 bool passJetCuts(JetIter jet) {
 
-  //could add a sanity check of i against njets
-
   //pT
   if ( jet->pt < minJetPT_ ) return false;
 
@@ -270,6 +274,18 @@ bool passLooseJetCuts(JetIter jet) {
   minJetPT_=minJetPT;
   return pass;
 
+}
+
+
+bool passWideJetCuts(JetIter jet) {
+
+  //normal pT cut
+  if ( jet->pt < minJetPT_ ) return false;
+  //wide eta cut
+  if ( fabs( jet->eta ) > maxWideJetEta_ ) return false;
+  //no EM frac cut
+
+  return true;
 }
 
 bool passBJetCuts(JetIter jet) {
@@ -372,7 +388,8 @@ bool passDeltaPhi(JetIter j1, CUmet cumet) {
 
 //end custom code
 
-void selectData(TString sample, TString maxindex="") {
+void selectData(TString sample, TString index="") {
+  fileindex_=0;
 
   TString path="rfio:/castor/cern.ch/user/p/puigh/CUSusy/CUJEM/Summer09/7TeV/Output/";
   sampleid_ = sample;
@@ -387,16 +404,18 @@ void selectData(TString sample, TString maxindex="") {
     fileNames.push_back(string(path.Data()));
   }
   else  {
-    if (maxindex!="") {
-      for (int ind=1; ind<=maxindex.Atoi(); ind++) {
-	TString mypath=path;
-	mypath+=sampleid_;
-	mypath += "_Summer09_7TeV_CUJEM_V09_";
-	mypath +=ind;
-	mypath +=".root";
-	cout<<"Adding to list of input files: "<<mypath<<endl;
-	fileNames.push_back(string(mypath.Data()));
-      }
+    if (index!="") {
+      //we don't want to bother with the loop anymore....
+      //      for (int ind=1; ind<=index.Atoi(); ind++) {
+      fileindex_ = index.Atoi();
+      TString mypath=path;
+      mypath+=sampleid_;
+      mypath += "_Summer09_7TeV_CUJEM_V09_";
+      mypath +=fileindex_;
+      mypath +=".root";
+      cout<<"Adding to list of input files: "<<mypath<<endl;
+      fileNames.push_back(string(mypath.Data()));
+      //      }
     }
     else {
       path+=sampleid_;
@@ -430,6 +449,10 @@ void eventLoop() {
 
   TString outfile = "plots_";
   outfile+=sampleid_;
+  if (fileindex_!=0) {
+    outfile+=".";
+    outfile+=fileindex_;
+  }
   outfile+=".root";
   TFile fout(outfile,"RECREATE");
   int nbins=200;
@@ -491,12 +514,14 @@ void eventLoop() {
 
   histo.make("H_Nbjets","Number of b jets",nbins_jets,-0.5,nbins_jets-0.5);
 
-  float maxssv=7;
-  histo.make("H_SSV_realb","SSV value for MC-matched b jets",50,0,maxssv);
-  histo.make("H_SSV_realc","SSV value for MC-matched c jets",50,0,maxssv);
-  histo.make("H_SSV_light","SSV value for MC-matched uds+g jets",50,0,maxssv);
-  histo.make("H_SSV_other","SSV value for other jets",50,0,maxssv);
-  histo.make("H_SSV_unmatched","SSV value for unmatched jets",50,0,maxssv);
+  histo.make("H_bjetfrac","fraction of jets that are b jets",50,0,1);
+
+  float maxssv=7, minssv=-1.1;
+  histo.make("H_SSV_realb","SSV value for MC-matched b jets",50,minssv,maxssv);
+  histo.make("H_SSV_realc","SSV value for MC-matched c jets",50,minssv,maxssv);
+  histo.make("H_SSV_light","SSV value for MC-matched uds+g jets",50,minssv,maxssv);
+  histo.make("H_SSV_other","SSV value for other jets",50,minssv,maxssv);
+  histo.make("H_SSV_unmatched","SSV value for unmatched jets",50,minssv,maxssv);
 
   histo.make("H_otherPartonID","Parton ID for other jets", 200,-100,100);
 
@@ -534,8 +559,14 @@ void eventLoop() {
   histo.make("H_ST","transverse sphericity",nbins,0,1);
   histo.make("H_STb","transverse sphericity (b jets only)",nbins,0,1);
 
-  histo.make2("H_DeltaPhi_MET", "jet1-MET angle versus MET",nbins,min,maxmet,nbins,0,pi);
+  histo.make2("H_DeltaPhi1_MET", "jet1-MET angle versus MET",nbins,min,maxmet,nbins,0,pi);
+  histo.make2("H_DeltaPhi2_MET", "jet1-MET angle versus MET",nbins,min,maxmet,nbins,0,pi);
+  histo.make2("H_DeltaPhi3_MET", "jet1-MET angle versus MET",nbins,min,maxmet,nbins,0,pi);
 
+  histo.make2("H_DeltaPhiMin_MET", "min angle between jet and MET",nbins,min,maxmet,nbins,0,pi);
+  histo.make2("H_DeltaPhiMax_MET", "max angle between jet and MET",nbins,min,maxmet,nbins,0,pi);
+  histo.make2("H_DeltaPhiMaxLoose_MET", "max angle between jet and MET",nbins,min,maxmet,nbins,0,pi);
+  histo.make2("H_DeltaPhiMinLoose_MET", "min angle between any jet and MET (wide eta)",nbins,min,maxmet,nbins,0,pi);
 
   Long64_t npassAllSelection=0;
   Long64_t npassObjectDefinition=0;
@@ -795,6 +826,8 @@ void eventLoop() {
 
       Float_t meff=0;
 
+      Float_t minDeltaPhi=4,minDeltaPhiLoose=4,maxDeltaPhi=-0.1,maxDeltaPhiLoose=-0.1;
+
       Float_t S11=0,S12=0, S22=0;
       Float_t S11b=0,S12b=0, S22b=0;
 
@@ -803,7 +836,7 @@ void eventLoop() {
 
       // ============ this is the main loop over jets ===============
 
-      for( JetIter jet = jets.begin(); jet != jets.end(); ++jet ) {
+      for ( JetIter jet = jets.begin(); jet != jets.end(); ++jet ) {
 	h_jet_pt->Fill(jet->pt);
 
 	//find the leading 3 jets; don't care about passing jet cuts
@@ -829,9 +862,14 @@ void eventLoop() {
 	  ijet3P=jet;
 	}
 
+	float dp = getDeltaPhi(jet,h_met->front());
 	bool passCuts = passJetCuts(jet);
 	//check if there is a hard jet that fails some other cuts
 	if ( (jet->pt > minJetPT_) && !passCuts ) badjetveto=true;
+	if ( passWideJetCuts(jet) ) { //"wide" means wider eta and EMfrac cuts, but same pT range
+	  if (dp < minDeltaPhiLoose) minDeltaPhiLoose = dp;
+	  if (dp > maxDeltaPhiLoose) maxDeltaPhiLoose = dp;
+	}
 	if ( passCuts ) { //these are the only jets (more or less) to be used in subsequent analysis
 	  ngoodjets++;	  
 	  
@@ -844,6 +882,9 @@ void eventLoop() {
 	  S11 += jet->px * jet->px;
 	  S12 += jet->px * jet->py;
 	  S22 += jet->py * jet->py;
+
+	  if (dp < minDeltaPhi) minDeltaPhi = dp;
+	  if (dp > maxDeltaPhi) maxDeltaPhi = dp;
 
 	  //find the first 3 leading jets
 	  if ( jet->pt > jet_pT1) {
@@ -888,7 +929,7 @@ void eventLoop() {
 	  
 	}
 
-	if (cuts_=="JMT" && passLooseJetCuts(jet) ) {
+	if (cuts_=="JMT" && passLooseJetCuts(jet) ) { //"Loose" means same eta and EMfrac, but looser pT
 	  
 	  myHTLoose += jet->pt;
 	  myMHTxLoose += jet->px;
@@ -896,7 +937,7 @@ void eventLoop() {
 	  
 	  nloosejets++;
 	}
-      }
+      } //end of loop over jets
 
       if (cuts_=="RA2" && !passRA2JetPreselection(ijet1P,ijet2P,ijet3P)) continue;
       npassRA2Preselection++;
@@ -1130,7 +1171,15 @@ void eventLoop() {
       histo["H_DeltaPhi_j1j2"]->Fill( getDeltaPhi(ijet1,ijet2));
       if (cuts_=="RA2") histo["H_DeltaPhi3"]->Fill( getDeltaPhi(ijet3,h_met->front()));
 
-      histo.find2("H_DeltaPhi_MET")->Fill( metPT,  getDeltaPhi(ijet1,h_met->front()));
+      histo.find2("H_DeltaPhi1_MET")->Fill( metPT,  getDeltaPhi(ijet1,h_met->front()));
+      histo.find2("H_DeltaPhi2_MET")->Fill( metPT,  getDeltaPhi(ijet2,h_met->front()));
+      histo.find2("H_DeltaPhi3_MET")->Fill( metPT,  getDeltaPhi(ijet3,h_met->front()));
+
+      histo.find2("H_DeltaPhiMinLoose_MET")->Fill(metPT, minDeltaPhiLoose);
+      histo.find2("H_DeltaPhiMin_MET")->Fill(metPT, minDeltaPhi);
+
+      histo.find2("H_DeltaPhiMaxLoose_MET")->Fill(metPT, maxDeltaPhiLoose);
+      histo.find2("H_DeltaPhiMax_MET")->Fill(metPT, maxDeltaPhi);
 
       int ngoodMCbjets=0;
       for ( JetIter jet = jets.begin(); jet != jets.end(); ++jet ) {
