@@ -22,6 +22,7 @@ eventLoop()
 #include "TStyle.h"
 #include "TPaveStats.h"
 #include "TAxis.h"
+#include "TSystem.h"
 #include "TMatrixT.h"
 #include "TVectorT.h"
 #include <iostream>
@@ -391,10 +392,13 @@ bool passDeltaPhi(JetIter j1, CUmet cumet) {
 void selectData(TString sample, TString index="") {
   fileindex_=0;
 
-  TString path="rfio:/castor/cern.ch/user/p/puigh/CUSusy/CUJEM/Summer09/7TeV/Output/";
+  TString sampledir(gSystem->Getenv("SAMPLEDIR"));
+
+  TString path=TString("rfio:")+sampledir;
+  path+="/";
   sampleid_ = sample;
   
-  if (sample.Contains("QCD")) path+="QCD-madgraph/";
+  if (sample.Contains("QCD") && sample.Contains("madgraph")) path+="QCD-madgraph/";
 
   if (sample.Contains("LM")) {
     path+="LM/";
@@ -565,8 +569,10 @@ void eventLoop() {
 
   histo.make2("H_DeltaPhiMin_MET", "min angle between jet and MET",nbins,min,maxmet,nbins,0,pi);
   histo.make2("H_DeltaPhiMax_MET", "max angle between jet and MET",nbins,min,maxmet,nbins,0,pi);
-  histo.make2("H_DeltaPhiMaxLoose_MET", "max angle between jet and MET",nbins,min,maxmet,nbins,0,pi);
+  histo.make2("H_DeltaPhiMaxLoose_MET", "max angle between jet and MET (wide eta)",nbins,min,maxmet,nbins,0,pi);
   histo.make2("H_DeltaPhiMinLoose_MET", "min angle between any jet and MET (wide eta)",nbins,min,maxmet,nbins,0,pi);
+  histo.make2("H_DeltaPhiMaxExtraLoose_MET", "max angle between jet and MET (low pT, wide eta)",nbins,min,maxmet,nbins,0,pi);
+  histo.make2("H_DeltaPhiMinExtraLoose_MET", "min angle between any jet and MET (low pT, wide eta)",nbins,min,maxmet,nbins,0,pi);
 
   Long64_t npassAllSelection=0;
   Long64_t npassObjectDefinition=0;
@@ -827,6 +833,7 @@ void eventLoop() {
       Float_t meff=0;
 
       Float_t minDeltaPhi=4,minDeltaPhiLoose=4,maxDeltaPhi=-0.1,maxDeltaPhiLoose=-0.1;
+      Float_t minDeltaPhiExtraLoose=4, maxDeltaPhiExtraLoose=-0.1;
 
       Float_t S11=0,S12=0, S22=0;
       Float_t S11b=0,S12b=0, S22b=0;
@@ -863,6 +870,13 @@ void eventLoop() {
 	}
 
 	float dp = getDeltaPhi(jet,h_met->front());
+
+	//kludge in these cuts for now
+	if (jet->pt> 5 && fabs(jet->eta)<5) {
+	  if (dp < minDeltaPhiExtraLoose) minDeltaPhiExtraLoose = dp;
+	  if (dp > maxDeltaPhiExtraLoose) maxDeltaPhiExtraLoose = dp;
+	}
+
 	bool passCuts = passJetCuts(jet);
 	//check if there is a hard jet that fails some other cuts
 	if ( (jet->pt > minJetPT_) && !passCuts ) badjetveto=true;
@@ -1090,6 +1104,8 @@ void eventLoop() {
       histo["H_NJets"]->Fill(ngoodjets);
       histo["H_NJetsLoose"]->Fill(nloosejets);
 
+      histo["H_bjetfrac"]->Fill(float(nbjets)/float(ngoodjets));
+
       //fill HT for events that pass preselection
       histo["H_HT"]->Fill(myHT);
 
@@ -1175,9 +1191,11 @@ void eventLoop() {
       histo.find2("H_DeltaPhi2_MET")->Fill( metPT,  getDeltaPhi(ijet2,h_met->front()));
       histo.find2("H_DeltaPhi3_MET")->Fill( metPT,  getDeltaPhi(ijet3,h_met->front()));
 
+      histo.find2("H_DeltaPhiMinExtraLoose_MET")->Fill(metPT, minDeltaPhiExtraLoose);
       histo.find2("H_DeltaPhiMinLoose_MET")->Fill(metPT, minDeltaPhiLoose);
       histo.find2("H_DeltaPhiMin_MET")->Fill(metPT, minDeltaPhi);
 
+      histo.find2("H_DeltaPhiMaxExtraLoose_MET")->Fill(metPT, maxDeltaPhiExtraLoose);
       histo.find2("H_DeltaPhiMaxLoose_MET")->Fill(metPT, maxDeltaPhiLoose);
       histo.find2("H_DeltaPhiMax_MET")->Fill(metPT, maxDeltaPhi);
 
