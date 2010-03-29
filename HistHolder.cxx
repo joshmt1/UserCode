@@ -15,88 +15,8 @@ other standard arguments
 */
 
 #include <iostream>
-#include <map>
-#include <string>
-#include <TString.h>
-#include <TH1.h>
-#include <TH2.h>
-#include <TFile.h>
 
-/*
-to do:
-all sort of protections are needed...
-
-also, i should make sure that all interfaces accept all 3 possibilites:
-const char* ("hello world")
-std::string
-TString
-*/
-
-class HistHolder {
-public :
-
-  HistHolder();
-  virtual ~HistHolder();
-
-  //convention is to use lowercase for methods that are custom to this class
-  //and uppercase for those that share a name with a normal ROOT method
-
-  void make(std::string name, std::string title, Int_t nbins, Double_t min, Double_t max);
-  void make(std::string name, std::string title, Int_t nbins, Double_t min, Double_t max,std::string xtitle);
-  void make(std::string name, std::string title, Int_t nbins, Double_t min, Double_t max,
-	    std::string xtitle, std::string ytitle);
-
-  void make2(std::string name, std::string title, Int_t nx, Double_t minx, Double_t maxx, 
-	     Int_t ny, Double_t miny, Double_t maxy);
-
-  //load histograms from files
-  //note that if the file is closed, the histo pointer may go away
-  void load(TString name, TFile* file);
-  //  void load2(TString name, TFile* file);
-
- //select a group of histograms for the next operation
-  void select(const std::string str) {select_=str;}
-  void reject(const std::string str) {reject_=str;}
-
-  //these methods operate on the selected histograms
-  //use * to work with all (default)
-
-  void normalize(); //scale to unit area
-  void Write();
-  void Sumw2();
-  void SetMinimum(Double_t min);
-  void SetMaximum(Double_t max);
-  Float_t GetMaximum();
-
-  TH1F* operator[](std::string name) {return histHolder_[name]; }
-
-  TH1F* find(std::string name) {return histHolder_[name];}
-  TH1F* find(std::string name, TFile* file) {return histHolderP_[make_pair(name,file)];}
-  TH2F* find2(std::string name) {return histHolder2_[name];}
- 
-  TH1F* find(TString name) {return find(std::string(name.Data()));}
-  TH1F* find(TString name, TFile* file) {return find( std::string(name.Data()),file); }
-  TH2F* find2(TString name) {return find2( std::string(name.Data()));} 
-
-  TH1F* find(const char* name) {return find(std::string(name));}
-  TH1F* find(const char* name, TFile* file) {return find( std::string(name),file); }
-  TH2F* find2(const char* name) {return find2( std::string(name));} 
- 
-  void print();
-  void reset();
-
-private :
-  bool passesFilter(const std::string mystr, TFile* filep=0);
-  bool passesFilter( std::pair<std::string , TFile*> mypair) {return passesFilter( mypair.first,mypair.second);}
-
-  std::map< std::string, TH1F*> histHolder_;
-  std::map< std::string, TH2F*> histHolder2_;
-
-  std::map< std::pair< std::string, TFile*>, TH1F* > histHolderP_;
-
-  std::string select_;
-  std::string reject_;
-};
+#include "HistHolder.h"
 
 HistHolder::HistHolder() :
   select_("*"),
@@ -115,19 +35,43 @@ HistHolder::~HistHolder()
 }
 
 void HistHolder::reset() {
-  std::cout<<"HistHolder reset()"<<std::endl;
+  //  std::cout<<"HistHolder reset()"<<std::endl;
   histHolder_.clear();
   histHolder2_.clear();
   histHolderP_.clear();
+  histHolderP2_.clear();
 }
 
 void
-HistHolder::print() {
+HistHolder::Print(TString opt) {
 
-  std::cout<<"histHolder_ size = "<<histHolder_.size()<<std::endl;
-  std::cout<<"histHolder2_ size = "<<histHolder2_.size()<<std::endl;
-  std::cout<<"histHolderP_ size = "<<histHolderP_.size()<<std::endl;
-
+  opt.ToUpper();
+  if (opt=="V") {
+    std::cout<<"histHolder_ size = "<<histHolder_.size()<<std::endl;
+    for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
+      std::cout<<i->first<<"\t"<<i->second<<std::endl;
+    }
+    std::cout<<"histHolder2_ size = "<<histHolder2_.size()<<std::endl;
+    for ( std::map< std::string, TH2F*>::const_iterator i = histHolder2_.begin() ; i!= histHolder2_.end() ; ++i ) {
+      std::cout<<i->first<<"\t"<<i->second<<std::endl;
+    }
+    std::cout<<"histHolderP_ size = "<<histHolderP_.size()<<std::endl;
+    for ( std::map< std::pair<std::string, TFile*>, TH1F*>::const_iterator i = histHolderP_.begin() ; i!= histHolderP_.end() ; ++i ) {
+      std::cout<<i->first.first<<" ; "<<i->first.second<<"\t"<<i->second<<std::endl;
+    }
+    std::cout<<"histHolderP2_ size = "<<histHolderP2_.size()<<std::endl;
+    for ( std::map< std::pair<std::string, TFile*>, TH2F*>::const_iterator i = histHolderP2_.begin() ; i!= histHolderP2_.end() ; ++i ) {
+      std::cout<<i->first.first<<" ; "<<i->first.second<<"\t"<<i->second<<std::endl;
+    }
+      
+  }
+  else {
+    std::cout<<"histHolder_ size = "<<histHolder_.size()<<std::endl;
+    std::cout<<"histHolder2_ size = "<<histHolder2_.size()<<std::endl;
+    std::cout<<"histHolderP_ size = "<<histHolderP_.size()<<std::endl;
+    std::cout<<"histHolderP2_ size = "<<histHolderP2_.size()<<std::endl;
+  }
+  
 }
 
 void
@@ -145,12 +89,27 @@ HistHolder::make2(std::string name, std::string title, Int_t nx, Double_t minx, 
   histHolder2_[name] = hist;
 }
 
-void
+Int_t
 HistHolder::load(TString name, TFile* file) {
 
-  TH1F* hist = ((TH1F*)file->Get(name));
-  histHolderP_[make_pair(std::string(name.Data()),file)] = hist;
+  Int_t code=0;
 
+  TObject* h = file->Get(name);
+  if (h==0) {std::cout<<"Problem loading "<<name<<std::endl; return code;}
+
+  if ( h->InheritsFrom("TH2F") ) {
+    histHolderP2_[make_pair(std::string(name.Data()),file)] = (TH2F*) h;
+    code=2;
+  }
+  else if ( h->InheritsFrom("TH1F") ) {
+    histHolderP_[make_pair(std::string(name.Data()),file)] = (TH1F*) h;
+    code=1;
+  }
+  else {
+    std::cout<<"Could not determine type of histogram "<<name<<std::endl;
+  }
+
+  return code;
 }
 
 // void
@@ -178,7 +137,7 @@ HistHolder::make(std::string name, std::string title, Int_t nbins, Double_t min,
 
 void
 HistHolder::Write() {
-  //FIXME need to add histHolder2
+  //FIXME need to add histHolder2 and other histHolders
   for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
     if ( passesFilter( i->first))
       i->second->Write();
@@ -250,6 +209,34 @@ Float_t HistHolder::GetMaximum() {
   return max;
 }
 
+TString HistHolder::getMaximumName() {
+
+  //most code copied from GetMaximum()
+  Float_t max = -99999999;
+  TString nameofmax="";
+
+  for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
+    if ( passesFilter(i->first)) {
+      if ( i->second->GetMaximum() > max ) {
+	max = i->second->GetMaximum();
+	nameofmax = TString(i->first);
+      }
+    }
+  }
+
+  for ( std::map< std::pair<std::string, TFile*>, TH1F*>::const_iterator i = histHolderP_.begin() ;
+	i!= histHolderP_.end() ; ++i ) {
+    if ( passesFilter(i->first)) {
+      if ( i->second->GetMaximum() > max ) {
+	max = i->second->GetMaximum();
+	nameofmax = TString(i->first.first);
+      }
+    }
+  }
+  
+  return nameofmax;
+}
+
 void HistHolder::normalize() {
   for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
     if ( passesFilter(i->first)) {
@@ -307,25 +294,6 @@ bool HistHolder::passesFilter(const std::string mystr, TFile* filep) {
 
 }
 
-// an auxilliary class
-// problem = in CINT I cannot use a std::vector<TFile*>
-// this is supposed to be an easy solution, basically just a minimal interface to std::vector
-
-class FileHolder {
-public :
-  FileHolder();
-  virtual ~FileHolder();
-
-  void add(TFile* filep) {files_.push_back(filep);}
-  unsigned int size() {return files_.size();}
-
-  TFile* at(unsigned int n) { return files_.at(n); }
-
-private :
-
-  std::vector<TFile*> files_;
-
-};
 
 FileHolder::FileHolder() {}
 
