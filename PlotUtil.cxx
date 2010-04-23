@@ -17,8 +17,10 @@ PlotUtil::PlotUtil(HistHolder* hh) :
 
 PlotUtil::~PlotUtil() {}
 
-Double_t PlotUtil::ErrorOnIntegral(const TH1F* h, const Int_t lowbin, const Int_t highbin) {
+Double_t PlotUtil::ErrorOnIntegral(const TH1F* h, const Int_t lowbin, Int_t highbin) {
   
+  if ( highbin == 0)  highbin = h->GetNbinsX();
+
   Double_t err=0;
 
   Double_t thisbin=0;
@@ -74,7 +76,7 @@ void PlotUtil::addQCD(TString varname) {
   for ( map<TString,TTree*>::const_iterator i=samples_.begin() ; i!=samples_.end() ; ++i) {
     TString fullname=getFullName(varname,i->first);
     if (  fullname!= qcdhist && fullname.Contains("_qcd") ) {
-      cout<<"Adding to base qcd histo: "<<fullname<<endl;
+      if (debug_)   cout<<"Adding to base qcd histo: "<<fullname<<endl;
       TH1F* htoadd=hh_->find(fullname);
       hbase->Add(htoadd);
     }

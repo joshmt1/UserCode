@@ -74,6 +74,27 @@ HistHolder::Print(TString opt) {
   
 }
 
+void HistHolder::Reset() {
+
+
+  for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
+    i->second->Reset();
+  }
+
+  for ( std::map< std::string, TH2F*>::const_iterator i = histHolder2_.begin() ; i!= histHolder2_.end() ; ++i ) {
+    i->second->Reset();
+  }
+
+  for ( std::map< std::pair<std::string, TFile*>, TH1F*>::const_iterator i = histHolderP_.begin() ; i!= histHolderP_.end() ; ++i ) {
+    i->second->Reset();
+  }
+
+  for ( std::map< std::pair<std::string, TFile*>, TH2F*>::const_iterator i = histHolderP2_.begin() ; i!= histHolderP2_.end() ; ++i ) {
+    i->second->Reset();
+  }
+      
+}
+
 void
 HistHolder::make(std::string name, std::string title, Int_t nbins, Double_t min, Double_t max) {
 

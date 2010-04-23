@@ -25,7 +25,7 @@ public :
 
   //======methods that calculate things======
   //this is built in to later versions of ROOT, but not 5.22
-  Double_t ErrorOnIntegral(const TH1F* h, const Int_t lowbin, const Int_t highbin) ;
+  Double_t ErrorOnIntegral(const TH1F* h, const Int_t lowbin=1, Int_t highbin=0) ;
 
   //======misc utilities======
   //gets rid of = > < from cuts in order to be better included in file names

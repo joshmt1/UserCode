@@ -74,7 +74,8 @@ public :
   TH2F* find2(std::string name, TFile* file) {return histHolderP2_[make_pair(name,file)];} 
 
   void Print(TString opt="");
-  void reset();
+  void reset(); //this resets the class (clear the data members)
+  void Reset(); //this calls TH1::Reset()
 
   //these are just to allow use of char* or TString
   TH1F* find(TString name) {return find(std::string(name.Data()));}
