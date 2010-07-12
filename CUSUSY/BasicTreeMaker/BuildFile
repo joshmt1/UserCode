@@ -1,0 +1,26 @@
+<use name=FWCore/Framework>
+<use name=FWCore/PluginManager>
+<use name=FWCore/ParameterSet>
+<use name=FWCore/Utilities>
+<use name=FWCore/ServiceRegistry>
+<use name=CommonTools/UtilAlgos>
+<use   name=PhysicsTools/Utilities>
+<use   name=PhysicsTools/SelectorUtils>
+<use   name=DataFormats/Math>
+<use name=CUSUSY/Selection>
+<use   name=clhep>
+<flags EDM_PLUGIN=1>
+<export>
+   <lib name=CUSUSYBasicTreeMaker>
+   <use name=FWCore/Framework>
+   <use name=FWCore/PluginManager>
+   <use name=FWCore/ParameterSet>
+   <use name=FWCore/Utilities>
+   <use name=FWCore/ServiceRegistry>
+   <use name=CommonTools/UtilAlgos>
+   <use   name=PhysicsTools/Utilities>
+   <use   name=PhysicsTools/SelectorUtils>
+   <use   name=DataFormats/Math>
+   <use name=CUSUSY/Selection>
+   <use   name=clhep>
+</export>
