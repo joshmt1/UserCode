@@ -1,0 +1,48 @@
+import FWCore.ParameterSet.Config as cms
+
+#load configuration for Don's code
+from CUSUSY.Selection.susybjetsSelection_cfi import *
+
+process = cms.Process("BasicTreeMaker")
+
+process.load("FWCore.MessageService.MessageLogger_cfi")
+process.MessageLogger.cerr.FwkReport.reportEvery = 1000
+
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+
+process.source = cms.Source("PoolSource",
+    # replace 'myfile.root' with the source file you want to use
+    fileNames = cms.untracked.vstring(
+    'INPUTFILE'
+#    '/store/user/wteo/LM3/lm3_spring10_v1/838332be00fca3dd34042237dc5fc2e8/LM3_SPRING10_PAT_1_4.root'
+    )
+)
+
+process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
+                                        susyBJetsSelection = susybjetsSelection,
+#extract individual tags from don's python
+                                        jetTag = susybjetsSelection.jetSrc,
+                                        eleTag = susybjetsSelection.electronSrc,
+                                        muoTag = susybjetsSelection.muonSrc,
+
+                                        pvSelector = susybjetsSelection.pvSelector,
+                                        
+                                        jetIdLoose = susybjetsSelection.jetIdLoose,
+
+                                        muonId = susybjetsSelection.muonId,
+                                        electronId = susybjetsSelection.electronId,
+                                        
+                                        jetPtMin = susybjetsSelection.jetPtMin,
+                                        jetEtaMax = susybjetsSelection.jetEtaMax,
+                                        loosejetPtMin = susybjetsSelection.loosejetPtMin,
+                                        loosejetEtaMax = susybjetsSelection.loosejetEtaMax,
+                                        muPtMin = susybjetsSelection.muPtMin,
+                                        muEtaMax = susybjetsSelection.muEtaMax,
+                                        eleEtMin = susybjetsSelection.eleEtMin,
+                                        eleEtaMax = susybjetsSelection.eleEtaMax
+)
+
+#process.TFileService = cms.Service("TFileService", fileName = cms.string('testoutput.root') )
+process.TFileService = cms.Service("TFileService", fileName = cms.string('BasicNtuple.root') )
+
+process.p = cms.Path(process.BasicTreeMaker)
