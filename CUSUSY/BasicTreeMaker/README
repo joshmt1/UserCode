@@ -1,0 +1,7 @@
+Release notes
+--
+
+V00-00-01 - 
+used to create plots and cut flows for Julia's 16 July 2010 talk at
+SUSY Hadronic Working Group meeting. For MoreMSSM (RECO in 36X),
+required a hack for b-tag info (not in CVS).
