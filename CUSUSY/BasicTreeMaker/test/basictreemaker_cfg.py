@@ -19,9 +19,15 @@ process.source = cms.Source("PoolSource",
 )
 
 process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
+                                        #btagAlgorithms = cms.vstring("trackCountingHighPurBJetTags","trackCountingHighEffBJetTags",
+                                        #                             "simpleSecondaryVertexHighEffBJetTags",#"simpleSecondaryVertexNegativeBJetTags",
+                                        #                             "simpleSecondaryVertexHighPurBJetTags"),
+                                        btagAlgorithms = cms.vstring("simpleSecondaryVertexBJetTags"), #for older samples
                                         susyBJetsSelection = susybjetsSelection,
 #extract individual tags from don's python
                                         jetTag = susybjetsSelection.jetSrc,
+                                        caloMetTag = susybjetsSelection.metSrc, #we assume don's py is asking for calomet
+                                        tcMetTag = cms.InputTag('patMETsTC'),
                                         eleTag = susybjetsSelection.electronSrc,
                                         muoTag = susybjetsSelection.muonSrc,
 
@@ -31,6 +37,8 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
 
                                         muonId = susybjetsSelection.muonId,
                                         electronId = susybjetsSelection.electronId,
+
+                                        minJets = susybjetsSelection.minJets,
                                         
                                         jetPtMin = susybjetsSelection.jetPtMin,
                                         jetEtaMax = susybjetsSelection.jetEtaMax,
@@ -39,7 +47,10 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                         muPtMin = susybjetsSelection.muPtMin,
                                         muEtaMax = susybjetsSelection.muEtaMax,
                                         eleEtMin = susybjetsSelection.eleEtMin,
-                                        eleEtaMax = susybjetsSelection.eleEtaMax
+                                        eleEtaMax = susybjetsSelection.eleEtaMax,
+
+                                        mhtMin = susybjetsSelection.mhtMin,
+                                        metMin = susybjetsSelection.metMin
 )
 
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('testoutput.root') )

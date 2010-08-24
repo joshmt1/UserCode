@@ -5,15 +5,20 @@
 // 
 /**\class BasicTreeMaker BasicTreeMaker.cc CUSUSY/BasicTreeMaker/src/BasicTreeMaker.cc
 
- Description: [one line class summary]
+ Description: The usual code for making a very simple tree from PATtuples
+Created for studies of inclusive hadronic SUSY searches with b tags
 
  Implementation:
-     [Notes on implementation]
+Uses STL vectors for arrays of data. This seems to work fine for analysis in bare ROOT
+using a class created with MakeClass.
+
+Developed and tested with CMSSW_3_6_2
+
 */
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id$
+// $Id: BasicTreeMaker.cc,v 1.1 2010/07/12 09:09:13 joshmt Exp $
 //
 //
 
@@ -78,6 +83,7 @@ private:
   void fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
 
   int  findSUSYMaternity( const reco::Candidate & cand );
+  int  findTopDecayMode( const reco::Candidate & cand );
 
   //a clever piece of code stolen from Freya
   template <class C>
@@ -105,22 +111,29 @@ private:
   edm::CPUTimer* thetimer_;
   TH1D* Heventcount_;
   TTree* tree_;
+
+  std::vector<std::string> btagAlgorithmNames_;
+
   SUSYEventSelector* susyCutFlow_;
 
   PVSelector                           pvSelector_;
 
   //configuration strings (largely copied from don's and freya's code)
   edm::InputTag jetLabel_;
+  edm::InputTag caloMetLabel_;
+  edm::InputTag tcMetLabel_;
+
   edm::InputTag eleLabel_;
   edm::InputTag muoLabel_;
 
-  //  edm::InputTag               metLabel_; //TODO
   JetIDSelectionFunctor                jetIdLoose_;
   MuonVPlusJetsIDSelectionFunctor      muonId_;
   ElectronVPlusJetsIDSelectionFunctor  electronId_;
 
 
   //cut values
+  int minJets_; //min number of Tight jets
+
   double jetPtMin_ ;
   double jetEtaMax_;  
   double loosejetPtMin_ ;
@@ -130,6 +143,9 @@ private:
   double muEtaMax_ ;
   double eleEtMin_ ;
   double eleEtaMax_;
+
+  double mhtMin_;
+  double metMin_;
  
   //bookkeeping
   bool jetInfoFilled_;
@@ -140,12 +156,20 @@ private:
   std::vector<std::string> cutNames;
   std::vector<bool> cutResultsDon;
   std::vector<bool> cutResults;
-  //jet info
+  //tight jet info
   std::vector<float> jetPt;
   std::vector<float> jetEta;
   std::vector<float> jetPhi;
-  std::vector<float> jetBTagSSV; //this is probably not the most elegant or general soln, but let's just do it
-  int nbSSVM;
+  std::map < std::string, std::vector<float> > jetBTagDisc; 
+
+  //loose jet info
+  std::vector<float> loosejetPt;
+  std::vector<float> loosejetEta;
+  std::vector<float> loosejetPhi;
+  std::map < std::string, std::vector<float> > loosejetBTagDisc;
+
+  int nbSSVM; //FIXME this is still in need of a more sophisticated approach (for now this works...)
+
   float HT;
   float MHT;
   float MHTphi;
@@ -155,6 +179,8 @@ private:
   //MET info
   float MET;
   float METphi;
+  float tcMET;
+  float tcMETphi;
   //NB -- as long as we only care about 'good' (tighter) jets, then 
   //we can calculate the DeltaPhi between jets and MET, as well as minDeltaPhi, later
 
@@ -165,6 +191,7 @@ private:
 
   //MC info
   int SUSY_nb;
+  std::vector<int> topDecayCode;
 
 };
 
@@ -183,17 +210,26 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   thetimer_(new edm::CPUTimer()),
   Heventcount_(0),
   tree_(0),
+
+  btagAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("btagAlgorithms")),
+
   susyCutFlow_( new SUSYEventSelector( iConfig.getParameter<edm::ParameterSet>("susyBJetsSelection" ))),
 
   pvSelector_      (iConfig.getParameter<edm::ParameterSet>("pvSelector") ),
 
   jetLabel_        (iConfig.getParameter<edm::InputTag>("jetTag")),
+
+  caloMetLabel_    (iConfig.getParameter<edm::InputTag>("caloMetTag")),
+  tcMetLabel_      (iConfig.getParameter<edm::InputTag>("tcMetTag")),
+
   eleLabel_        (iConfig.getParameter<edm::InputTag>("eleTag")),
   muoLabel_        (iConfig.getParameter<edm::InputTag>("muoTag")),
 
   jetIdLoose_      (iConfig.getParameter<edm::ParameterSet>("jetIdLoose") ),
   muonId_          (iConfig.getParameter<edm::ParameterSet>("muonId") ),
   electronId_      (iConfig.getParameter<edm::ParameterSet>("electronId") ),
+
+  minJets_         (iConfig.getParameter<int>("minJets")),
 
   jetPtMin_        (iConfig.getParameter<double>("jetPtMin")), 
   jetEtaMax_       (iConfig.getParameter<double>("jetEtaMax")),
@@ -204,6 +240,9 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   muEtaMax_        (iConfig.getParameter<double>("muEtaMax")), 
   eleEtMin_        (iConfig.getParameter<double>("eleEtMin")), 
   eleEtaMax_       (iConfig.getParameter<double>("eleEtaMax")), 
+
+  mhtMin_          (iConfig.getParameter<double>("mhtMin")),
+  metMin_          (iConfig.getParameter<double>("metMin")),
 
   jetInfoFilled_(false),
   leptonInfoFilled_(false),
@@ -255,6 +294,71 @@ BasicTreeMaker::findSUSYMaternity( const reco::Candidate & cand ) {
   return numSUSY;
 }
 
+int
+BasicTreeMaker::findTopDecayMode( const reco::Candidate & cand) {
+  //tested using a TTbarJets madgraph sample
+  const int numOfDaughters = cand.numberOfDaughters();
+  bool foundb=false, foundq=false,founde=false,foundm=false,foundt=false;
+  bool found_tau_had=false,found_tau_elec=false,found_tau_muon=false;
+  for (int i=0; i<numOfDaughters; ++i) {
+    //std::cout<<cand.daughter(i)->pdgId()<<"\t"<<cand.daughter(i)->status()<<std::endl;
+
+    const reco::Candidate *daughter = cand.daughter(i); //should we check if it is null?
+    if ( abs(daughter->pdgId()) == 5) foundb=true;
+    else if (abs(daughter->pdgId()) == 24) { //this is the W
+      for (size_t j=0; j < daughter->numberOfDaughters(); ++j) {
+	//seems that the daughters of the W will be status 3 decay products and a status 2 copy of the W
+	if (daughter->daughter(j)->status() == 3) {
+	  int wdau = abs(daughter->daughter(j)->pdgId());
+	  if (wdau <= 4) foundq = true;
+	  else if (wdau == 11) founde = true;
+	  else if (wdau == 13) foundm = true;
+	  else if (wdau == 15) {
+	    foundt = true;
+	    const reco::Candidate *mytau = daughter->daughter(j);
+	    for (size_t k=0; k<mytau->numberOfDaughters(); k++) {
+	      //	      std::cout<<mytau->daughter(k)->pdgId()<<"\t"<<mytau->daughter(k)->status()<<std::endl;
+	      const reco::Candidate *mytau2 = mytau->daughter(k);
+	      if (abs(mytau2->pdgId()) == 15) {
+		
+		for (size_t l=0; l<mytau2->numberOfDaughters(); l++) {
+		  int taudau = abs(mytau2->daughter(l)->pdgId());
+		  if (taudau == 11) found_tau_elec=true;
+		  else if (taudau == 13) found_tau_muon=true;
+		  else if (taudau ==213 || taudau==111 || taudau==113 ||taudau==211) found_tau_had=true;
+		  //not really sure if this will catch everything
+		}
+	      }
+	      else if (abs(mytau2->pdgId()) ==22) { //photon
+		//do nothing
+	      }
+	      else std::cout<<"WARNING -- tau daughter is not as expected! "<<mytau2->pdgId()<<"\t"<<mytau2->status()<<std::endl;
+	    }
+	  }
+	  //skip neutrinos completely....
+	}
+      }
+    }
+  }
+
+  if ( !foundb ) return 0; //this shouldn't happen
+
+  //i should really put in a check that only one of these bools is set!
+  if ( foundq ) return 1; //hadronic W decay
+  if ( founde ) return 2; //W->e
+  if ( foundm ) return 3; //W->mu
+  if ( foundt ) { //W->tau
+    if ((found_tau_had && found_tau_elec) || (found_tau_had && found_tau_muon) ||(found_tau_elec&&found_tau_muon))
+      std::cout<<"WARNING -- something weird happened in tau decay detection!"<<std::endl;
+    if (found_tau_had) return 4;   
+    if (found_tau_elec) return 5;   
+    if (found_tau_muon) return 6;   
+    return 7; //not yet categorized (probably hadronic)
+  }
+  //shouldn't get here
+  return -1;
+}
+
 void
 BasicTreeMaker::fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
@@ -268,6 +372,11 @@ BasicTreeMaker::fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSet
       //if we have one b, and it has nSUSY greater than 1, we still want to just count the b once
       if (  nSUSY>0 ) SUSY_nb++;
     }
+    else if (abs(TCand.pdgId())== 6 && TCand.status()==3) { //find t quark
+      int topcode = findTopDecayMode(TCand);
+      topDecayCode.push_back(topcode);
+    }
+
   }
 
 
@@ -374,22 +483,32 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     bool passLooseCuts = (jet.pt() > loosejetPtMin_) && (fabs(jet.eta())<loosejetEtaMax_) && passJetID;
     bool passTightCuts = (jet.pt() > jetPtMin_) && (fabs(jet.eta())<jetEtaMax_) && passJetID;
 
+    //now fill ntuple!
     if (passLooseCuts) {
       MHTx -= jet.px();
       MHTy -= jet.py();
+      loosejetPt.push_back( jet.pt() );
+      loosejetEta.push_back(jet.eta());
+      loosejetPhi.push_back(jet.phi());
+      for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
+	loosejetBTagDisc[btagAlgorithmNames_[ib]].push_back( jet.bDiscriminator(btagAlgorithmNames_[ib]) );
+      }
     }
     if (passTightCuts) {
-      //now fill ntuple!
       HT += jet.pt();
       jetPt.push_back( jet.pt() );
       jetEta.push_back(jet.eta());
       jetPhi.push_back(jet.phi());
-      float bdisc = jet.bDiscriminator("simpleSecondaryVertexBJetTags");
-      jetBTagSSV.push_back( bdisc );
-      if (bdisc>=1.74) nbSSVM++;
-    }
-    if (passLooseCuts || passTightCuts) {
-      loosejetPhi.push_back(jet.phi());
+
+      float bdisc = 0;
+
+      for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
+	jetBTagDisc[btagAlgorithmNames_[ib]].push_back( jet.bDiscriminator(btagAlgorithmNames_[ib]) );
+	//look especially for SSV
+	if (btagAlgorithmNames_[ib] == "simpleSecondaryVertexBJetTags" || btagAlgorithmNames_[ib] == "simpleSecondaryVertexHighEffBJetTags")
+	  bdisc = jet.bDiscriminator(btagAlgorithmNames_[ib]);
+      }
+      if (bdisc>=1.74) nbSSVM++; //hard-coded SSV medium cut
     }
 
   }
@@ -404,24 +523,30 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
   //fill cut flow info
   // == are there at least 3 good jets?
   int ngoodjets = (int) jetPt.size();
-  cutResults.push_back( ngoodjets >= 3 ); //FIXME this value (and those below) should be passed in from python
+  cutResults.push_back( ngoodjets >= minJets_ );
   // == check pt of lead 3 jets
-  if (ngoodjets >0)  cutResults.push_back( jetPt.at(0) >= 50); else cutResults.push_back(false);
-  if (ngoodjets >1)  cutResults.push_back( jetPt.at(1) >= 50); else cutResults.push_back(false);
-  if (ngoodjets >2)  cutResults.push_back( jetPt.at(2) >= 50); else cutResults.push_back(false);
+  if (ngoodjets >0)  cutResults.push_back( jetPt.at(0) >= 50); else cutResults.push_back(false); //FIXME ... 50 should come from python
+  if (ngoodjets >1)  cutResults.push_back( jetPt.at(1) >= 50); else cutResults.push_back(false); //FIXME ... 50 should come from python
+  if (ngoodjets >2)  cutResults.push_back( jetPt.at(2) >= 50); else cutResults.push_back(false); //FIXME ... 50 should come from python
 
   //next is the HT cut //FIXME hardcoded to RA2 value
   cutResults.push_back(HT >= 300);
 
   //next step in cut flow is MET
   edm::Handle<edm::View<pat::MET> > metHandle;
-  //  iEvent.getByLabel(metLabel_,metHandle);
-  iEvent.getByLabel("patMETsAK5Calo",metHandle); //FIXME dear god, this is awful
+  iEvent.getByLabel(caloMetLabel_,metHandle);
   MET = metHandle->front().et();
   METphi = metHandle->front().phi();
-  cutResults.push_back(MET >= 150); //FIXME
 
-  cutResults.push_back(MHT >= 150); //FIXME
+  edm::Handle<edm::View<pat::MET> > tcmetHandle; //i dunno if I really need a new one of these; can't hurt
+  iEvent.getByLabel(tcMetLabel_,tcmetHandle);
+  tcMET = tcmetHandle->front().et();
+  tcMETphi = tcmetHandle->front().phi();
+
+  cutResults.push_back(MET >= metMin_); //note that we are cutting on caloMET
+  //the cut will have to be redone in order to use tcMET
+
+  cutResults.push_back(MHT >= mhtMin_);
 
   jetInfoFilled_=true;
 }
@@ -457,13 +582,24 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   jetPt.clear();
   jetEta.clear();
   jetPhi.clear();
-  jetBTagSSV.clear();
+
+  loosejetPt.clear();
+  loosejetEta.clear();
+  loosejetPhi.clear();
+
+  for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
+    jetBTagDisc[btagAlgorithmNames_[ib]].clear();
+    loosejetBTagDisc[btagAlgorithmNames_[ib]].clear();
+  }
+
   nbSSVM=0;
   HT=0;
   MHT=0;
   MET=0;
   METphi=0;
   MHTphi=0;
+  tcMET=0;
+  tcMETphi=0;
   DeltaPhi_JetMHT1 = -99;
   DeltaPhi_JetMHT2 = -99;
   DeltaPhi_JetMHT3 = -99;
@@ -471,6 +607,7 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   trackEta.clear();
   trackPhi.clear();
   SUSY_nb=0;
+  topDecayCode.clear();
   //start analyzin'
 
   //run don's selector and copy to tree
@@ -553,7 +690,14 @@ BasicTreeMaker::beginJob()
   tree_->Branch("jetPt",&jetPt);
   tree_->Branch("jetEta",&jetEta);
   tree_->Branch("jetPhi",&jetPhi);
-  tree_->Branch("jetBTagSSV",&jetBTagSSV);
+  //ROOT does not allow us to put a map of vectors into a tree
+  //so we have to go with this approach
+  for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
+    std::string bname = "jetBTagDisc_";
+    bname += btagAlgorithmNames_[ib];
+    tree_->Branch(bname.c_str(),&jetBTagDisc[btagAlgorithmNames_[ib]]);
+  }
+
   tree_->Branch("nbSSVM",&nbSSVM,"nbSSVM/I");
   tree_->Branch("HT",&HT,"HT/F");
   tree_->Branch("MHT",&MHT,"MHT/F");
@@ -563,11 +707,14 @@ BasicTreeMaker::beginJob()
   tree_->Branch("DeltaPhi_JetMHT3",&DeltaPhi_JetMHT3,"DeltaPhi_JetMHT3/F");
   tree_->Branch("MET",&MET,"MET/F");
   tree_->Branch("METphi",&METphi,"METphi/F");
+  tree_->Branch("tcMET",&tcMET,"tcMET/F");
+  tree_->Branch("tcMETphi",&tcMETphi,"tcMETphi/F");
   tree_->Branch("trackPt",&trackPt);
   tree_->Branch("trackEta",&trackEta);
   tree_->Branch("trackPhi",&trackPhi);
 
   tree_->Branch("SUSY_nb",&SUSY_nb,"SUSY_nb/I");
+  tree_->Branch("topDecayCode",&topDecayCode);
 
   //copied from Don's code
   //someday i need to find a better way to do it
