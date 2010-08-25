@@ -17,7 +17,7 @@ import os, sys, re
 ##    print arg
     
 #sys.argv[1] will have the first argument
-tmpfile = '/tmp/joshmt/onlyLast_py_'
+tmpfile = '.onlyLast_py_'
 mypid = os.getpid()
 tmpfile += `mypid`
 
