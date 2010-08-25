@@ -28,7 +28,7 @@ HistHolder::HistHolder() :
 HistHolder::~HistHolder()
 {
   /* causes a crash
-  for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i )
+  for ( std::map< std::string, TH1D*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i )
     delete i->second;
   */
   reset();
@@ -48,7 +48,7 @@ HistHolder::Print(TString opt) {
   opt.ToUpper();
   if (opt=="V") {
     std::cout<<"histHolder_ size = "<<histHolder_.size()<<std::endl;
-    for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
+    for ( std::map< std::string, TH1D*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
       std::cout<<i->first<<"\t"<<i->second<<std::endl;
     }
     std::cout<<"histHolder2_ size = "<<histHolder2_.size()<<std::endl;
@@ -56,7 +56,7 @@ HistHolder::Print(TString opt) {
       std::cout<<i->first<<"\t"<<i->second<<std::endl;
     }
     std::cout<<"histHolderP_ size = "<<histHolderP_.size()<<std::endl;
-    for ( std::map< std::pair<std::string, TFile*>, TH1F*>::const_iterator i = histHolderP_.begin() ; i!= histHolderP_.end() ; ++i ) {
+    for ( std::map< std::pair<std::string, TFile*>, TH1D*>::const_iterator i = histHolderP_.begin() ; i!= histHolderP_.end() ; ++i ) {
       std::cout<<i->first.first<<" ; "<<i->first.second<<"\t"<<i->second<<std::endl;
     }
     std::cout<<"histHolderP2_ size = "<<histHolderP2_.size()<<std::endl;
@@ -77,7 +77,7 @@ HistHolder::Print(TString opt) {
 void HistHolder::Reset() {
 
 
-  for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
+  for ( std::map< std::string, TH1D*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
     i->second->Reset();
   }
 
@@ -85,7 +85,7 @@ void HistHolder::Reset() {
     i->second->Reset();
   }
 
-  for ( std::map< std::pair<std::string, TFile*>, TH1F*>::const_iterator i = histHolderP_.begin() ; i!= histHolderP_.end() ; ++i ) {
+  for ( std::map< std::pair<std::string, TFile*>, TH1D*>::const_iterator i = histHolderP_.begin() ; i!= histHolderP_.end() ; ++i ) {
     i->second->Reset();
   }
 
@@ -98,7 +98,7 @@ void HistHolder::Reset() {
 void
 HistHolder::make(std::string name, std::string title, Int_t nbins, Double_t min, Double_t max) {
 
-  TH1F* hist = new TH1F(name.c_str(),title.c_str(),nbins,min,max);
+  TH1D* hist = new TH1D(name.c_str(),title.c_str(),nbins,min,max);
   histHolder_[name] = hist;
 
 }
@@ -122,8 +122,8 @@ HistHolder::load(TString name, TFile* file) {
     histHolderP2_[make_pair(std::string(name.Data()),file)] = (TH2F*) h;
     code=2;
   }
-  else if ( h->InheritsFrom("TH1F") ) {
-    histHolderP_[make_pair(std::string(name.Data()),file)] = (TH1F*) h;
+  else if ( h->InheritsFrom("TH1D") ) {
+    histHolderP_[make_pair(std::string(name.Data()),file)] = (TH1D*) h;
     code=1;
   }
   else {
@@ -159,7 +159,7 @@ HistHolder::make(std::string name, std::string title, Int_t nbins, Double_t min,
 void
 HistHolder::Write() {
   //FIXME need to add histHolder2 and other histHolders
-  for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
+  for ( std::map< std::string, TH1D*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
     if ( passesFilter( i->first))
       i->second->Write();
   }
@@ -168,12 +168,12 @@ HistHolder::Write() {
 
 void HistHolder::Sumw2() {
 
-  for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
+  for ( std::map< std::string, TH1D*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
     if ( passesFilter( i->first))
       i->second->Sumw2();
   }
 
-  for ( std::map< std::pair<std::string, TFile*>, TH1F*>::const_iterator i = histHolderP_.begin() ;
+  for ( std::map< std::pair<std::string, TFile*>, TH1D*>::const_iterator i = histHolderP_.begin() ;
 	i!= histHolderP_.end() ; ++i ) {
     
     if ( passesFilter(i->first))
@@ -183,12 +183,12 @@ void HistHolder::Sumw2() {
 }
 
 void HistHolder::SetMaximum( Double_t max) {
-  for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
+  for ( std::map< std::string, TH1D*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
     if ( passesFilter(i->first)) 
       i->second->SetMaximum(max);
   }
 
-  for ( std::map< std::pair<std::string, TFile*>, TH1F*>::const_iterator i = histHolderP_.begin() ;
+  for ( std::map< std::pair<std::string, TFile*>, TH1D*>::const_iterator i = histHolderP_.begin() ;
 	i!= histHolderP_.end() ; ++i ) {
     if ( passesFilter( i->first))
       i->second->SetMaximum(max);
@@ -197,12 +197,12 @@ void HistHolder::SetMaximum( Double_t max) {
 }
 
 void HistHolder::SetMinimum( Double_t min) {
-  for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
+  for ( std::map< std::string, TH1D*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
     if ( passesFilter(i->first)) 
       i->second->SetMinimum(min);
   }
   
-  for ( std::map< std::pair<std::string, TFile*>, TH1F*>::const_iterator i = histHolderP_.begin() ;
+  for ( std::map< std::pair<std::string, TFile*>, TH1D*>::const_iterator i = histHolderP_.begin() ;
 	i!= histHolderP_.end() ; ++i ) {
     if ( passesFilter(i->first))
       i->second->SetMinimum(min);
@@ -214,13 +214,13 @@ Float_t HistHolder::GetMaximum() {
 
   Float_t max = -99999999;
 
-  for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
+  for ( std::map< std::string, TH1D*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
     if ( passesFilter(i->first)) {
       if ( i->second->GetMaximum() > max ) max = i->second->GetMaximum();
     }
   }
 
-  for ( std::map< std::pair<std::string, TFile*>, TH1F*>::const_iterator i = histHolderP_.begin() ;
+  for ( std::map< std::pair<std::string, TFile*>, TH1D*>::const_iterator i = histHolderP_.begin() ;
 	i!= histHolderP_.end() ; ++i ) {
     if ( passesFilter(i->first)) {
       if ( i->second->GetMaximum() > max ) max = i->second->GetMaximum();
@@ -236,7 +236,7 @@ TString HistHolder::getMaximumName() {
   Float_t max = -99999999;
   TString nameofmax="";
 
-  for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
+  for ( std::map< std::string, TH1D*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
     if ( passesFilter(i->first)) {
       if ( i->second->GetMaximum() > max ) {
 	max = i->second->GetMaximum();
@@ -245,7 +245,7 @@ TString HistHolder::getMaximumName() {
     }
   }
 
-  for ( std::map< std::pair<std::string, TFile*>, TH1F*>::const_iterator i = histHolderP_.begin() ;
+  for ( std::map< std::pair<std::string, TFile*>, TH1D*>::const_iterator i = histHolderP_.begin() ;
 	i!= histHolderP_.end() ; ++i ) {
     if ( passesFilter(i->first)) {
       if ( i->second->GetMaximum() > max ) {
@@ -259,14 +259,14 @@ TString HistHolder::getMaximumName() {
 }
 
 void HistHolder::normalize() {
-  for ( std::map< std::string, TH1F*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
+  for ( std::map< std::string, TH1D*>::const_iterator i = histHolder_.begin() ; i!= histHolder_.end() ; ++i ) {
     if ( passesFilter(i->first)) {
       double factor = i->second->Integral();
       i->second->Scale(1.0/factor);
     }
   }
 
-  for ( std::map< std::pair<std::string, TFile*>, TH1F*>::const_iterator i = histHolderP_.begin() ;
+  for ( std::map< std::pair<std::string, TFile*>, TH1D*>::const_iterator i = histHolderP_.begin() ;
 	i!= histHolderP_.end() ; ++i ) {
     if ( passesFilter( i->first)) {
       double factor = i->second->Integral();

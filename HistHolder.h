@@ -40,8 +40,8 @@ public :
 
   //add a histogram...
 
-  void put(std::string name, TH1F* h) {histHolder_[name] = h;}
-  void put(    TString name, TH1F* h) {histHolder_[std::string(name.Data())] = h;}
+  void put(std::string name, TH1D* h) {histHolder_[name] = h;}
+  void put(    TString name, TH1D* h) {histHolder_[std::string(name.Data())] = h;}
 
 
  //select a group of histograms for the next operation
@@ -64,12 +64,12 @@ public :
   //  void ProjectionX(); //should add the custom name argument
 
 
-  TH1F* operator[](std::string name) {return histHolder_[name]; }
-  TH1F* operator[](const char* name) {return histHolder_[std::string(name)]; }
-  TH1F* operator[](TString name) {return histHolder_[std::string(name.Data())]; }
+  TH1D* operator[](std::string name) {return histHolder_[name]; }
+  TH1D* operator[](const char* name) {return histHolder_[std::string(name)]; }
+  TH1D* operator[](TString name) {return histHolder_[std::string(name.Data())]; }
 
-  TH1F* find(std::string name) {return histHolder_[name];}
-  TH1F* find(std::string name, TFile* file) {return histHolderP_[make_pair(name,file)];}
+  TH1D* find(std::string name) {return histHolder_[name];}
+  TH1D* find(std::string name, TFile* file) {return histHolderP_[make_pair(name,file)];}
   TH2F* find2(std::string name) {return histHolder2_[name];}
   TH2F* find2(std::string name, TFile* file) {return histHolderP2_[make_pair(name,file)];} 
 
@@ -78,13 +78,13 @@ public :
   void Reset(); //this calls TH1::Reset()
 
   //these are just to allow use of char* or TString
-  TH1F* find(TString name) {return find(std::string(name.Data()));}
-  TH1F* find(TString name, TFile* file) {return find( std::string(name.Data()),file); }
+  TH1D* find(TString name) {return find(std::string(name.Data()));}
+  TH1D* find(TString name, TFile* file) {return find( std::string(name.Data()),file); }
   TH2F* find2(TString name) {return find2( std::string(name.Data()));} 
   TH2F* find2(TString name, TFile* file) {return find2( std::string(name.Data()),file); }
 
-  TH1F* find(const char* name) {return find(std::string(name));}
-  TH1F* find(const char* name, TFile* file) {return find( std::string(name),file); }
+  TH1D* find(const char* name) {return find(std::string(name));}
+  TH1D* find(const char* name, TFile* file) {return find( std::string(name),file); }
   TH2F* find2(const char* name) {return find2( std::string(name));} 
   TH2F* find2(const char* name, TFile* file) {return find2( std::string(name),file); }
  
@@ -92,10 +92,10 @@ private :
   bool passesFilter(const std::string mystr, TFile* filep=0);
   bool passesFilter( std::pair<std::string , TFile*> mypair) {return passesFilter( mypair.first,mypair.second);}
 
-  std::map< std::string, TH1F*> histHolder_;
+  std::map< std::string, TH1D*> histHolder_;
   std::map< std::string, TH2F*> histHolder2_;
 
-  std::map< std::pair< std::string, TFile*>, TH1F* > histHolderP_;
+  std::map< std::pair< std::string, TFile*>, TH1D* > histHolderP_;
   std::map< std::pair< std::string, TFile*>, TH2F* > histHolderP2_;
 
   std::string select_;

@@ -17,7 +17,7 @@ PlotUtil::PlotUtil(HistHolder* hh) :
 
 PlotUtil::~PlotUtil() {}
 
-Double_t PlotUtil::ErrorOnIntegral(const TH1F* h, const Int_t lowbin, Int_t highbin) {
+Double_t PlotUtil::ErrorOnIntegral(const TH1D* h, const Int_t lowbin, Int_t highbin) {
   
   if ( highbin == 0)  highbin = h->GetNbinsX();
 
@@ -67,7 +67,7 @@ void PlotUtil::addQCD(TString varname) {
 
   const  TString qcdhist="H"+varname+"_qcd";
 
-  TH1F* hbase=hh_->find(qcdhist);
+  TH1D* hbase=hh_->find(qcdhist);
   if (hbase==0) {
     cout<<"Could not find the _qcd histogram!"<<endl;
     return;
@@ -77,7 +77,7 @@ void PlotUtil::addQCD(TString varname) {
     TString fullname=getFullName(varname,i->first);
     if (  fullname!= qcdhist && fullname.Contains("_qcd") ) {
       if (debug_)   cout<<"Adding to base qcd histo: "<<fullname<<endl;
-      TH1F* htoadd=hh_->find(fullname);
+      TH1D* htoadd=hh_->find(fullname);
       hbase->Add(htoadd);
     }
   }
@@ -106,7 +106,7 @@ void PlotUtil::drawPlots(TString varname) {
   const TString qcdhist="H"+varname+"_qcd";
 
   //find the "tallest" histogram
-  TH1F* firsttodraw=0;
+  TH1D* firsttodraw=0;
   double max=0;
   for ( map<TString,TTree*>::const_iterator i=samples_.begin() ; i!=samples_.end() ; ++i) {
     TString fullname=getFullName(varname,i->first);
@@ -126,7 +126,7 @@ void PlotUtil::drawPlots(TString varname) {
   for ( map<TString,TTree*>::const_iterator i=samples_.begin() ; i!=samples_.end() ; ++i) {
     TString fullname=getFullName(varname,i->first);
     if ( (!fullname.Contains("_qcd")) || (fullname ==qcdhist) ) {
-      TH1F* hist= hh_->find(fullname);
+      TH1D* hist= hh_->find(fullname);
       if (hist!= firsttodraw) hist->Draw("SAME");
     }
   }
