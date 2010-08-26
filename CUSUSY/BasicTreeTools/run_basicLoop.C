@@ -1,110 +1,59 @@
+#include "TString.h"
+#include "TSystem.h"
+#include "TChain.h"
+#include "TObjArray.h"
+
+#include "basicLoop.C"
 /*
+Usage:
+root -b -l -q run_basicLoop.C++
+
+these are not needed (assuming this macro is compiled) because of the include above
+(Not a solution that I love, but it works)
 
 .L basicLoop.C++
 
-*/
+gSystem->Load("basicLoop_C.so");
 
+*/
+void run_basicLoop()
 {
 
-  gSystem->Load("basicLoop_C.so");
+  //the problem with this structure is that it doesn't parallelize
+  //parallelization would work well on dellcmscornell
 
-  {
-  //ttbar
-  TChain* ttbarChain = new TChain("BasicTreeMaker/tree");
-  ttbarChain->Add("~/data/BasicNtuples/V00-00-01/TTbarJets/Spring10/BasicNtuple*");
-
-  basicLoop l_ttbar(ttbarChain);
-  l_ttbar.Loop();
+  TString computername = gSystem->Getenv("HOST");
+  TString dir = "/cu1/joshmt/"; //default is dellcmscornell
+  if (computername =="JoshPC") {
+    dir="~/data/";
+    //  libname="basicLoop_C.dll";
   }
 
-  {
-  //LM9
-  TChain* lm9Chain = new TChain("BasicTreeMaker/tree");
-  lm9Chain->Add("~/data/BasicNtuples/V00-00-01/LM9/Spring10/BasicNtuple*");
+  dir += "BasicNtuples/V00-00-01/";
+  TChain dummy("dummy");
+  TString dirs = dir; dirs+="*";
+  dummy.Add(dirs);
+  TObjArray* dirlist = dummy.GetListOfFiles();
+  int nfiles=dirlist->GetEntries();
 
-  basicLoop l_lm9(lm9Chain);
-  l_lm9.Loop();
-  }
+  for (int ifile=0; ifile<nfiles; ifile++) {
+    TString samplefiles = dirlist->At(ifile)->GetTitle();
+    samplefiles+="/Spring10/*.root";
 
-  {
-  //LM13
-  TChain* lm13Chain = new TChain("BasicTreeMaker/tree");
-  lm13Chain->Add("~/data/BasicNtuples/V00-00-01/LM13/Spring10/BasicNtuple*");
+    cout<<"About to start on files: "<<samplefiles<<endl;
 
-  basicLoop l_lm13(lm13Chain);
-  l_lm13.Loop();
-  }
+    //    if (samplefiles.Contains("LM")) continue; //hack to skip some samples
 
-  {
-  //MoreMSSM
-  TChain* mmssmChain = new TChain("BasicTreeMaker/tree");
-  mmssmChain->Add("~/data/BasicNtuples/V00-00-01/MoreMSSM/Spring10/BasicNtuple*");
+    TChain ch("BasicTreeMaker/tree");
+    ch.Add(samplefiles);
+    basicLoop looper(&ch);
+    //important! this is where cuts are defined
+    looper.setCutScheme(basicLoop::kRA2MET); //no b tagging cut so that plots can apply it selectively
+    //careful what is set here!
+    //    looper.setIgnoredCut(8); //MET
+    looper.setIgnoredCut(12); //DeltaPhi
 
-  basicLoop l_mmssm(mmssmChain);
-  l_mmssm.Loop();
-  }
-
-  {
-  //QCD-Pt1000toInf-madgraph
-  TChain* qcd1000Chain = new TChain("BasicTreeMaker/tree");
-  qcd1000Chain->Add("~/data/BasicNtuples/V00-00-01/QCD-Pt1000toInf-madgraph/Spring10/BasicNtuple*");
-
-  basicLoop l_qcd1000(qcd1000Chain);
-  l_qcd1000.Loop();
-  }
-
-  {
-  //QCD-Pt100to250-madgraph
-  TChain* qcd100Chain = new TChain("BasicTreeMaker/tree");
-  qcd100Chain->Add("~/data/BasicNtuples/V00-00-01/QCD-Pt100to250-madgraph/Spring10/BasicNtuple*");
-
-  basicLoop l_qcd100(qcd100Chain);
-  l_qcd100.Loop();
-  }
-
-  {
-  //QCD-Pt250to500-madgraph
-  TChain* qcd250Chain = new TChain("BasicTreeMaker/tree");
-  qcd250Chain->Add("~/data/BasicNtuples/V00-00-01/QCD-Pt250to500-madgraph/Spring10/BasicNtuple*");
-
-  basicLoop l_qcd250(qcd250Chain);
-  l_qcd250.Loop();
-  }
-
-  {
-  //QCD-Pt500to1000-madgraph
-  TChain* qcd500Chain = new TChain("BasicTreeMaker/tree");
-  qcd500Chain->Add("~/data/BasicNtuples/V00-00-01/QCD-Pt500to1000-madgraph/Spring10/BasicNtuple*");
-
-  basicLoop l_qcd500(qcd500Chain);
-  l_qcd500.Loop();
-  }
-
-  {
-  //WJets
-  TChain* wjetsChain = new TChain("BasicTreeMaker/tree");
-  wjetsChain->Add("~/data/BasicNtuples/V00-00-01/WJets/Spring10/BasicNtuple*");
-
-  basicLoop l_wjets(wjetsChain);
-  l_wjets.Loop();
-  }
-
-  {
-  //ZJets
-  TChain* zjetsChain = new TChain("BasicTreeMaker/tree");
-  zjetsChain->Add("~/data/BasicNtuples/V00-00-01/ZJets/Spring10/BasicNtuple*");
-
-  basicLoop l_zjets(zjetsChain);
-  l_zjets.Loop();
-  }
-
-  {
-  //Zinvisible
-  TChain* znunuChain = new TChain("BasicTreeMaker/tree");
-  znunuChain->Add("~/data/BasicNtuples/V00-00-01/Zinvisible/Spring10/BasicNtuple*");
-
-  basicLoop l_znunu(znunuChain);
-  l_znunu.Loop();
+    looper.Loop();  //go!
   }
 
 }

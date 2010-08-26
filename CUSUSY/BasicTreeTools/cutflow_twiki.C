@@ -13,9 +13,9 @@ root -b -l -q cutflow_twiki.C++
 void cutflow_twiki()
 {
   //first we need to load each text file (one sample at a time)
-  const TString filestub ="cutflow_RA2withBtagging";
+  const TString filestub ="cutflow_RA2tcMETwithBtagging";
 
-  const int mode = 2; //mode 1 is print cut flow table ; mode 2 is print significance table
+  const int mode = 1; //mode 1 is print cut flow table ; mode 2 is print significance table
   assert(mode==1 || mode==2);
 
   //in principle these are coded in basicLoop.C/h; do the easy thing for now
@@ -25,7 +25,8 @@ void cutflow_twiki()
   cutnames.push_back("PV");
   cutnames.push_back(">= 3 Jets");
   cutnames.push_back("HT Cut");
-  cutnames.push_back("MHT Cut");
+  //  cutnames.push_back("MHT Cut");
+  cutnames.push_back("MET Cut"); //sub in this one
   cutnames.push_back("Muon veto");
   cutnames.push_back("electron veto");
   cutnames.push_back("Delta Phi");
@@ -39,11 +40,12 @@ void cutflow_twiki()
   char *qcd_list[]={"QCD100","QCD250","QCD500","QCD1000"};
   int nbackground = 6;
   char *background_list[]={"TTbarJets","SingleTop-tChannel","SingleTop-tWChannel","Zinvisible","WJets","ZJets"};
-  int nsignal = 16; //oops, where did LM3 go?
-  char *signal_list[]={"LM0", "LM1", "LM2", "LM4", "LM5", "LM6","LM7", "LM8","LM9","LM9p", "LM9t175", "LM10", "LM11", "LM12","LM13","mMSSM"};
+  int nsignal = 6;//16; //oops, where did LM3 go?
+  //  char *signal_list[]={"LM0", "LM1", "LM2", "LM4", "LM5", "LM6","LM7", "LM8","LM9","LM9p", "LM9t175", "LM10", "LM11", "LM12","LM13","mMSSM"};
+  char *signal_list[]={"LM0", "LM9","LM13","mMSSM","mMSSMv2","mMSSMv3"};
 
   //as long as i compile, I can use the most basic stl containers
-  //SHIT ... what was I thinking? what i really want is a map of these, indexed by the names.
+  // ... what was I thinking? what i really want is a map of these, indexed by the names.
   //can ROOT handle it? //seems ok....
 
   std::map<TString, std::vector<float> > qcd;

@@ -5,12 +5,17 @@
 
 #include "basicLoop.C"
 /*
+these are not needed (assuming this macro is compiled) because of the include above
+(Not a solution that I love, but it works)
 
 .L basicLoop.C++
 
 gSystem->Load("basicLoop_C.so");
 
 */
+
+const TString version = "V00-00-02";
+
 void run_cutflow()
 {
 
@@ -25,7 +30,8 @@ void run_cutflow()
 
   //gSystem->Load(libname);
 
-  dir += "BasicNtuples/V00-00-01/";
+  dir += "BasicNtuples/";
+  dir += version; dir+="/";
   TChain dummy("dummy");
   TString dirs = dir; dirs+="*";
   dummy.Add(dirs);
@@ -34,18 +40,18 @@ void run_cutflow()
 
   for (int ifile=0; ifile<nfiles; ifile++) {
     TString samplefiles = dirlist->At(ifile)->GetTitle();
-    samplefiles+="/Spring10/*.root";
+    //for the first iteration I had this stupid subdirectory in there
+    if (version=="V00-00-01")  samplefiles+="/Spring10/*.root";
+    else                       samplefiles+="/*.root";
 
     cout<<"About to start on files: "<<samplefiles<<endl;
 
-    if (samplefiles.Contains("LM")) continue; //hack to skip some samples
+    //if (!samplefiles.Contains("v2")) continue; //hack to skip some samples
 
     TChain ch("BasicTreeMaker/tree");
     ch.Add(samplefiles);
-    cout<<"files added..."<<endl;
     basicLoop looper(&ch);
-    cout<<"class constructed"<<endl;
-    looper.setCutScheme(basicLoop::kRA2withB);
+    looper.setCutScheme(basicLoop::kRA2tcMETwithB); //this is a critical line! defines the cuts to use!
     looper.cutflow();
   }
 

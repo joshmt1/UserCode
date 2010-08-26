@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Mon Jul 12 14:05:33 2010 by ROOT version 5.22/00d
+// Wed Aug 25 16:53:46 2010 by ROOT version 5.22/00d
 // from TTree tree/tree
-// found on file: /cu1/joshmt/BasicNtuple/V00-00-01/MoreMSSM/Spring10/BasicNtuple.root
+// found on file: /cu1/joshmt/BasicNtuples/V00-00-02/TTbarJets/BasicNtuple_1_1_p5X.root
 //////////////////////////////////////////////////////////
 
 #ifndef basicLoop_h
@@ -12,29 +12,40 @@
 #include <TChain.h>
 #include <TFile.h>
 
+// ========================================== begin
+//this code will have to be regenerated when changing the ntuple structure
+//custom code is marked with these 'begin' and 'end' markers
 #include <iostream>
 #include <vector>
 
 //avoid spaces and funny characters!
-const char *CutSchemeNames_[]={"RA2","RA2withBtagging"};
+const char *CutSchemeNames_[]={"RA2", "RA2MET", "RA2withBtagging","RA2METwithBtagging", "RA2tcMETwithBtagging"};
+
+//we want to weight to 100 pb^-1
+const double lumi=100;
+// ========================================== end
 
 class basicLoop {
- public :
-  enum CutScheme {kRA2=0, kRA2withB, nCutSchemes};
+public :
+  // ========================================== begin
+  enum CutScheme {kRA2=0, kRA2MET, kRA2withB, kRA2METwithB, kRA2tcMETwithB, nCutSchemes};
   CutScheme theCutScheme_;
-  std::vector<TString> cutnames_;
+  std::vector<int> ignoredCut_; //allow more than 1 ignored cut!
 
-  TTree          *fChain;   //!pointer to the analyzed TTree or TChain
-  Int_t           fCurrent; //!current Tree number in a TChain
-  
+  std::vector<TString> cutnames_;
+  // ========================================== end
+
+   TTree          *fChain;   //!pointer to the analyzed TTree or TChain
+   Int_t           fCurrent; //!current Tree number in a TChain
+
    // Declaration of leaf types
-   std::vector<std::string>  *SUSY_cutNames;
-   std::vector<bool>    *SUSY_cutResults;
-   std::vector<bool>    *cutResults;
-   std::vector<float>   *jetPt;
-   std::vector<float>   *jetEta;
-   std::vector<float>   *jetPhi;
-   std::vector<float>   *jetBTagSSV;
+   vector<string>  *SUSY_cutNames;
+   vector<bool>    *SUSY_cutResults;
+   vector<bool>    *cutResults;
+   vector<float>   *jetPt;
+   vector<float>   *jetEta;
+   vector<float>   *jetPhi;
+   vector<float>   *jetBTagDisc_simpleSecondaryVertexBJetTags; //unfortunately this changes depending on the sample!
    Int_t           nbSSVM;
    Float_t         HT;
    Float_t         MHT;
@@ -44,10 +55,13 @@ class basicLoop {
    Float_t         DeltaPhi_JetMHT3;
    Float_t         MET;
    Float_t         METphi;
-   std::vector<float>   *trackPt;
-   std::vector<float>   *trackEta;
-   std::vector<float>   *trackPhi;
+   Float_t         tcMET;
+   Float_t         tcMETphi;
+   vector<float>   *trackPt;
+   vector<float>   *trackEta;
+   vector<float>   *trackPhi;
    Int_t           SUSY_nb;
+   vector<int>     *topDecayCode;
 
    // List of branches
    TBranch        *b_SUSY_cutNames;   //!
@@ -56,7 +70,7 @@ class basicLoop {
    TBranch        *b_jetPt;   //!
    TBranch        *b_jetEta;   //!
    TBranch        *b_jetPhi;   //!
-   TBranch        *b_jetBTagSSV;   //!
+   TBranch        *b_jetBTagDisc_simpleSecondaryVertexBJetTags;   //!
    TBranch        *b_nbSSVM;   //!
    TBranch        *b_HT;   //!
    TBranch        *b_MHT;   //!
@@ -66,10 +80,13 @@ class basicLoop {
    TBranch        *b_DeltaPhi_JetMHT3;   //!
    TBranch        *b_MET;   //!
    TBranch        *b_METphi;   //!
+   TBranch        *b_tcMET;   //!
+   TBranch        *b_tcMETphi;   //!
    TBranch        *b_trackPt;   //!
    TBranch        *b_trackEta;   //!
    TBranch        *b_trackPhi;   //!
    TBranch        *b_SUSY_nb;   //!
+   TBranch        *b_topDecayCode;   //!
 
    basicLoop(TTree *tree=0);
    virtual ~basicLoop();
@@ -78,43 +95,53 @@ class basicLoop {
    virtual Long64_t LoadTree(Long64_t entry);
    virtual void     Init(TTree *tree);
    virtual void     Loop();
-   virtual void     compareRA2();
-   virtual void     exampleLoop();
-   virtual void     nbLoop();
    virtual Bool_t   Notify();
    virtual void     Show(Long64_t entry = -1);
 
-   bool setCutScheme(CutScheme cutscheme);
+   // ========================================== begin
+   virtual void     compareRA2();
+   virtual void     exampleLoop();
+   virtual void     nbLoop();
 
+   bool setCutScheme(CutScheme cutscheme);
+   void setIgnoredCut(const int cutIndex); //use to make N-1 plots! (and other things)
+   void resetIgnoredCut() ;
+   
    void cutflow();
    bool cutRequired(unsigned int cutIndex) ;
+   bool passCut(unsigned int cutIndex) ;
    TString getSampleName(const TString inname) ;
    double getCrossSection(const TString inname) ;
    TString findInputName() ;
    double getDeltaPhiMPTMET();
+   double getMinDeltaPhibMET() ;
+   double getMinDeltaPhiMET(unsigned int maxjets) ;
+   double getDeltaPhib1b2() ;
+   // ========================================== end
+
+
 };
 
 #endif
 
 #ifdef basicLoop_cxx
-basicLoop::basicLoop(TTree *tree) :
-  theCutScheme_(kRA2)
+basicLoop::basicLoop(TTree *tree)
+  :  theCutScheme_(kRA2) //====================== begin -> end
 {
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
    if (tree == 0) {
-      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("/cu1/joshmt/BasicNtuple/V00-00-01/MoreMSSM/Spring10/BasicNtuple.root");
+      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("/cu1/joshmt/BasicNtuples/V00-00-02/TTbarJets/BasicNtuple_1_1_p5X.root");
       if (!f) {
-         f = new TFile("/cu1/joshmt/BasicNtuple/V00-00-01/MoreMSSM/Spring10/BasicNtuple.root");
-         f->cd("/cu1/joshmt/BasicNtuple/V00-00-01/MoreMSSM/Spring10/BasicNtuple.root:/BasicTreeMaker");
+         f = new TFile("/cu1/joshmt/BasicNtuples/V00-00-02/TTbarJets/BasicNtuple_1_1_p5X.root");
+         f->cd("/cu1/joshmt/BasicNtuples/V00-00-02/TTbarJets/BasicNtuple_1_1_p5X.root:/BasicTreeMaker");
       }
       tree = (TTree*)gDirectory->Get("tree");
 
    }
-
-   std::cout<<"In basicLoop ctor. About to do Init"<<std::endl;
    Init(tree);
 
+   // ========================================== begin
    //this may well be stored in the event for now too.
    //think about it
    cutnames_.push_back("Inclusive");
@@ -133,14 +160,17 @@ basicLoop::basicLoop(TTree *tree) :
    cutnames_.push_back(">=1 b");
    cutnames_.push_back(">=2 b");
    cutnames_.push_back(">=3 b");
-
+   // ========================================== end
+   
 }
 
 basicLoop::~basicLoop()
 {
+  // ========================================== begin
   //No! stupid ROOT! this leads to a double deletion!
-  //   if (!fChain) return;
-  //   delete fChain->GetCurrentFile();
+  //if (!fChain) return;
+  // delete fChain->GetCurrentFile();
+  // ========================================== end
 }
 
 Int_t basicLoop::GetEntry(Long64_t entry)
@@ -181,10 +211,11 @@ void basicLoop::Init(TTree *tree)
    jetPt = 0;
    jetEta = 0;
    jetPhi = 0;
-   jetBTagSSV = 0;
+   jetBTagDisc_simpleSecondaryVertexBJetTags = 0;
    trackPt = 0;
    trackEta = 0;
    trackPhi = 0;
+   topDecayCode = 0;
    // Set branch addresses and branch pointers
    if (!tree) return;
    fChain = tree;
@@ -197,7 +228,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("jetPt", &jetPt, &b_jetPt);
    fChain->SetBranchAddress("jetEta", &jetEta, &b_jetEta);
    fChain->SetBranchAddress("jetPhi", &jetPhi, &b_jetPhi);
-   fChain->SetBranchAddress("jetBTagSSV", &jetBTagSSV, &b_jetBTagSSV);
+   fChain->SetBranchAddress("jetBTagDisc_simpleSecondaryVertexBJetTags", &jetBTagDisc_simpleSecondaryVertexBJetTags, &b_jetBTagDisc_simpleSecondaryVertexBJetTags);
    fChain->SetBranchAddress("nbSSVM", &nbSSVM, &b_nbSSVM);
    fChain->SetBranchAddress("HT", &HT, &b_HT);
    fChain->SetBranchAddress("MHT", &MHT, &b_MHT);
@@ -207,10 +238,13 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("DeltaPhi_JetMHT3", &DeltaPhi_JetMHT3, &b_DeltaPhi_JetMHT3);
    fChain->SetBranchAddress("MET", &MET, &b_MET);
    fChain->SetBranchAddress("METphi", &METphi, &b_METphi);
+   fChain->SetBranchAddress("tcMET", &tcMET, &b_tcMET);
+   fChain->SetBranchAddress("tcMETphi", &tcMETphi, &b_tcMETphi);
    fChain->SetBranchAddress("trackPt", &trackPt, &b_trackPt);
    fChain->SetBranchAddress("trackEta", &trackEta, &b_trackEta);
    fChain->SetBranchAddress("trackPhi", &trackPhi, &b_trackPhi);
    fChain->SetBranchAddress("SUSY_nb", &SUSY_nb, &b_SUSY_nb);
+   fChain->SetBranchAddress("topDecayCode", &topDecayCode, &b_topDecayCode);
    Notify();
 }
 
@@ -233,7 +267,23 @@ void basicLoop::Show(Long64_t entry)
    fChain->Show(entry);
 }
 
-bool basicLoop::cutRequired(unsigned int cutIndex) {
+// ========================================== begin
+
+void basicLoop::setIgnoredCut(const int cutIndex) {
+
+  //could do this via exception handling....but no, i won't
+  if ( cutIndex>= int(cutnames_.size())) {cout<<"Invalid cutIndex"<<endl; return;}
+  cout<<"Will ignore cut: "<<cutnames_.at(cutIndex)<<endl;
+
+  ignoredCut_.push_back(cutIndex);
+
+}
+
+void basicLoop::resetIgnoredCut() {
+  ignoredCut_.clear();
+}
+
+bool basicLoop::cutRequired(const unsigned int cutIndex) {
   //not quite sure what the best (most elegant) way to implement this is....
   // *        0 *        0 * Inclusive *
   // *        0 *        1 *   Trigger *
@@ -251,41 +301,116 @@ bool basicLoop::cutRequired(unsigned int cutIndex) {
   // *        0 *       13 * >=1 B-Tag *
   // *        0 *       14 * >=2 B-Tag *
   // *        0 *       15 * >=3 B-Tag *
-  
-  //RA2
-  if (theCutScheme_ == kRA2 || theCutScheme_==kRA2withB) {
-    if      (cutIndex == 0)  return true;
-    else if (cutIndex == 1)  return true;
-    else if (cutIndex == 2)  return true;
-    else if (cutIndex == 3)  return true;
-    else if (cutIndex == 4)  return false;
-    else if (cutIndex == 5)  return false;
-    else if (cutIndex == 6)  return false;
-    else if (cutIndex == 7)  return true;
-    else if (cutIndex == 8)  return false;
-    else if (cutIndex == 9)  return true;
-    else if (cutIndex == 10) return true;
-    else if (cutIndex == 11) return true;
-    else if (cutIndex == 12) return true;
-    else if (cutIndex == 13) return (theCutScheme_==kRA2withB);
-    else if (cutIndex == 14) return (theCutScheme_==kRA2withB);
-    else if (cutIndex == 15) return (theCutScheme_==kRA2withB);
+
+
+  //check if we are *ignoring* this cut (for N-1 studies, etc)
+  for (unsigned int i = 0; i< ignoredCut_.size() ; i++) {
+    if ( int(cutIndex) == ignoredCut_.at(i) ) return false;
   }
 
-  //should not get past here!
-  assert(0);
-  return false;
+  bool cutIsRequired=false;
+
+  //RA2
+  if (theCutScheme_ == kRA2 || theCutScheme_==kRA2withB || theCutScheme_==kRA2METwithB 
+      || theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMETwithB) {
+    if      (cutIndex == 0)  cutIsRequired =  true;
+    else if (cutIndex == 1)  cutIsRequired =  true;
+    else if (cutIndex == 2)  cutIsRequired =  true;
+    else if (cutIndex == 3)  cutIsRequired =  true;
+    else if (cutIndex == 4)  cutIsRequired =  false;
+    else if (cutIndex == 5)  cutIsRequired =  false;
+    else if (cutIndex == 6)  cutIsRequired =  false;
+    else if (cutIndex == 7)  cutIsRequired =  true;
+    //MET
+    else if (cutIndex == 8)  cutIsRequired =  (theCutScheme_==kRA2METwithB || theCutScheme_==kRA2MET 
+					       || theCutScheme_==kRA2tcMETwithB);
+    //MHT
+    else if (cutIndex == 9)  cutIsRequired =  (theCutScheme_!=kRA2METwithB && theCutScheme_!=kRA2MET
+					       && theCutScheme_!=kRA2tcMETwithB);
+    else if (cutIndex == 10) cutIsRequired =  true;
+    else if (cutIndex == 11) cutIsRequired =  true;
+    else if (cutIndex == 12) cutIsRequired =  true;
+    else if (cutIndex == 13) cutIsRequired =  (theCutScheme_==kRA2withB || theCutScheme_==kRA2METwithB 
+					       || theCutScheme_==kRA2tcMETwithB);
+    else if (cutIndex == 14) cutIsRequired =  (theCutScheme_==kRA2withB || theCutScheme_==kRA2METwithB 
+					       || theCutScheme_==kRA2tcMETwithB);
+    else if (cutIndex == 15) cutIsRequired =  (theCutScheme_==kRA2withB || theCutScheme_==kRA2METwithB 
+					       || theCutScheme_==kRA2tcMETwithB);
+    else assert(0);
+  }
+  else assert(0);
+
+  return cutIsRequired;
+}
+
+bool basicLoop::passCut(const unsigned int cutIndex) {
+
+  //implement special exceptions here
+  if ( theCutScheme_== kRA2tcMETwithB ) {
+    if (cutIndex == 8) { //cut on tc MET instead of caloMET
+      return (tcMET > 150); //hardcoded MET cut
+    }
+  }
+
+  //in case this is not an exception, return the cut result stored in the ntuple
+  return cutResults->at(cutIndex);
 }
 
 Int_t basicLoop::Cut(Long64_t entry)
 {
   
   for (unsigned int i=0; i< cutResults->size(); i++) {
-    if (cutRequired(i) && !cutResults->at(i) ) return -1;
+    if (cutRequired(i) && !passCut(i) ) return -1;
   }
   
   return 1;
   
+}
+
+double basicLoop::getMinDeltaPhiMET(unsigned int maxjets) {
+
+  unsigned int njets=  jetPhi->size();
+
+  if (njets < maxjets) maxjets = njets;
+
+  //get the minimum angle between the first n jets and MET
+  double mindp=99;
+  for (unsigned int i=0; i< maxjets; i++) {
+
+    double dp =  acos(cos( jetPhi->at(i) - METphi));
+    if (dp<mindp) mindp=dp;
+
+  }
+  return mindp;
+}
+
+double basicLoop::getMinDeltaPhibMET() {
+  //get the minimum angle between a b jet and MET
+  double mindp=99;
+  for (unsigned int i=0; i<jetBTagDisc_simpleSecondaryVertexBJetTags->size(); i++) {
+    if (jetBTagDisc_simpleSecondaryVertexBJetTags->at(i) >= 1.74 ) { //FIXME hardcoded!
+      double dp =  acos(cos( jetPhi->at(i) - METphi));
+      if (dp<mindp) mindp=dp;
+    }
+  }
+  return mindp;
+}
+
+double basicLoop::getDeltaPhib1b2() {
+  //get the angle between the lead 2 b jets
+  std::vector<float> phis;
+
+  for (unsigned int i=0; i<jetBTagDisc_simpleSecondaryVertexBJetTags->size(); i++) {
+    if (jetBTagDisc_simpleSecondaryVertexBJetTags->at(i) >= 1.74 ) { //FIXME hardcoded!
+
+      phis.push_back( jetPhi->at(i));
+
+      if (phis.size() == 2) break;
+      
+    }
+  }
+
+  return acos(cos( phis.at(0) - phis.at(1)));
 }
 
 double basicLoop::getDeltaPhiMPTMET() {
@@ -325,6 +450,8 @@ TString basicLoop::getSampleName(const TString inname) {
   else if (inname.Contains("/LM12/"))                      return "LM12";
   else if (inname.Contains("/LM13/"))                      return "LM13";
   else if (inname.Contains("/MoreMSSM/"))                  return "mMSSM";
+  else if (inname.Contains("/MoreMSSMv2/"))                return "mMSSMv2";
+  else if (inname.Contains("/MoreMSSMv3/"))                return "mMSSMv3";
   else if (inname.Contains("/SingleTop-tChannel/"))        return "SingleTop-tChannel";
   else if (inname.Contains("/SingleTop-tWChannel/"))       return "SingleTop-tWChannel";
   else if (inname.Contains("/QCD-Pt1000toInf-madgraph/"))  return "QCD1000";
@@ -361,6 +488,8 @@ double basicLoop::getCrossSection(const TString inname) {
   else if (inname.Contains("/LM12/"))                      return 4.414;
   else if (inname.Contains("/LM13/"))                      return 6.899;
   else if (inname.Contains("/MoreMSSM/"))                  return 1.73;
+  else if (inname.Contains("/MoreMSSMv2/"))                return 2.1;
+  else if (inname.Contains("/MoreMSSMv3/"))                return 2.6;
   else if (inname.Contains("/SingleTop-tChannel/"))        return 20.44;
   else if (inname.Contains("/SingleTop-tWChannel/"))       return 10.6;
   else if (inname.Contains("/QCD-Pt1000toInf-madgraph/"))  return 83;
@@ -404,5 +533,7 @@ bool basicLoop::setCutScheme(CutScheme cutscheme) {
   return true;
 }
 
+
+// ========================================== end
 
 #endif // #ifdef basicLoop_cxx

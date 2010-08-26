@@ -1,6 +1,7 @@
 #define basicLoop_cxx
 #include "basicLoop.h"
 #include <TH1.h>
+#include <TH2.h>
 #include <TFile.h>
 #include <TStyle.h>
 #include <fstream>
@@ -24,11 +25,13 @@ void basicLoop::exampleLoop()
    }
 }
 
+/*
+print a cut flow table
+lumi is set in basicLoop.h
+*/
 void basicLoop::cutflow()
 {
 
-  const double lumi=100;
-  
   std::vector<int> npass;
   
   if (fChain == 0) return;
@@ -55,9 +58,6 @@ void basicLoop::cutflow()
     for (unsigned int i=0 ; i<cutResults->size(); i++) {
       if (cutRequired(i) && cutResults->at(i) )   npass.at(i) = npass.at(i) +1;
       else if (cutRequired(i) && !cutResults->at(i) ) break;
-      //dirty hack to include b tagging in the cut flow
-      //	else if ( i>=13 && cutResults->at(i) )  npass.at(i) = npass.at(i) +1;
-      //	else if ( i>=13 && !cutResults->at(i) )  break;
     }
     
   }
@@ -89,6 +89,10 @@ void basicLoop::cutflow()
   file.close();
 }
 
+
+/* 
+main plot-making loop
+*/
 void basicLoop::Loop()
 {
   const double pi=4*atan(1);
@@ -98,8 +102,6 @@ void basicLoop::Loop()
 
    Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
 
-   //we want to weight to 100 pb^-1
-   const double lumi=100;
 
    TString inname=findInputName(); //uses fChain
    std::cout<<"Got an input file name as: "<<inname<<std::endl;
@@ -131,6 +133,34 @@ void basicLoop::Loop()
    TH1D HdeltaPhiMPTMET("HdeltaPhiMPTMET","DeltaPhi(MET,MPT) (RA2)",nbins,0,pi);
    TH1D HdeltaPhiMPTMET_ge2b("HdeltaPhiMPTMET_ge2b","DeltaPhi(MET,MPT) (RA2 && >=2b)",nbins,0,pi);
 
+   TH1D HminDeltaPhiMETb_ge1b("HminDeltaPhiMETb_ge1b","minDeltaPhi(b,MET) (RA2 && >=1b)",nbins,0,pi);
+   TH1D HminDeltaPhiMETj_ge1b("HminDeltaPhiMETj_ge1b","minDeltaPhi(j,MET) (RA2 && >=1b)",nbins,0,pi);
+   TH2D HdeltaPhib1b2_minDeltaPhiMETb("HdeltaPhib1b2_minDeltaPhiMETb","DeltaPhi(b1,b2) v minDeltaPhi(b,MET) (RA2 && >=2b)",nbins,0,pi,nbins,0,pi);
+
+   TH1D HminDeltaPhiMETb_ge2b("HminDeltaPhiMETb_ge2b","minDeltaPhi(b,MET) (RA2 && >=2b)",nbins,0,pi);
+   TH1D HminDeltaPhiMETj_ge2b("HminDeltaPhiMETj_ge2b","minDeltaPhi(j,MET) (RA2 && >=2b)",nbins,0,pi);
+
+
+   double met_max=500,met_min=0;
+   TH1D H_MHT("H_MHT","MHT (RA2)",nbins, met_min , met_max);
+   TH1D H_MET("H_MET","MET (RA2)",nbins, met_min , met_max);
+
+   TH1D H_MHT_ge1b("H_MHT_ge1b","MHT (RA2 && >=1b)",nbins, met_min , met_max);
+   TH1D H_MET_ge1b("H_MET_ge1b","MET (RA2 && >=1b)",nbins, met_min , met_max);
+
+   TH1D H_MHT_ge2b("H_MHT_ge2b","MHT (RA2 && >=2b)",nbins, met_min , met_max);
+   TH1D H_MET_ge2b("H_MET_ge2b","MET (RA2 && >=2b)",nbins, met_min , met_max);
+
+   TH1D H_MHT_ge3b("H_MHT_ge3b","MHT (RA2 && >=3b)",nbins, met_min , met_max);
+   TH1D H_MET_ge3b("H_MET_ge3b","MET (RA2 && >=3b)",nbins, met_min , met_max);
+
+   TH2D HdeltaPhib1b2_MET("HdeltaPhib1b2_MET","DeltaPhi(b1,b2) v MET (>=2b)",nbins,met_min,met_max,nbins,0,pi);
+   TH2D HminDeltaPhiMETb_MET_ge2b("HminDeltaPhiMETb_MET_ge2b","minDeltaPhi(b,MET) v MET (>=2b)",nbins,met_min,met_max,nbins,0,pi);
+   TH2D HminDeltaPhiMETj_MET_ge2b("HminDeltaPhiMETj_MET_ge2b","minDeltaPhi(j,MET) v MET (>=2b)",nbins,met_min,met_max,nbins,0,pi);
+
+   TH2D HminDeltaPhiMETb_HminDeltaPhiMETj_ge2b("HminDeltaPhiMETb_HminDeltaPhiMETj_ge2b","minDPhi(b,MET) v minDPhi(j,MET) (>=2b)",
+					       nbins,0,pi,nbins,0,pi);
+
    //as usual, perhaps we should manage our histos with HistHolder (but let's keep it simple instead)
    Hnjets.Sumw2();
    Hnjets_nocuts.Sumw2();
@@ -140,6 +170,27 @@ void basicLoop::Loop()
 
    HdeltaPhiMPTMET.Sumw2();
    HdeltaPhiMPTMET_ge2b.Sumw2();
+   HdeltaPhib1b2_minDeltaPhiMETb.Sumw2();
+   HminDeltaPhiMETb_ge1b.Sumw2();
+   HminDeltaPhiMETj_ge1b.Sumw2();
+
+   HminDeltaPhiMETb_ge2b.Sumw2();
+   HminDeltaPhiMETj_ge2b.Sumw2();
+
+   H_MHT.Sumw2();
+   H_MET.Sumw2();
+   H_MHT_ge1b.Sumw2();
+   H_MET_ge1b.Sumw2();
+   H_MHT_ge2b.Sumw2();
+   H_MET_ge2b.Sumw2();
+   H_MHT_ge3b.Sumw2();
+   H_MET_ge3b.Sumw2();
+
+   HdeltaPhib1b2_MET.Sumw2();
+   HminDeltaPhiMETb_MET_ge2b.Sumw2();
+   HminDeltaPhiMETj_MET_ge2b.Sumw2();
+
+   HminDeltaPhiMETb_HminDeltaPhiMETj_ge2b.Sumw2();
 
    //event loop
    Long64_t nbytes = 0, nb = 0;
@@ -156,16 +207,42 @@ void basicLoop::Loop()
 
       Hnjets.Fill( jetPt->size(), weight );
       HdeltaPhiMPTMET.Fill( dp_MPTMET,weight);
+      H_MHT.Fill(MHT ,weight);
+      H_MET.Fill(MET ,weight);
 
       if ( nbSSVM < 1) continue; //cut on the number of b tags
       Hnjets_ge1b.Fill( jetPt->size(), weight );
+      H_MHT_ge1b.Fill(MHT ,weight);
+      H_MET_ge1b.Fill(MET ,weight);
+
+      double minDeltaPhi_b_MET= getMinDeltaPhibMET();
+      double minDeltaPhi_j_MET= getMinDeltaPhiMET(3);
+      HminDeltaPhiMETb_ge1b.Fill(minDeltaPhi_b_MET,weight);
+      HminDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
 
       if ( nbSSVM < 2) continue; //cut on the number of b tags
+
       Hnjets_ge2b.Fill( jetPt->size(), weight );
+      H_MHT_ge2b.Fill(MHT ,weight);
+      H_MET_ge2b.Fill(MET ,weight);
       HdeltaPhiMPTMET_ge2b.Fill( dp_MPTMET,weight);
+
+      HminDeltaPhiMETb_ge2b.Fill(minDeltaPhi_b_MET,weight);
+      HminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,weight);
+
+      double deltaPhi_b1b2 = getDeltaPhib1b2();
+      HdeltaPhib1b2_minDeltaPhiMETb.Fill(minDeltaPhi_b_MET,deltaPhi_b1b2,weight);
+
+      HdeltaPhib1b2_MET.Fill(MET,deltaPhi_b1b2,weight);
+      HminDeltaPhiMETb_MET_ge2b.Fill(MET,minDeltaPhi_b_MET,weight);
+      HminDeltaPhiMETj_MET_ge2b.Fill(MET,minDeltaPhi_j_MET,weight);
+
+      HminDeltaPhiMETb_HminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,minDeltaPhi_b_MET,weight);
 
       if ( nbSSVM < 3) continue; //cut on the number of b tags
       Hnjets_ge3b.Fill( jetPt->size(), weight );
+      H_MHT_ge3b.Fill(MHT ,weight);
+      H_MET_ge3b.Fill(MET ,weight);
    }
 
    fout.Write();
