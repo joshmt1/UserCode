@@ -1,6 +1,10 @@
 Release notes
 --
 
+V00-00-02 - 
+Adds more elegant handling of b-tagging (name of b taggers given in python).
+Also add tcMET and also some MC truch info about tops.
+
 V00-00-01 - 
 used to create plots and cut flows for Julia's 16 July 2010 talk at
 SUSY Hadronic Working Group meeting. For MoreMSSM (RECO in 36X),
