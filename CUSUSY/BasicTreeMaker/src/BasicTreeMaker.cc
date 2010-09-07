@@ -13,12 +13,13 @@ Uses STL vectors for arrays of data. This seems to work fine for analysis in bar
 using a class created with MakeClass.
 
 Developed and tested with CMSSW_3_6_2
+(Now moving to CMSSW_3_6_3)
 
 */
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.1 2010/07/12 09:09:13 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.2 2010/08/24 16:40:03 joshmt Exp $
 //
 //
 
@@ -49,6 +50,8 @@ Developed and tested with CMSSW_3_6_2
 //amazingly, this won't build if these two includes are not in this order!
 #include "PhysicsTools/SelectorUtils/interface/EventSelector.h"
 #include "PhysicsTools/SelectorUtils/interface/PVSelector.h"
+
+#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
@@ -81,6 +84,7 @@ private:
   void fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillTrackInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
+  void fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
 
   int  findSUSYMaternity( const reco::Candidate & cand );
   int  findTopDecayMode( const reco::Candidate & cand );
@@ -111,6 +115,7 @@ private:
   edm::CPUTimer* thetimer_;
   TH1D* Heventcount_;
   TTree* tree_;
+  TTree* infotree_;
 
   std::vector<std::string> btagAlgorithmNames_;
 
@@ -119,12 +124,15 @@ private:
   PVSelector                           pvSelector_;
 
   //configuration strings (largely copied from don's and freya's code)
+  edm::InputTag triggerLabel_;
   edm::InputTag jetLabel_;
   edm::InputTag caloMetLabel_;
   edm::InputTag tcMetLabel_;
 
   edm::InputTag eleLabel_;
   edm::InputTag muoLabel_;
+
+  std::string susyTrigger_;
 
   JetIDSelectionFunctor                jetIdLoose_;
   MuonVPlusJetsIDSelectionFunctor      muonId_;
@@ -152,20 +160,29 @@ private:
   bool leptonInfoFilled_;
   bool trackInfoFilled_;
 
-  //define variables for the tree
+  // ====== define variables for the tree ======
   std::vector<std::string> cutNames;
   std::vector<bool> cutResultsDon;
   std::vector<bool> cutResults;
   //tight jet info
+  std::vector<int> looseJetIndex; //map from tight jet list to loose jet list
   std::vector<float> jetPt;
   std::vector<float> jetEta;
   std::vector<float> jetPhi;
+  std::vector<int> jetFlavor;
   std::map < std::string, std::vector<float> > jetBTagDisc; 
+
+  //this structure duplicates info between the tight and loose lists
+  //i am starting to fix this using the looseJetIndex.
+  //for convenience I will keep some duplication for now
 
   //loose jet info
   std::vector<float> loosejetPt;
   std::vector<float> loosejetEta;
   std::vector<float> loosejetPhi;
+  std::vector<int> loosejetFlavor;
+  std::vector<int> loosejetGenParticlePDGId;
+  std::vector<float> loosejetInvisibleEnergy;
   std::map < std::string, std::vector<float> > loosejetBTagDisc;
 
   int nbSSVM; //FIXME this is still in need of a more sophisticated approach (for now this works...)
@@ -181,8 +198,6 @@ private:
   float METphi;
   float tcMET;
   float tcMETphi;
-  //NB -- as long as we only care about 'good' (tighter) jets, then 
-  //we can calculate the DeltaPhi between jets and MET, as well as minDeltaPhi, later
 
   //track info
   std::vector<float> trackPt;
@@ -191,6 +206,7 @@ private:
 
   //MC info
   int SUSY_nb;
+  float qScale;
   std::vector<int> topDecayCode;
 
 };
@@ -210,6 +226,7 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   thetimer_(new edm::CPUTimer()),
   Heventcount_(0),
   tree_(0),
+  infotree_(0),
 
   btagAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("btagAlgorithms")),
 
@@ -217,13 +234,16 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
 
   pvSelector_      (iConfig.getParameter<edm::ParameterSet>("pvSelector") ),
 
+  triggerLabel_    (iConfig.getParameter<edm::InputTag>("triggerTag")),
   jetLabel_        (iConfig.getParameter<edm::InputTag>("jetTag")),
-
+  
   caloMetLabel_    (iConfig.getParameter<edm::InputTag>("caloMetTag")),
   tcMetLabel_      (iConfig.getParameter<edm::InputTag>("tcMetTag")),
 
   eleLabel_        (iConfig.getParameter<edm::InputTag>("eleTag")),
   muoLabel_        (iConfig.getParameter<edm::InputTag>("muoTag")),
+
+  susyTrigger_     (iConfig.getParameter<std::string>("susyTrigger")),
 
   jetIdLoose_      (iConfig.getParameter<edm::ParameterSet>("jetIdLoose") ),
   muonId_          (iConfig.getParameter<edm::ParameterSet>("muonId") ),
@@ -252,6 +272,7 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   edm::Service<TFileService> fs;
   Heventcount_ = fs->make<TH1D>( "Heventcount"  , "events processed", 1,  0, 1 );
   tree_ = new TTree("tree","tree");
+  infotree_ = new TTree("infotree","infotree");
   //branch creation done in beginJob instead of here
 
 }
@@ -270,6 +291,44 @@ BasicTreeMaker::~BasicTreeMaker()
 //
 // member functions
 //
+
+//
+void
+BasicTreeMaker::fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+  
+  bool passTrig=false;
+
+  //The RECO way
+  edm::Handle<edm::TriggerResults> HLTResults;
+  iEvent.getByLabel(triggerLabel_, HLTResults);
+  
+  //based on code copied from Don
+  if (HLTResults.isValid()) {
+    
+    const edm::TriggerNames & triggerNames = iEvent.triggerNames(*HLTResults);
+    unsigned int trigger_size = HLTResults->size();
+    unsigned int trigger_position = triggerNames.triggerIndex(susyTrigger_);
+    
+    if (trigger_position < trigger_size){
+      passTrig = HLTResults->accept(trigger_position);
+    }
+    else {
+      std::cout << "WARNING -- Trigger position not found" << std::endl;
+    }
+
+    //verbose code for looking at the trigger menu
+    if (false) {
+      for (unsigned int i = 0; i<trigger_size; i++) {
+	std::cout<<triggerNames.triggerName(i)<<"\t"<<HLTResults->accept(i)<<std::endl;
+      }
+    }
+  }
+  else {
+    std::cout << "WARNING -- TriggerResults missing from this event." << std::endl;
+  }
+  
+  cutResults.push_back(passTrig); //store main trigger result in cut flow
+}
 
 //return the number of SUSY mothers
 int
@@ -325,8 +384,12 @@ BasicTreeMaker::findTopDecayMode( const reco::Candidate & cand) {
 		  int taudau = abs(mytau2->daughter(l)->pdgId());
 		  if (taudau == 11) found_tau_elec=true;
 		  else if (taudau == 13) found_tau_muon=true;
-		  else if (taudau ==213 || taudau==111 || taudau==113 ||taudau==211) found_tau_had=true;
-		  //not really sure if this will catch everything
+		  else if (taudau ==213 || taudau==111 || taudau==113 ||taudau==211||taudau==130
+			   || taudau==223 ||taudau==321 ||taudau ==323 ||taudau ==310||taudau==221) found_tau_had=true;
+		  else if (taudau == 14 || taudau==16 || taudau==12) { } //do nothing for neutrinos
+		  else {
+		    std::cout<<"WARNING -- Unknown tau daughter found = "<<taudau<<std::endl; //debug info
+		  }
 		}
 	      }
 	      else if (abs(mytau2->pdgId()) ==22) { //photon
@@ -352,7 +415,8 @@ BasicTreeMaker::findTopDecayMode( const reco::Candidate & cand) {
       std::cout<<"WARNING -- something weird happened in tau decay detection!"<<std::endl;
     if (found_tau_had) return 4;   
     if (found_tau_elec) return 5;   
-    if (found_tau_muon) return 6;   
+    if (found_tau_muon) return 6;
+    //    std::cout<<"Returning tau decay status 7!"<<std::endl; //debug info
     return 7; //not yet categorized (probably hadronic)
   }
   //shouldn't get here
@@ -361,6 +425,15 @@ BasicTreeMaker::findTopDecayMode( const reco::Candidate & cand) {
 
 void
 BasicTreeMaker::fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+
+  // === get the process qscale (pthat) ===
+
+  edm::Handle<GenEventInfoProduct> genEventInfo;
+  iEvent.getByLabel("generator", genEventInfo);
+
+  qScale=genEventInfo->qScale();
+
+  // === get some info about the decay structure in the event ===
 
   edm::Handle<reco::GenParticleCollection> genParticles;
   iEvent.getByLabel("genParticles",genParticles); //TODO make this configurable
@@ -483,6 +556,9 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     bool passLooseCuts = (jet.pt() > loosejetPtMin_) && (fabs(jet.eta())<loosejetEtaMax_) && passJetID;
     bool passTightCuts = (jet.pt() > jetPtMin_) && (fabs(jet.eta())<jetEtaMax_) && passJetID;
 
+    //let's enforce that the tight cuts are always a subset of the loose cuts
+    if (passTightCuts && !passLooseCuts) assert(0);
+
     //now fill ntuple!
     if (passLooseCuts) {
       MHTx -= jet.px();
@@ -490,15 +566,45 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       loosejetPt.push_back( jet.pt() );
       loosejetEta.push_back(jet.eta());
       loosejetPhi.push_back(jet.phi());
+      loosejetFlavor.push_back( jet.partonFlavour() );
+
+      if ( jet.genJet() != 0 && jet.genParticle() != 0) {
+		
+	loosejetGenParticlePDGId.push_back( jet.genParticle()->pdgId() );
+	loosejetInvisibleEnergy.push_back( jet.genJet()->invisibleEnergy());
+	//	std::cout<<jet.partonFlavour()<<"\t"<<jet.genParticle()->pdgId()<<"\t"<<jet.genJet()->invisibleEnergy()<<std::endl;
+	//std::cout<<"\t\t"<<jet.genJet()->getGenConstituents().size()<<std::endl;
+
+	//We could add a function here to drill down through the jet constituents
+	//and sum up the missing *transverse* energy belonging to e.g. neutrinos
+	//i'm not going to implement this now
+
+// 	for (unsigned int ijet=0; ijet<jet.genJet()->getGenConstituents().size(); ijet++) {
+// 	  std::cout<<"\t\t"<<jet.genJet()->getGenConstituents().at(ijet)->pdgId()
+// 		   <<"\t"<<jet.genJet()->getGenConstituents().at(ijet)->energy()
+// 		   <<"\t"<<jet.genJet()->getGenConstituents().at(ijet)->et()<<std::endl;
+// 	}
+      }
+      else {
+	//	std::cout<<jet.partonFlavour()<<"\tNo gen match!"<<std::endl;
+	loosejetGenParticlePDGId.push_back( -99 );
+	loosejetInvisibleEnergy.push_back( -99 );
+      }
+
+
       for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
 	loosejetBTagDisc[btagAlgorithmNames_[ib]].push_back( jet.bDiscriminator(btagAlgorithmNames_[ib]) );
       }
     }
     if (passTightCuts) {
+      //allow us to reference things only stored for loose jets
+      looseJetIndex.push_back( loosejetPt.size() - 1);
+
       HT += jet.pt();
       jetPt.push_back( jet.pt() );
       jetEta.push_back(jet.eta());
       jetPhi.push_back(jet.phi());
+      jetFlavor.push_back( jet.partonFlavour() );
 
       float bdisc = 0;
 
@@ -510,7 +616,7 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       }
       if (bdisc>=1.74) nbSSVM++; //hard-coded SSV medium cut
     }
-
+    
   }
 
   MHT = sqrt( MHTx*MHTx + MHTy*MHTy);
@@ -579,13 +685,18 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   jetInfoFilled_=false;
   leptonInfoFilled_=false;
   trackInfoFilled_=false;
+  looseJetIndex.clear();
   jetPt.clear();
   jetEta.clear();
   jetPhi.clear();
+  jetFlavor.clear();
 
   loosejetPt.clear();
   loosejetEta.clear();
   loosejetPhi.clear();
+  loosejetFlavor.clear();
+  loosejetGenParticlePDGId.clear();
+  loosejetInvisibleEnergy.clear();
 
   for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
     jetBTagDisc[btagAlgorithmNames_[ib]].clear();
@@ -607,6 +718,7 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   trackEta.clear();
   trackPhi.clear();
   SUSY_nb=0;
+  qScale=0;
   topDecayCode.clear();
   //start analyzin'
 
@@ -615,12 +727,15 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   for (vector<string>::const_iterator iname = cutNames.begin(); iname!=cutNames.end() ; ++iname) {
     cutResultsDon.push_back( ret[*iname]);
 
-    //we trust the trigger info...and unfortunately nothing else
-    if (*iname == string("Inclusive") || *iname == string("Trigger")) {
+    //i'm not taking the trigger info from here anymore either....this code is rather silly now
+    if (*iname == string("Inclusive") ) {
       cutResults.push_back( ret[*iname]);
       //cout<<"Found cut name = "<<*iname<<endl;
     }
   }
+
+  //trigger
+  fillTriggerInfo(iEvent,iSetup);
 
   //primary vertex
   //  cutResults.push_back( passPV(iEvent,iSetup)); //TODO
@@ -644,21 +759,7 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   cutResults.push_back(nbSSVM>=2);
   cutResults.push_back(nbSSVM>=3);
 
-  /* i realize that this cross check is not going to work unless i add a lot of intelligence
-  if ( cutResultsDon.size() != cutResults.size() ) {
-    nfail_++;
-    std::cout<<"cutResults size = "<<cutResults.size()
-	     <<" ; cutResultsDon size = "<<cutResultsDon.size()<<std::endl;
-  }
-  for (size_t icut=0; icut<cutResultsDon.size(); icut++) {
-    if (!cutResultsDon.at(icut)) break;
-    if (cutResultsDon.at(icut) != cutResults.at(icut)) {
-      nfail_++;
-      cout<<"Fail: "<<cutNames.at(icut)<<" "<<cutResultsDon.at(icut)
-	  <<cutResults.at(icut)<<endl;
-    }
-  }
-  */
+
 
   fillTrackInfo(iEvent,iSetup);
   fillMCInfo(iEvent,iSetup);
@@ -683,19 +784,37 @@ BasicTreeMaker::beginJob()
 {
   //nfail_=0;
 
-  tree_->Branch("SUSY_cutNames",&cutNames);
+  infotree_->Branch("SUSY_cutNames",&cutNames);
+
   tree_->Branch("SUSY_cutResults",&cutResultsDon);
   tree_->Branch("cutResults",&cutResults);
   //jet branches
+  tree_->Branch("looseJetIndex",&looseJetIndex);
   tree_->Branch("jetPt",&jetPt);
   tree_->Branch("jetEta",&jetEta);
   tree_->Branch("jetPhi",&jetPhi);
+  tree_->Branch("jetFlavor",&jetFlavor);
   //ROOT does not allow us to put a map of vectors into a tree
   //so we have to go with this approach
   for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
     std::string bname = "jetBTagDisc_";
     bname += btagAlgorithmNames_[ib];
     tree_->Branch(bname.c_str(),&jetBTagDisc[btagAlgorithmNames_[ib]]);
+  }
+
+  //loose jet branches
+  tree_->Branch("loosejetPt",&loosejetPt);
+  tree_->Branch("loosejetEta",&loosejetEta);
+  tree_->Branch("loosejetPhi",&loosejetPhi);
+  tree_->Branch("loosejetFlavor",&loosejetFlavor);
+  tree_->Branch("loosejetGenParticlePDGId",&loosejetGenParticlePDGId);
+  tree_->Branch("loosejetInvisibleEnergy",&loosejetInvisibleEnergy);
+  //ROOT does not allow us to put a map of vectors into a tree
+  //so we have to go with this approach
+  for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
+    std::string bname = "loosejetBTagDisc_";
+    bname += btagAlgorithmNames_[ib];
+    tree_->Branch(bname.c_str(),&loosejetBTagDisc[btagAlgorithmNames_[ib]]);
   }
 
   tree_->Branch("nbSSVM",&nbSSVM,"nbSSVM/I");
@@ -714,6 +833,7 @@ BasicTreeMaker::beginJob()
   tree_->Branch("trackPhi",&trackPhi);
 
   tree_->Branch("SUSY_nb",&SUSY_nb,"SUSY_nb/I");
+  tree_->Branch("qScale",&qScale,"qScale/F");
   tree_->Branch("topDecayCode",&topDecayCode);
 
   //copied from Don's code
@@ -744,6 +864,8 @@ BasicTreeMaker::endJob() {
   using namespace std;
 
   thetimer_->stop();
+
+  infotree_->Fill();
 
   susyCutFlow_->print(std::cout);
 

@@ -19,17 +19,22 @@ process.source = cms.Source("PoolSource",
 )
 
 process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
+#triggersOfInterest = cms.vstring("HLT_HT200",
                                         #btagAlgorithms = cms.vstring("trackCountingHighPurBJetTags","trackCountingHighEffBJetTags",
                                         #                             "simpleSecondaryVertexHighEffBJetTags",#"simpleSecondaryVertexNegativeBJetTags",
                                         #                             "simpleSecondaryVertexHighPurBJetTags"),
                                         btagAlgorithms = cms.vstring("simpleSecondaryVertexBJetTags"), #for older samples
                                         susyBJetsSelection = susybjetsSelection,
 #extract individual tags from don's python
+#first the names of various collections
+                                        triggerTag = susybjetsSelection.trigSrc,
                                         jetTag = susybjetsSelection.jetSrc,
                                         caloMetTag = susybjetsSelection.metSrc, #we assume don's py is asking for calomet
                                         tcMetTag = cms.InputTag('patMETsTC'),
                                         eleTag = susybjetsSelection.electronSrc,
                                         muoTag = susybjetsSelection.muonSrc,
+#configuration of the cut flow and what cuts to use when storing to the ntuple
+                                        susyTrigger = susybjetsSelection.susyTrig,
 
                                         pvSelector = susybjetsSelection.pvSelector,
                                         
@@ -53,7 +58,6 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                         metMin = susybjetsSelection.metMin
 )
 
-#process.TFileService = cms.Service("TFileService", fileName = cms.string('testoutput.root') )
 process.TFileService = cms.Service("TFileService", fileName = cms.string('BasicNtuple.root') )
 
 process.p = cms.Path(process.BasicTreeMaker)
