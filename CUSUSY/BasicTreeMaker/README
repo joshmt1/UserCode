@@ -1,6 +1,9 @@
 Release notes
 --
 
+V00-00-03 - 
+Add info about 'loose' jets. Add true jet flavor.
+
 V00-00-02 - 
 Adds more elegant handling of b-tagging (name of b taggers given in python).
 Also add tcMET and also some MC truch info about tops.
