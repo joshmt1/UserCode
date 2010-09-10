@@ -16,6 +16,8 @@ these are not needed (assuming this macro is compiled) because of the include ab
 gSystem->Load("basicLoop_C.so");
 
 */
+const TString version = "V00-00-02";
+
 void run_basicLoop()
 {
 
@@ -29,7 +31,8 @@ void run_basicLoop()
     //  libname="basicLoop_C.dll";
   }
 
-  dir += "BasicNtuples/V00-00-01/";
+  dir += "BasicNtuples/";
+  dir += version; dir+="/";
   TChain dummy("dummy");
   TString dirs = dir; dirs+="*";
   dummy.Add(dirs);
@@ -38,11 +41,14 @@ void run_basicLoop()
 
   for (int ifile=0; ifile<nfiles; ifile++) {
     TString samplefiles = dirlist->At(ifile)->GetTitle();
-    samplefiles+="/Spring10/*.root";
+    //for the first iteration I had this stupid subdirectory in there
+    if (version=="V00-00-01")  samplefiles+="/Spring10/*.root";
+    else                       samplefiles+="/*.root";
 
     cout<<"About to start on files: "<<samplefiles<<endl;
 
-    //    if (samplefiles.Contains("LM")) continue; //hack to skip some samples
+    if (samplefiles.Contains("MoreMSSM")) continue; //hack to skip some samples
+    //    if (samplefiles.Contains("QCD")) continue; //hack to skip some samples
 
     TChain ch("BasicTreeMaker/tree");
     ch.Add(samplefiles);
@@ -50,8 +56,8 @@ void run_basicLoop()
     //important! this is where cuts are defined
     looper.setCutScheme(basicLoop::kRA2MET); //no b tagging cut so that plots can apply it selectively
     //careful what is set here!
-    //    looper.setIgnoredCut(8); //MET
-    looper.setIgnoredCut(12); //DeltaPhi
+    //looper.setIgnoredCut(8); //MET
+    //    looper.setIgnoredCut(12); //DeltaPhi
 
     looper.Loop();  //go!
   }
