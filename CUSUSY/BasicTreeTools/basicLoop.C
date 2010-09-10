@@ -1,3 +1,8 @@
+/* to do:
+-- fix MET cut flows to use correct DeltaPhi
+-- perhaps implement fancier ABCD methods (either directly or via a tree)
+*/
+
 #define basicLoop_cxx
 #include "basicLoop.h"
 #include <TH1.h>
@@ -140,7 +145,6 @@ void basicLoop::Loop()
    TH1D HminDeltaPhiMETb_ge2b("HminDeltaPhiMETb_ge2b","minDeltaPhi(b,MET) (RA2 && >=2b)",nbins,0,pi);
    TH1D HminDeltaPhiMETj_ge2b("HminDeltaPhiMETj_ge2b","minDeltaPhi(j,MET) (RA2 && >=2b)",nbins,0,pi);
 
-
    double met_max=500,met_min=0;
    TH1D H_MHT("H_MHT","MHT (RA2)",nbins, met_min , met_max);
    TH1D H_MET("H_MET","MET (RA2)",nbins, met_min , met_max);
@@ -160,6 +164,30 @@ void basicLoop::Loop()
 
    TH2D HminDeltaPhiMETb_HminDeltaPhiMETj_ge2b("HminDeltaPhiMETb_HminDeltaPhiMETj_ge2b","minDPhi(b,MET) v minDPhi(j,MET) (>=2b)",
 					       nbins,0,pi,nbins,0,pi);
+   TH2D HdeltaPhiMPTMET_MET_ge2b("HdeltaPhiMPTMET_MET_ge2b","DeltaPhi(MET,MPT) v MET (RA2 && >=2b)",nbins,met_min,met_max,nbins,0,pi);
+
+   TH1D HtopDecayCategory_ge2b("HtopDecayCategory_ge2b","top decay category (RA2 && >=2b)",nTopCategories,-0.5,nTopCategories-0.5);
+
+   TH1D HdeltaPhi_bj_ge2b("HdeltaPhi_bj_ge2b","deltaPhi(b,j) (RA2 && >=2b)",nbins,0,pi);
+
+   float dr_min=0.5;
+   float dr_max=5.5;
+
+   TH1D HdeltaR_bj_ge2b("HdeltaR_bj_ge2b","deltaR(b,j) (RA2 && >=2b)",nbins,dr_min,dr_max);
+   TH2D HdeltaR_bj_vTopCat_ge2b("HdeltaR_bj_vTopCat_ge2b","deltaR(b,j) (RA2 && >=2b)",nTopCategories,-0.5,nTopCategories-0.5,nbins,dr_min,dr_max);
+
+   TH1D HminDeltaR_bj_ge2b("HminDeltaR_bj_ge2b","minimum deltaR(b,j) (RA2 && >=2b)",nbins,0,5);
+   TH2D HminDeltaR_bj_vTopCat_ge2b("HminDeltaR_bj_vTopCat_ge2b","minimum deltaR(b,j) (RA2 && >=2b)",nTopCategories,-0.5,nTopCategories-0.5,nbins,dr_min,dr_max);
+
+   TH2D HminDeltaR_bj_vMET_ge1b("HminDeltaR_bj_vMET_ge1b","minimum deltaR(b,j) v. MET (RA2 && >=1b)",nbins,met_min,met_max,nbins,dr_min,dr_max);
+   TH2D HminDeltaR_bj_vMET_ge2b("HminDeltaR_bj_vMET_ge2b","minimum deltaR(b,j) v. MET (RA2 && >=2b)",nbins,met_min,met_max,nbins,dr_min,dr_max);
+
+   int nbinsDR=20;
+   nbins=40;
+   met_min=40;
+   met_max=met_min+nbins*10;
+   TH2D HminDeltaR_bj_vMET_ABCD_ge1b("HminDeltaR_bj_vMET_ABCD_ge1b","minimum deltaR(b,j) v. MET (RA2 && >=1b)",nbins,met_min,met_max,nbinsDR,dr_min,dr_max);
+   TH2D HminDeltaR_bj_vMET_ABCD_ge2b("HminDeltaR_bj_vMET_ABCD_ge2b","minimum deltaR(b,j) v. MET (RA2 && >=2b)",nbins,met_min,met_max,nbinsDR,dr_min,dr_max);
 
    //as usual, perhaps we should manage our histos with HistHolder (but let's keep it simple instead)
    Hnjets.Sumw2();
@@ -186,11 +214,26 @@ void basicLoop::Loop()
    H_MHT_ge3b.Sumw2();
    H_MET_ge3b.Sumw2();
 
+   HdeltaPhiMPTMET_MET_ge2b.Sumw2();
+
    HdeltaPhib1b2_MET.Sumw2();
    HminDeltaPhiMETb_MET_ge2b.Sumw2();
    HminDeltaPhiMETj_MET_ge2b.Sumw2();
 
    HminDeltaPhiMETb_HminDeltaPhiMETj_ge2b.Sumw2();
+   HtopDecayCategory_ge2b.Sumw2();
+   HdeltaPhi_bj_ge2b.Sumw2();
+   HdeltaR_bj_ge2b.Sumw2();
+   HdeltaR_bj_vTopCat_ge2b.Sumw2();
+
+   HminDeltaR_bj_ge2b.Sumw2();
+   HminDeltaR_bj_vTopCat_ge2b.Sumw2();
+
+   HminDeltaR_bj_vMET_ge1b.Sumw2();
+   HminDeltaR_bj_vMET_ge2b.Sumw2();
+
+   HminDeltaR_bj_vMET_ABCD_ge1b.Sumw2();
+   HminDeltaR_bj_vMET_ABCD_ge2b.Sumw2();
 
    //event loop
    Long64_t nbytes = 0, nb = 0;
@@ -220,6 +263,26 @@ void basicLoop::Loop()
       HminDeltaPhiMETb_ge1b.Fill(minDeltaPhi_b_MET,weight);
       HminDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
 
+      int topcat = getTopDecayCategory();
+      double minDeltaR_bj=999;
+      //note that all tight jet vectors should have the same size
+      for (unsigned int ib = 0; ib< jetPhi->size(); ib++) {
+	if ( passBCut(ib)) { //refind the b jets
+	  double deltaPhi_bj=getMinDeltaPhi_bj(ib);
+	  if ( nbSSVM < 2) {	  HdeltaPhi_bj_ge2b.Fill(deltaPhi_bj,weight);}
+
+	  double mdr=getMinDeltaR_bj(ib);
+	  if ( nbSSVM < 2) {
+	    HdeltaR_bj_ge2b.Fill(mdr,weight);
+	    HdeltaR_bj_vTopCat_ge2b.Fill(topcat,mdr,weight);
+	  }
+	  if (mdr<minDeltaR_bj) minDeltaR_bj=mdr;
+	}
+      }
+
+      HminDeltaR_bj_vMET_ge1b.Fill(MET, minDeltaR_bj,weight);
+      HminDeltaR_bj_vMET_ABCD_ge1b.Fill(MET, minDeltaR_bj,weight);
+
       if ( nbSSVM < 2) continue; //cut on the number of b tags
 
       Hnjets_ge2b.Fill( jetPt->size(), weight );
@@ -238,6 +301,17 @@ void basicLoop::Loop()
       HminDeltaPhiMETj_MET_ge2b.Fill(MET,minDeltaPhi_j_MET,weight);
 
       HminDeltaPhiMETb_HminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,minDeltaPhi_b_MET,weight);
+
+      HdeltaPhiMPTMET_MET_ge2b.Fill(MET,dp_MPTMET,weight);
+
+      HtopDecayCategory_ge2b.Fill(topcat,weight);
+
+      //make a plot that has only one entry per event
+      HminDeltaR_bj_ge2b.Fill(minDeltaR_bj,weight);
+      HminDeltaR_bj_vTopCat_ge2b.Fill(topcat,minDeltaR_bj,weight);
+
+      HminDeltaR_bj_vMET_ge2b.Fill(MET, minDeltaR_bj,weight);
+      HminDeltaR_bj_vMET_ABCD_ge2b.Fill(MET, minDeltaR_bj,weight);
 
       if ( nbSSVM < 3) continue; //cut on the number of b tags
       Hnjets_ge3b.Fill( jetPt->size(), weight );

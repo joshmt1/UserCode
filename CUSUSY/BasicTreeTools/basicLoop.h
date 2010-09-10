@@ -33,6 +33,8 @@ public :
   std::vector<int> ignoredCut_; //allow more than 1 ignored cut!
 
   std::vector<TString> cutnames_;
+
+  enum TopDecayCategory {kTTbarUnknown=0,kAllLeptons=1,kAllHadronic=2,kOneElectron=3,kOneMuon=4,kOneTauE=5,kOneTauMu=6,kOneTauHadronic=7,kAllTau=8, nTopCategories=9};
   // ========================================== end
 
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
@@ -116,7 +118,12 @@ public :
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
    double getMinDeltaPhiMET(unsigned int maxjets) ;
-   double getDeltaPhib1b2() ;
+   double getDeltaPhib1b2();
+   int getTopDecayCategory();
+   double getMinDeltaPhi_bj(unsigned int bindex);
+   double getMinDeltaR_bj(unsigned int bindex);
+   bool passBCut( unsigned int bindex);
+   double getDeltaPhi(double phi1, double phi2);
    // ========================================== end
 
 
@@ -352,6 +359,16 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
     }
   }
 
+  // -- in case we are using MET instead of MHT, we need to alter the DeltaPhi cuts --
+  /*
+  if (cutIndex == 12 && 
+      ( theCutScheme_ == kRA2MET || theCutScheme_ == kRA2METwithB ||theCutScheme_ == kRA2tcMETwithB ) ) {
+    
+    //need to calculate DeltaPhi between jets and MET
+    //for RA2 and MHT, this is done with *loose* jets!
+    //i don't have loose jets in the ntuple until V00-00-03
+  }
+  */
   //in case this is not an exception, return the cut result stored in the ntuple
   return cutResults->at(cutIndex);
 }
@@ -387,9 +404,9 @@ double basicLoop::getMinDeltaPhiMET(unsigned int maxjets) {
 double basicLoop::getMinDeltaPhibMET() {
   //get the minimum angle between a b jet and MET
   double mindp=99;
-  for (unsigned int i=0; i<jetBTagDisc_simpleSecondaryVertexBJetTags->size(); i++) {
-    if (jetBTagDisc_simpleSecondaryVertexBJetTags->at(i) >= 1.74 ) { //FIXME hardcoded!
-      double dp =  acos(cos( jetPhi->at(i) - METphi));
+  for (unsigned int i=0; i<jetPhi->size(); i++) {
+    if (passBCut(i) ) {
+      double dp =  getDeltaPhi( jetPhi->at(i), METphi);
       if (dp<mindp) mindp=dp;
     }
   }
@@ -400,9 +417,9 @@ double basicLoop::getDeltaPhib1b2() {
   //get the angle between the lead 2 b jets
   std::vector<float> phis;
 
-  for (unsigned int i=0; i<jetBTagDisc_simpleSecondaryVertexBJetTags->size(); i++) {
-    if (jetBTagDisc_simpleSecondaryVertexBJetTags->at(i) >= 1.74 ) { //FIXME hardcoded!
-
+  for (unsigned int i=0; i<jetPhi->size(); i++) {
+    if (passBCut(i) ) {
+      
       phis.push_back( jetPhi->at(i));
 
       if (phis.size() == 2) break;
@@ -410,7 +427,7 @@ double basicLoop::getDeltaPhib1b2() {
     }
   }
 
-  return acos(cos( phis.at(0) - phis.at(1)));
+  return getDeltaPhi(phis.at(0),phis.at(1));
 }
 
 double basicLoop::getDeltaPhiMPTMET() {
@@ -427,7 +444,102 @@ double basicLoop::getDeltaPhiMPTMET() {
 
    double MPTphi = atan2(MPTy,MPTx);
 
-   return acos(cos(METphi - MPTphi));
+   return getDeltaPhi(METphi, MPTphi);
+}
+
+bool basicLoop::passBCut( unsigned int bindex) {
+
+  return  jetBTagDisc_simpleSecondaryVertexBJetTags->at(bindex) >= 1.74;
+}
+
+double basicLoop::getDeltaPhi(double phi1, double phi2) {
+
+  return acos(cos(phi1-phi2));
+}
+
+double basicLoop::getMinDeltaPhi_bj(unsigned int bindex) {
+
+  // for now we don't have a choice -- we can only use tight jets
+  //because i left the loose ones out of the ntuple
+
+  double bphi = jetPhi->at(bindex);
+
+  double minDeltaPhi=99;
+  //loop over the jets
+  for (unsigned int jindex=0; jindex<jetPhi->size(); jindex++) {
+    if ( !passBCut(jindex) ) { //only look at non-b jets
+      double dp = getDeltaPhi(bphi, jetPhi->at(jindex));
+      if (dp < minDeltaPhi) minDeltaPhi = dp;
+    }
+  }
+
+  return minDeltaPhi;
+}
+
+double basicLoop::getMinDeltaR_bj(unsigned int bindex) {
+
+  double beta=jetEta->at(bindex);
+  double bphi=jetPhi->at(bindex);
+
+  double minDeltaR = 999;
+
+  //loop over the jets
+  for (unsigned int jindex=0; jindex<jetPhi->size(); jindex++) {
+    if ( !passBCut(jindex) ) { //only look at non-b jets
+      double dr = pow(getDeltaPhi(bphi, jetPhi->at(jindex)),2) + pow(beta - jetEta->at(jindex),2);
+      dr = sqrt(dr);
+      if (dr < minDeltaR) minDeltaR = dr;
+    }
+  }
+
+  return minDeltaR;
+}
+
+int basicLoop::getTopDecayCategory() {
+  /*
+    this is a kludge on top of a kludge, I suppose.
+    reclassifying one set of arbitrary integers with another set of arbitrary integers.
+    ugly, but i don't have a better idea.
+    i will use enums to make things a little more clear
+  */
+
+  //here are the codes defined in the ntuple
+  enum TopDecayCodes {kUnknown=-1, kNoB = 0, kHadronic = 1, kElectron = 2, kMuon=3,kTauHadronic=4,kTauElectron=5,kTauMuon=6,kTauMisc=7 };
+  //  TopDecayCodes mycode=kUnknown;
+
+  //the set of codes returned here is defined in the class defn at the top of this file
+
+  int code=-1;
+
+  unsigned int ntop=  topDecayCode->size();
+
+  if (ntop==2) { //this is what we expect for ttbar
+    int code1 = topDecayCode->at(0);
+    int code2 = topDecayCode->at(1);
+
+    //i'm pretty sure that the 'misc' category is only filled by hadronic decays
+    if (code1==kTauMisc) code1=kHadronic;
+    if (code2==kTauMisc) code2=kHadronic;
+    
+    if ( (code1==kElectron ||code1==kMuon) && (code2==kElectron ||code2==kMuon) ) code=kAllLeptons;
+    else if ( code1==kHadronic && code2==kHadronic ) code=kAllHadronic;
+    else if ( (code1==kElectron && code2==kHadronic) || (code2==kElectron && code1==kHadronic) ) code=kOneElectron;
+    else if ( (code1==kMuon && code2==kHadronic) || (code2==kMuon && code1==kHadronic) ) code=kOneMuon;
+    else if ( (code1==kTauElectron && code2==kHadronic) || (code2==kTauElectron && code1==kHadronic) ) code=kOneTauE;
+    else if ( (code1==kTauMuon && code2==kHadronic) || (code2==kTauMuon && code1==kHadronic) ) code=kOneTauMu;
+    else if ( (code1==kTauHadronic && code2==kHadronic) || (code2==kTauHadronic && code1==kHadronic) ) code=kOneTauHadronic;
+    //this logic depends on all of the highest categories being tau
+    else if ( code1>=kTauHadronic && code2>=kTauHadronic ) code=kAllTau;
+    else {code=kTTbarUnknown;}
+  }
+  //  else if (ntop==1) { //maybe we expect this for single top?
+  //
+  //  }
+  //  else {
+  //    
+  //  }
+
+  return code;
 }
 
 TString basicLoop::getSampleName(const TString inname) {
