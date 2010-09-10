@@ -3,17 +3,22 @@
   //======
   // to do -- split SUSY into 'SUSY signal' and 'SUSY background' ?
   //======
+  const TString dir="plots_V00-00-02/";
 
   //const TString hname="Hnjets";
-  const TString hname="Hnjets_ge3b";
+  //  const TString hname="Hnjets_ge3b";
+  //  const TString hname="HdeltaPhiMPTMET_ge2b";
+  const TString hname="HminDeltaR_bj_ge2b";
   //const TString hname="Hnjets_nocuts";
-  const TString xtitle="Number of jets";
+  //  const TString xtitle="Number of jets";
+  //  const TString xtitle="DeltaPhi(MPT,MET)";
+  const TString xtitle="event minimum DeltaR(b,non-b)";
 
   //  const TString hname="HdeltaPhiMPTMET";
   //  const TString hname="HdeltaPhiMPTMET_ge2b";
   //  const TString xtitle="#Delta #Phi (MET,MPT)";
   
-  const TString signalfile = "plots.mMSSM.root";
+  const TString signalfile = "plots.LM9.root";
 
   //
 
@@ -22,12 +27,12 @@
   FileHolder fh;
 
   //samples!
-  TFile fqcd("plots.QCD.root"); //combined with hadd
-  TFile fttbar("plots.TTbarJets.root");
-  TFile fwjets("plots.WJets.root");
-  TFile fzjets("plots.ZJets.root");
-  TFile fzinvisible("plots.Zinvisible.root");
-  TFile fsusy(signalfile);
+  TFile fqcd(dir+"plots.QCD.root"); //combined with hadd
+  TFile fttbar(dir+"plots.TTbarJets.root");
+  TFile fwjets(dir+"plots.WJets.root");
+  TFile fzjets(dir+"plots.ZJets.root");
+  TFile fzinvisible(dir+"plots.Zinvisible.root");
+  TFile fsusy(dir+signalfile);
 
   fh.add(&fqcd);
   fh.add(&fttbar);
