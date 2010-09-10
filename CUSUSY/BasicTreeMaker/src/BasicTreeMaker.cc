@@ -19,7 +19,7 @@ Developed and tested with CMSSW_3_6_2
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.2 2010/08/24 16:40:03 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.3 2010/09/07 11:30:30 joshmt Exp $
 //
 //
 
@@ -55,6 +55,7 @@ Developed and tested with CMSSW_3_6_2
 
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
+#include "DataFormats/HLTReco/interface/TriggerEvent.h"
 
 #include "CUSUSY/Selection/interface/SUSYEventSelector.h"
 
@@ -118,13 +119,14 @@ private:
   TTree* infotree_;
 
   std::vector<std::string> btagAlgorithmNames_;
+  std::vector<std::string> triggersOfInterest_;
 
   SUSYEventSelector* susyCutFlow_;
 
   PVSelector                           pvSelector_;
 
   //configuration strings (largely copied from don's and freya's code)
-  edm::InputTag triggerLabel_;
+  //  edm::InputTag triggerLabel_;
   edm::InputTag jetLabel_;
   edm::InputTag caloMetLabel_;
   edm::InputTag tcMetLabel_;
@@ -164,6 +166,9 @@ private:
   std::vector<std::string> cutNames;
   std::vector<bool> cutResultsDon;
   std::vector<bool> cutResults;
+
+  std::vector<bool> passTrigger;
+
   //tight jet info
   std::vector<int> looseJetIndex; //map from tight jet list to loose jet list
   std::vector<float> jetPt;
@@ -229,12 +234,13 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   infotree_(0),
 
   btagAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("btagAlgorithms")),
+  triggersOfInterest_(iConfig.getParameter<std::vector<std::string> >("triggersOfInterest")),
 
   susyCutFlow_( new SUSYEventSelector( iConfig.getParameter<edm::ParameterSet>("susyBJetsSelection" ))),
 
   pvSelector_      (iConfig.getParameter<edm::ParameterSet>("pvSelector") ),
 
-  triggerLabel_    (iConfig.getParameter<edm::InputTag>("triggerTag")),
+  //  triggerLabel_    (iConfig.getParameter<edm::InputTag>("triggerTag")),
   jetLabel_        (iConfig.getParameter<edm::InputTag>("jetTag")),
   
   caloMetLabel_    (iConfig.getParameter<edm::InputTag>("caloMetTag")),
@@ -243,7 +249,7 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   eleLabel_        (iConfig.getParameter<edm::InputTag>("eleTag")),
   muoLabel_        (iConfig.getParameter<edm::InputTag>("muoTag")),
 
-  susyTrigger_     (iConfig.getParameter<std::string>("susyTrigger")),
+  //  susyTrigger_     (iConfig.getParameter<std::string>("susyTrigger")),
 
   jetIdLoose_      (iConfig.getParameter<edm::ParameterSet>("jetIdLoose") ),
   muonId_          (iConfig.getParameter<edm::ParameterSet>("muonId") ),
@@ -296,24 +302,51 @@ BasicTreeMaker::~BasicTreeMaker()
 void
 BasicTreeMaker::fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   
-  bool passTrig=false;
+  using namespace edm;
 
-  //The RECO way
-  edm::Handle<edm::TriggerResults> HLTResults;
-  iEvent.getByLabel(triggerLabel_, HLTResults);
+  bool passTrig=false;
+  
+  //some code from Josh Bendavid to automagically get the trigger tag (in MC)
+  //https://hypernews.cern.ch/HyperNews/CMS/get/physTools/1791/1/1/1/1/1/2.html
+
+  //i feel like i should not have to do this for every event (to save time)
+  //but I can't put it in beginJob (I think) because there is no edm::Event at that point
+  //-- could implement a global so that it only runs once
+  Handle<trigger::TriggerEvent> triggerEventHLT;
+  iEvent.getByLabel("hltTriggerSummaryAOD", triggerEventHLT);
+  
+  InputTag trigResultsTag("TriggerResults","",triggerEventHLT.provenance()->processName()); 
+  //std::cout<<"Will use trigger tag = "<<triggerEventHLT.provenance()->processName()<<std::endl;
+
+  // get HLT trigger information
+  Handle<TriggerResults> HLTResults;
+  iEvent.getByLabel(trigResultsTag, HLTResults);
   
   //based on code copied from Don
   if (HLTResults.isValid()) {
     
     const edm::TriggerNames & triggerNames = iEvent.triggerNames(*HLTResults);
     unsigned int trigger_size = HLTResults->size();
-    unsigned int trigger_position = triggerNames.triggerIndex(susyTrigger_);
-    
-    if (trigger_position < trigger_size){
-      passTrig = HLTResults->accept(trigger_position);
-    }
-    else {
-      std::cout << "WARNING -- Trigger position not found" << std::endl;
+
+    bool foundAGoodTrigger=false;
+    //loop over the list of triggers
+    for (unsigned int itrig = 0; itrig< triggersOfInterest_.size(); itrig++) {
+      
+      unsigned int trigger_position = triggerNames.triggerIndex(triggersOfInterest_.at(itrig));
+      
+      if (trigger_position < trigger_size) {
+	bool passed=HLTResults->accept(trigger_position);
+	passTrigger.push_back( passed );
+	if (!foundAGoodTrigger) { //this must be the first valid trigger
+	  //	  std::cout<<"Will store in cutflow the results for: "<<triggersOfInterest_.at(itrig)<<std::endl; //debug
+	  foundAGoodTrigger=true;
+	  passTrig = passed;
+	}
+      }
+      else {	//	std::cout << "WARNING -- Trigger position not found" << std::endl;
+	passTrigger.push_back(false);
+      }
+      
     }
 
     //verbose code for looking at the trigger menu
@@ -519,6 +552,8 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
 void
 BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
+  //  std::cout<<" == fillJetInfo =="<<std::endl; //debug
+
   //we're gonna do MET in here too
 
   if (jetInfoFilled_) return;
@@ -534,7 +569,7 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
   }
 
   std::vector<int> sortedJetIndices = IndexSorter< std::vector<float> >(jetPtVector,true)();
-
+  
   //variables for use in the jet loop
   pat::strbitset ret1 = jetIdLoose_.getBitTemplate();
   double MHTx = 0, MHTy = 0;
@@ -555,10 +590,10 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     // === make cuts ===
     bool passLooseCuts = (jet.pt() > loosejetPtMin_) && (fabs(jet.eta())<loosejetEtaMax_) && passJetID;
     bool passTightCuts = (jet.pt() > jetPtMin_) && (fabs(jet.eta())<jetEtaMax_) && passJetID;
-
+    
     //let's enforce that the tight cuts are always a subset of the loose cuts
     if (passTightCuts && !passLooseCuts) assert(0);
-
+    
     //now fill ntuple!
     if (passLooseCuts) {
       MHTx -= jet.px();
@@ -569,29 +604,29 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       loosejetFlavor.push_back( jet.partonFlavour() );
 
       if ( jet.genJet() != 0 && jet.genParticle() != 0) {
-		
+	
 	loosejetGenParticlePDGId.push_back( jet.genParticle()->pdgId() );
 	loosejetInvisibleEnergy.push_back( jet.genJet()->invisibleEnergy());
 	//	std::cout<<jet.partonFlavour()<<"\t"<<jet.genParticle()->pdgId()<<"\t"<<jet.genJet()->invisibleEnergy()<<std::endl;
 	//std::cout<<"\t\t"<<jet.genJet()->getGenConstituents().size()<<std::endl;
-
+	
 	//We could add a function here to drill down through the jet constituents
 	//and sum up the missing *transverse* energy belonging to e.g. neutrinos
 	//i'm not going to implement this now
-
-// 	for (unsigned int ijet=0; ijet<jet.genJet()->getGenConstituents().size(); ijet++) {
-// 	  std::cout<<"\t\t"<<jet.genJet()->getGenConstituents().at(ijet)->pdgId()
-// 		   <<"\t"<<jet.genJet()->getGenConstituents().at(ijet)->energy()
-// 		   <<"\t"<<jet.genJet()->getGenConstituents().at(ijet)->et()<<std::endl;
-// 	}
+	
+	// 	for (unsigned int ijet=0; ijet<jet.genJet()->getGenConstituents().size(); ijet++) {
+	// 	  std::cout<<"\t\t"<<jet.genJet()->getGenConstituents().at(ijet)->pdgId()
+	// 		   <<"\t"<<jet.genJet()->getGenConstituents().at(ijet)->energy()
+	// 		   <<"\t"<<jet.genJet()->getGenConstituents().at(ijet)->et()<<std::endl;
+	// 	}
       }
       else {
 	//	std::cout<<jet.partonFlavour()<<"\tNo gen match!"<<std::endl;
 	loosejetGenParticlePDGId.push_back( -99 );
 	loosejetInvisibleEnergy.push_back( -99 );
       }
-
-
+      
+      
       for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
 	loosejetBTagDisc[btagAlgorithmNames_[ib]].push_back( jet.bDiscriminator(btagAlgorithmNames_[ib]) );
       }
@@ -599,25 +634,31 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     if (passTightCuts) {
       //allow us to reference things only stored for loose jets
       looseJetIndex.push_back( loosejetPt.size() - 1);
-
+      
       HT += jet.pt();
       jetPt.push_back( jet.pt() );
       jetEta.push_back(jet.eta());
       jetPhi.push_back(jet.phi());
       jetFlavor.push_back( jet.partonFlavour() );
-
+      
       float bdisc = 0;
-
+      bool foundSSVM=false;
       for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
-	jetBTagDisc[btagAlgorithmNames_[ib]].push_back( jet.bDiscriminator(btagAlgorithmNames_[ib]) );
+	bdisc = jet.bDiscriminator(btagAlgorithmNames_[ib]);
+	jetBTagDisc[btagAlgorithmNames_[ib]].push_back( bdisc );
 	//look especially for SSV
-	if (btagAlgorithmNames_[ib] == "simpleSecondaryVertexBJetTags" || btagAlgorithmNames_[ib] == "simpleSecondaryVertexHighEffBJetTags")
-	  bdisc = jet.bDiscriminator(btagAlgorithmNames_[ib]);
+	//when the tagger doesn't exist, it seems to return -1000. So this 'if' should fire only once per jet
+	//but to be safe we'll use this foundSSVM variable
+	if ( ((btagAlgorithmNames_[ib] == "simpleSecondaryVertexBJetTags") && (bdisc > -999))
+	     || (btagAlgorithmNames_[ib] == "simpleSecondaryVertexHighEffBJetTags") && (bdisc >-999)) {
+	  //	  std::cout<<"Found SSV algorithm! jet = "<<ii<<std::endl; //debug
+	  if (bdisc>=1.74) foundSSVM=true;  //hard-coded SSV medium cut
+	}
       }
-      if (bdisc>=1.74) nbSSVM++; //hard-coded SSV medium cut
-    }
-    
-  }
+      if (foundSSVM) nbSSVM++; //hard-coded SSV medium cut
+      
+    } //end of tight cuts block
+  } //end of loop over jets
 
   MHT = sqrt( MHTx*MHTx + MHTy*MHTy);
   MHTphi = atan2(MHTy,MHTx);
@@ -682,6 +723,7 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   ret.set(false);
   cutResults.clear();
   cutResultsDon.clear();
+  passTrigger.clear();
   jetInfoFilled_=false;
   leptonInfoFilled_=false;
   trackInfoFilled_=false;
@@ -784,10 +826,17 @@ BasicTreeMaker::beginJob()
 {
   //nfail_=0;
 
-  infotree_->Branch("SUSY_cutNames",&cutNames);
+  //== create tree branches ==
 
+  //tree that is filled only once per job
+  infotree_->Branch("SUSY_cutNames",&cutNames);
+  infotree_->Branch("btagAlgorithms",&btagAlgorithmNames_);
+  infotree_->Branch("triggerList",&triggersOfInterest_);
+
+  //tree that is filled for each event
   tree_->Branch("SUSY_cutResults",&cutResultsDon);
   tree_->Branch("cutResults",&cutResults);
+  tree_->Branch("passTrigger",&passTrigger); //stores results for triggers listed in triggerList
   //jet branches
   tree_->Branch("looseJetIndex",&looseJetIndex);
   tree_->Branch("jetPt",&jetPt);
