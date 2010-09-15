@@ -19,7 +19,7 @@ Developed and tested with CMSSW_3_6_2
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.3 2010/09/07 11:30:30 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.4 2010/09/10 16:16:28 joshmt Exp $
 //
 //
 
@@ -573,7 +573,6 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
   //variables for use in the jet loop
   pat::strbitset ret1 = jetIdLoose_.getBitTemplate();
   double MHTx = 0, MHTy = 0;
-  std::vector<float> loosejetPhi;
   //now loop over sorted jets
   for (size_t ii = 0 ; ii< sortedJetIndices.size(); ++ii) {
     //get the index of the ii'th jet
@@ -650,7 +649,7 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
 	//when the tagger doesn't exist, it seems to return -1000. So this 'if' should fire only once per jet
 	//but to be safe we'll use this foundSSVM variable
 	if ( ((btagAlgorithmNames_[ib] == "simpleSecondaryVertexBJetTags") && (bdisc > -999))
-	     || (btagAlgorithmNames_[ib] == "simpleSecondaryVertexHighEffBJetTags") && (bdisc >-999)) {
+	     || ((btagAlgorithmNames_[ib] == "simpleSecondaryVertexHighEffBJetTags") && (bdisc >-999))) {
 	  //	  std::cout<<"Found SSV algorithm! jet = "<<ii<<std::endl; //debug
 	  if (bdisc>=1.74) foundSSVM=true;  //hard-coded SSV medium cut
 	}
