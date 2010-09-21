@@ -4,6 +4,9 @@
 <use name=FWCore/Utilities>
 <use name=FWCore/ServiceRegistry>
 <use name=CommonTools/UtilAlgos>
+<use name=RecoBTag/Records>
+<use name=RecoBTag/PerformanceDB>
+<use name=CondFormats/PhysicsToolsObjects>
 <use   name=PhysicsTools/Utilities>
 <use   name=PhysicsTools/SelectorUtils>
 <use   name=DataFormats/Math>

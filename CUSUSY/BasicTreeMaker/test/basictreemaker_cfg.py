@@ -18,6 +18,12 @@ process.source = cms.Source("PoolSource",
     )
 )
 
+#b-tagging efficiency parameters:
+process.load ("RecoBTag.PerformanceDB.PoolBTagPerformanceDBOctEx")
+process.load ("RecoBTag.PerformanceDB.BTagPerformanceDBOctEx")
+process.load ("RecoBTag.PerformanceDB.PoolBTagPerformanceDBMC36X")
+process.load ("RecoBTag.PerformanceDB.BTagPerformanceDBMC36X")
+
 process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                         #b taggers to store in ntuple
                                         btagAlgorithms = cms.vstring("trackCountingHighPurBJetTags","trackCountingHighEffBJetTags",

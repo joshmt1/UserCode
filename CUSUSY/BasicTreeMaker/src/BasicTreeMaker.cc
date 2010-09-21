@@ -19,7 +19,7 @@ Developed and tested with CMSSW_3_6_2
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.4 2010/09/10 16:16:28 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.5 2010/09/15 12:09:37 joshmt Exp $
 //
 //
 
@@ -43,6 +43,8 @@ Developed and tested with CMSSW_3_6_2
 //added by jmt
 #include "FWCore/Utilities/interface/CPUTimer.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
+#include "FWCore/Framework/interface/ESHandle.h"
+
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 //#include "PhysicsTools/FWLite/interface/TFileService.h"
 #include "PhysicsTools/SelectorUtils/interface/JetIDSelectionFunctor.h"
@@ -52,6 +54,10 @@ Developed and tested with CMSSW_3_6_2
 #include "PhysicsTools/SelectorUtils/interface/PVSelector.h"
 
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
+
+#include "RecoBTag/PerformanceDB/interface/BtagPerformance.h"
+#include "RecoBTag/Records/interface/BTagPerformanceRecord.h"
+#include "CondFormats/PhysicsToolsObjects/interface/BinningPointByMap.h"
 
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
@@ -86,6 +92,7 @@ private:
   void fillTrackInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
+  void fillBTagDBInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
 
   int  findSUSYMaternity( const reco::Candidate & cand );
   int  findTopDecayMode( const reco::Candidate & cand );
@@ -148,7 +155,7 @@ private:
   double jetEtaMax_;  
   double loosejetPtMin_ ;
   double loosejetEtaMax_;  
- 
+
   double muPtMin_  ;
   double muEtaMax_ ;
   double eleEtMin_ ;
@@ -183,12 +190,16 @@ private:
 
   //loose jet info
   std::vector<float> loosejetPt;
+  std::vector<float> loosejetEt;
   std::vector<float> loosejetEta;
   std::vector<float> loosejetPhi;
   std::vector<int> loosejetFlavor;
   std::vector<int> loosejetGenParticlePDGId;
   std::vector<float> loosejetInvisibleEnergy;
   std::map < std::string, std::vector<float> > loosejetBTagDisc;
+  std::vector<float> loosejetPtUncorr; //uncorrected jet info
+  std::vector<float> loosejetEtaUncorr;
+  std::vector<float> loosejetPhiUncorr;
 
   int nbSSVM; //FIXME this is still in need of a more sophisticated approach (for now this works...)
 
@@ -563,6 +574,7 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
   const edm::View<pat::Jet> & jets = *jetHandle;
 
   //freya sort using et. don sorts with pt. stick with pt
+  //further note on this -- RA2 selection sorts by pT
   std::vector<float> jetPtVector;
   for(edm::View<pat::Jet>::const_iterator ijet = jets.begin(); ijet != jets.end(); ++ijet) {
     jetPtVector.push_back( ijet->pt() );
@@ -598,9 +610,15 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       MHTx -= jet.px();
       MHTy -= jet.py();
       loosejetPt.push_back( jet.pt() );
+      loosejetEt.push_back( jet.et() );
       loosejetEta.push_back(jet.eta());
       loosejetPhi.push_back(jet.phi());
       loosejetFlavor.push_back( jet.partonFlavour() );
+
+      pat::Jet uncorrectedJet = jet.correctedJet("raw"); //get the uncorrected jet (i hope)
+      loosejetPtUncorr.push_back(uncorrectedJet.pt());
+      loosejetEtaUncorr.push_back(uncorrectedJet.eta());
+      loosejetPhiUncorr.push_back(uncorrectedJet.phi());
 
       if ( jet.genJet() != 0 && jet.genParticle() != 0) {
 	
@@ -697,15 +715,78 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
   jetInfoFilled_=true;
 }
 
-// bool
-// BasicTreeMaker::passPV(const edm::Event& iEvent, const edm::EventSetup& iSetup)
-// {
-//   //Primary vertex
-//   edm::Handle<std::vector<reco::Vertex> > pvHandle;
-//   iEvent.getByLabel(pvLabel_,pvHandle);
+//this is more or less working.
+//next step is to make it fancier.
+//first need to decide if we actually care about this info!
+void
+BasicTreeMaker::fillBTagDBInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+{
 
-//   //TODO
-// }
+  if (!jetInfoFilled_) assert(0);
+
+  //stealing generously from Freya et al.
+  //for now just hard-code stuff
+
+  std::vector<std::string> btaggingparamnames_;
+  btaggingparamnames_.push_back("MCCaloSSVHEMb");
+  btaggingparamnames_.push_back("MCCaloSSVHEMb");//yes, the duplication is intentional
+
+  std::vector<std::string> btaggingparaminputtypes_;
+  btaggingparaminputtypes_.push_back("BTAGBEFF");
+  btaggingparaminputtypes_.push_back("BTAGBERR");
+
+  std::map<std::string,float> bidParamsDiscCut_;
+
+  //this is stuff that we would move out of this function when everything is finalized
+  std::map<std::string,PerformanceResult::ResultType> btaggingparamtype_;
+  btaggingparamtype_["BTAGBEFF"]=PerformanceResult::BTAGBEFF;
+  btaggingparamtype_["BTAGBERR"]=PerformanceResult::BTAGBERR;
+  btaggingparamtype_["BTAGCEFF"]=PerformanceResult::BTAGCEFF;
+  btaggingparamtype_["BTAGCERR"]=PerformanceResult::BTAGCERR;
+  btaggingparamtype_["BTAGLEFF"]=PerformanceResult::BTAGLEFF;
+  btaggingparamtype_["BTAGLERR"]=PerformanceResult::BTAGLERR;
+  btaggingparamtype_["BTAGNBEFF"]=PerformanceResult::BTAGNBEFF;
+  btaggingparamtype_["BTAGNBERR"]=PerformanceResult::BTAGNBERR;
+  btaggingparamtype_["BTAGBEFFCORR"]=PerformanceResult::BTAGBEFFCORR;
+  btaggingparamtype_["BTAGBERRCORR"]=PerformanceResult::BTAGBERRCORR;
+  btaggingparamtype_["BTAGCEFFCORR"]=PerformanceResult::BTAGCEFFCORR;
+  btaggingparamtype_["BTAGCERRCORR"]=PerformanceResult::BTAGCERRCORR;
+  btaggingparamtype_["BTAGLEFFCORR"]=PerformanceResult::BTAGLEFFCORR;
+  btaggingparamtype_["BTAGLERRCORR"]=PerformanceResult::BTAGLERRCORR;
+  btaggingparamtype_["BTAGNBEFFCORR"]=PerformanceResult::BTAGNBEFFCORR;
+  btaggingparamtype_["BTAGNBERRCORR"]=PerformanceResult::BTAGNBERRCORR;
+  btaggingparamtype_["BTAGNBERRCORR"]=PerformanceResult::BTAGNBERRCORR;
+  btaggingparamtype_["MUEFF"]=PerformanceResult::MUEFF;
+  btaggingparamtype_["MUERR"]=PerformanceResult::MUERR;
+  btaggingparamtype_["MUFAKE"]=PerformanceResult::MUFAKE; 
+  btaggingparamtype_["MUEFAKE"]=PerformanceResult::MUEFAKE;
+
+
+  edm::ESHandle<BtagPerformance> perfH;
+  BinningPointByMap p;
+  for (size_t ii=0; ii<btaggingparamnames_.size(); ii++){
+     std::string beffstr = btaggingparamnames_[ii];
+     //std::cout <<" Studying Beff with label "<<beffstr <<std::endl; //debug
+     iSetup.get<BTagPerformanceRecord>().get(beffstr,perfH);  
+     const BtagPerformance & pbeff = *(perfH.product());
+     bidParamsDiscCut_[btaggingparamnames_[ii]]=pbeff.workingPoint().cut();
+     //std::cout << " Beff cut value is : " << bidParamsDiscCut_[btaggingparamnames_[ii]] << std::endl; //debug
+     // now loop over the jets:
+     std::string lookupname=btaggingparamnames_[ii]+"-"+btaggingparaminputtypes_[ii];
+     for (size_t ijet=0; ijet< loosejetEt.size(); ijet++) {
+       p.reset();
+       p.insert(BinningVariables::JetAbsEta,std::abs( loosejetEta[ijet] ));
+       p.insert(BinningVariables::JetEt,loosejetEt[ijet]);
+       float eff=0;
+       //	 if(pbeff.isResultOk(btaggingparamtype_[jj].second,p))
+       eff=pbeff.getResult(btaggingparamtype_[btaggingparaminputtypes_[ii]],p);
+       std::cout << "value " << lookupname << " (PerformanceResult:" << btaggingparamtype_[btaggingparaminputtypes_[ii]] <<  ") for jet " << ijet << "(et,eta):("<<loosejetEt[ijet]<< "," << loosejetEta[ijet]<< ")  is " << eff << std::endl;
+       //       jetSortedBIDParams_[lookupname + ID][ijet]=eff;
+
+     }
+  }
+
+}
 
 // ------------ method called to for each event  ------------
 void
@@ -733,11 +814,16 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   jetFlavor.clear();
 
   loosejetPt.clear();
+  loosejetEt.clear();
   loosejetEta.clear();
   loosejetPhi.clear();
   loosejetFlavor.clear();
   loosejetGenParticlePDGId.clear();
   loosejetInvisibleEnergy.clear();
+
+  loosejetPtUncorr.clear();
+  loosejetEtaUncorr.clear();
+  loosejetPhiUncorr.clear();
 
   for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
     jetBTagDisc[btagAlgorithmNames_[ib]].clear();
@@ -779,11 +865,14 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   fillTriggerInfo(iEvent,iSetup);
 
   //primary vertex
-  //  cutResults.push_back( passPV(iEvent,iSetup)); //TODO
   cutResults.push_back( pvSelector_( iEvent ) );
 
   //fills jets cuts, as well as MET, and the values of DeltaPhi
   fillJetInfo( iEvent,iSetup);
+
+  /* for now we don't bother to do this */
+  //fill b efficiency info (must be done after jets are filled)
+  //fillBTagDBInfo(iEvent,iSetup);
 
   //fill muon, electron
   fillLeptonInfo(iEvent,iSetup);
@@ -852,9 +941,15 @@ BasicTreeMaker::beginJob()
 
   //loose jet branches
   tree_->Branch("loosejetPt",&loosejetPt);
+  tree_->Branch("loosejetEt",&loosejetEt);
   tree_->Branch("loosejetEta",&loosejetEta);
   tree_->Branch("loosejetPhi",&loosejetPhi);
   tree_->Branch("loosejetFlavor",&loosejetFlavor);
+
+  tree_->Branch("loosejetPtUncorr",&loosejetPtUncorr);
+  tree_->Branch("loosejetEtaUncorr",&loosejetEtaUncorr);
+  tree_->Branch("loosejetPhiUncorr",&loosejetPhiUncorr);
+
   tree_->Branch("loosejetGenParticlePDGId",&loosejetGenParticlePDGId);
   tree_->Branch("loosejetInvisibleEnergy",&loosejetInvisibleEnergy);
   //ROOT does not allow us to put a map of vectors into a tree
