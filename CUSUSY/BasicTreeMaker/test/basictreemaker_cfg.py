@@ -18,33 +18,23 @@ process.source = cms.Source("PoolSource",
     )
 )
 
-#b-tagging efficiency parameters:
-process.load ("RecoBTag.PerformanceDB.PoolBTagPerformanceDBOctEx")
-process.load ("RecoBTag.PerformanceDB.BTagPerformanceDBOctEx")
-process.load ("RecoBTag.PerformanceDB.PoolBTagPerformanceDBMC36X")
-process.load ("RecoBTag.PerformanceDB.BTagPerformanceDBMC36X")
-
 process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
-                                        #b taggers to store in ntuple
-                                        btagAlgorithms = cms.vstring("trackCountingHighPurBJetTags","trackCountingHighEffBJetTags",
-                                                                     "simpleSecondaryVertexHighEffBJetTags",#"simpleSecondaryVertexNegativeBJetTags",
-                                                                     "simpleSecondaryVertexHighPurBJetTags",
-                                                                     "simpleSecondaryVertexBJetTags"), #for older samples
+#triggersOfInterest = cms.vstring("HLT_HT200",
+                                        #btagAlgorithms = cms.vstring("trackCountingHighPurBJetTags","trackCountingHighEffBJetTags",
+                                        #                             "simpleSecondaryVertexHighEffBJetTags",#"simpleSecondaryVertexNegativeBJetTags",
+                                        #                             "simpleSecondaryVertexHighPurBJetTags"),
+                                        btagAlgorithms = cms.vstring("simpleSecondaryVertexBJetTags"), #for older samples
                                         susyBJetsSelection = susybjetsSelection,
 #extract individual tags from don's python
 #first the names of various collections
+                                        triggerTag = susybjetsSelection.trigSrc,
                                         jetTag = susybjetsSelection.jetSrc,
                                         caloMetTag = susybjetsSelection.metSrc, #we assume don's py is asking for calomet
                                         tcMetTag = cms.InputTag('patMETsTC'),
                                         eleTag = susybjetsSelection.electronSrc,
                                         muoTag = susybjetsSelection.muonSrc,
 #configuration of the cut flow and what cuts to use when storing to the ntuple
-#the 'SUSY trigger' used in the cut flow is the first one listed here
-                                        triggersOfInterest = cms.vstring("HLT_HT100U","HLT_HT200",
-                                                                         "HLT_MET45","HLT_MET60","HLT_MET100","HLT_Jet15U",
-                                                                         "HLT_BTagIP_Jet50U"),
-            
-#                                        susyTrigger = susybjetsSelection.susyTrig,
+                                        susyTrigger = susybjetsSelection.susyTrig,
 
                                         pvSelector = susybjetsSelection.pvSelector,
                                         

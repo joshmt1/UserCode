@@ -19,7 +19,7 @@ Developed and tested with CMSSW_3_6_2
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.5 2010/09/15 12:09:37 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.2 2010/08/24 16:40:03 joshmt Exp $
 //
 //
 
@@ -43,8 +43,6 @@ Developed and tested with CMSSW_3_6_2
 //added by jmt
 #include "FWCore/Utilities/interface/CPUTimer.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
-#include "FWCore/Framework/interface/ESHandle.h"
-
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 //#include "PhysicsTools/FWLite/interface/TFileService.h"
 #include "PhysicsTools/SelectorUtils/interface/JetIDSelectionFunctor.h"
@@ -55,13 +53,8 @@ Developed and tested with CMSSW_3_6_2
 
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 
-#include "RecoBTag/PerformanceDB/interface/BtagPerformance.h"
-#include "RecoBTag/Records/interface/BTagPerformanceRecord.h"
-#include "CondFormats/PhysicsToolsObjects/interface/BinningPointByMap.h"
-
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
-#include "DataFormats/HLTReco/interface/TriggerEvent.h"
 
 #include "CUSUSY/Selection/interface/SUSYEventSelector.h"
 
@@ -92,7 +85,6 @@ private:
   void fillTrackInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-  void fillBTagDBInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
 
   int  findSUSYMaternity( const reco::Candidate & cand );
   int  findTopDecayMode( const reco::Candidate & cand );
@@ -126,14 +118,13 @@ private:
   TTree* infotree_;
 
   std::vector<std::string> btagAlgorithmNames_;
-  std::vector<std::string> triggersOfInterest_;
 
   SUSYEventSelector* susyCutFlow_;
 
   PVSelector                           pvSelector_;
 
   //configuration strings (largely copied from don's and freya's code)
-  //  edm::InputTag triggerLabel_;
+  edm::InputTag triggerLabel_;
   edm::InputTag jetLabel_;
   edm::InputTag caloMetLabel_;
   edm::InputTag tcMetLabel_;
@@ -155,7 +146,7 @@ private:
   double jetEtaMax_;  
   double loosejetPtMin_ ;
   double loosejetEtaMax_;  
-
+ 
   double muPtMin_  ;
   double muEtaMax_ ;
   double eleEtMin_ ;
@@ -173,9 +164,6 @@ private:
   std::vector<std::string> cutNames;
   std::vector<bool> cutResultsDon;
   std::vector<bool> cutResults;
-
-  std::vector<bool> passTrigger;
-
   //tight jet info
   std::vector<int> looseJetIndex; //map from tight jet list to loose jet list
   std::vector<float> jetPt;
@@ -190,16 +178,12 @@ private:
 
   //loose jet info
   std::vector<float> loosejetPt;
-  std::vector<float> loosejetEt;
   std::vector<float> loosejetEta;
   std::vector<float> loosejetPhi;
   std::vector<int> loosejetFlavor;
   std::vector<int> loosejetGenParticlePDGId;
   std::vector<float> loosejetInvisibleEnergy;
   std::map < std::string, std::vector<float> > loosejetBTagDisc;
-  std::vector<float> loosejetPtUncorr; //uncorrected jet info
-  std::vector<float> loosejetEtaUncorr;
-  std::vector<float> loosejetPhiUncorr;
 
   int nbSSVM; //FIXME this is still in need of a more sophisticated approach (for now this works...)
 
@@ -245,13 +229,12 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   infotree_(0),
 
   btagAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("btagAlgorithms")),
-  triggersOfInterest_(iConfig.getParameter<std::vector<std::string> >("triggersOfInterest")),
 
   susyCutFlow_( new SUSYEventSelector( iConfig.getParameter<edm::ParameterSet>("susyBJetsSelection" ))),
 
   pvSelector_      (iConfig.getParameter<edm::ParameterSet>("pvSelector") ),
 
-  //  triggerLabel_    (iConfig.getParameter<edm::InputTag>("triggerTag")),
+  triggerLabel_    (iConfig.getParameter<edm::InputTag>("triggerTag")),
   jetLabel_        (iConfig.getParameter<edm::InputTag>("jetTag")),
   
   caloMetLabel_    (iConfig.getParameter<edm::InputTag>("caloMetTag")),
@@ -260,7 +243,7 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   eleLabel_        (iConfig.getParameter<edm::InputTag>("eleTag")),
   muoLabel_        (iConfig.getParameter<edm::InputTag>("muoTag")),
 
-  //  susyTrigger_     (iConfig.getParameter<std::string>("susyTrigger")),
+  susyTrigger_     (iConfig.getParameter<std::string>("susyTrigger")),
 
   jetIdLoose_      (iConfig.getParameter<edm::ParameterSet>("jetIdLoose") ),
   muonId_          (iConfig.getParameter<edm::ParameterSet>("muonId") ),
@@ -313,51 +296,24 @@ BasicTreeMaker::~BasicTreeMaker()
 void
 BasicTreeMaker::fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   
-  using namespace edm;
-
   bool passTrig=false;
-  
-  //some code from Josh Bendavid to automagically get the trigger tag (in MC)
-  //https://hypernews.cern.ch/HyperNews/CMS/get/physTools/1791/1/1/1/1/1/2.html
 
-  //i feel like i should not have to do this for every event (to save time)
-  //but I can't put it in beginJob (I think) because there is no edm::Event at that point
-  //-- could implement a global so that it only runs once
-  Handle<trigger::TriggerEvent> triggerEventHLT;
-  iEvent.getByLabel("hltTriggerSummaryAOD", triggerEventHLT);
-  
-  InputTag trigResultsTag("TriggerResults","",triggerEventHLT.provenance()->processName()); 
-  //std::cout<<"Will use trigger tag = "<<triggerEventHLT.provenance()->processName()<<std::endl;
-
-  // get HLT trigger information
-  Handle<TriggerResults> HLTResults;
-  iEvent.getByLabel(trigResultsTag, HLTResults);
+  //The RECO way
+  edm::Handle<edm::TriggerResults> HLTResults;
+  iEvent.getByLabel(triggerLabel_, HLTResults);
   
   //based on code copied from Don
   if (HLTResults.isValid()) {
     
     const edm::TriggerNames & triggerNames = iEvent.triggerNames(*HLTResults);
     unsigned int trigger_size = HLTResults->size();
-
-    bool foundAGoodTrigger=false;
-    //loop over the list of triggers
-    for (unsigned int itrig = 0; itrig< triggersOfInterest_.size(); itrig++) {
-      
-      unsigned int trigger_position = triggerNames.triggerIndex(triggersOfInterest_.at(itrig));
-      
-      if (trigger_position < trigger_size) {
-	bool passed=HLTResults->accept(trigger_position);
-	passTrigger.push_back( passed );
-	if (!foundAGoodTrigger) { //this must be the first valid trigger
-	  //	  std::cout<<"Will store in cutflow the results for: "<<triggersOfInterest_.at(itrig)<<std::endl; //debug
-	  foundAGoodTrigger=true;
-	  passTrig = passed;
-	}
-      }
-      else {	//	std::cout << "WARNING -- Trigger position not found" << std::endl;
-	passTrigger.push_back(false);
-      }
-      
+    unsigned int trigger_position = triggerNames.triggerIndex(susyTrigger_);
+    
+    if (trigger_position < trigger_size){
+      passTrig = HLTResults->accept(trigger_position);
+    }
+    else {
+      std::cout << "WARNING -- Trigger position not found" << std::endl;
     }
 
     //verbose code for looking at the trigger menu
@@ -563,8 +519,6 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
 void
 BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-  //  std::cout<<" == fillJetInfo =="<<std::endl; //debug
-
   //we're gonna do MET in here too
 
   if (jetInfoFilled_) return;
@@ -574,17 +528,17 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
   const edm::View<pat::Jet> & jets = *jetHandle;
 
   //freya sort using et. don sorts with pt. stick with pt
-  //further note on this -- RA2 selection sorts by pT
   std::vector<float> jetPtVector;
   for(edm::View<pat::Jet>::const_iterator ijet = jets.begin(); ijet != jets.end(); ++ijet) {
     jetPtVector.push_back( ijet->pt() );
   }
 
   std::vector<int> sortedJetIndices = IndexSorter< std::vector<float> >(jetPtVector,true)();
-  
+
   //variables for use in the jet loop
   pat::strbitset ret1 = jetIdLoose_.getBitTemplate();
   double MHTx = 0, MHTy = 0;
+  std::vector<float> loosejetPhi;
   //now loop over sorted jets
   for (size_t ii = 0 ; ii< sortedJetIndices.size(); ++ii) {
     //get the index of the ii'th jet
@@ -601,49 +555,43 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     // === make cuts ===
     bool passLooseCuts = (jet.pt() > loosejetPtMin_) && (fabs(jet.eta())<loosejetEtaMax_) && passJetID;
     bool passTightCuts = (jet.pt() > jetPtMin_) && (fabs(jet.eta())<jetEtaMax_) && passJetID;
-    
+
     //let's enforce that the tight cuts are always a subset of the loose cuts
     if (passTightCuts && !passLooseCuts) assert(0);
-    
+
     //now fill ntuple!
     if (passLooseCuts) {
       MHTx -= jet.px();
       MHTy -= jet.py();
       loosejetPt.push_back( jet.pt() );
-      loosejetEt.push_back( jet.et() );
       loosejetEta.push_back(jet.eta());
       loosejetPhi.push_back(jet.phi());
       loosejetFlavor.push_back( jet.partonFlavour() );
 
-      pat::Jet uncorrectedJet = jet.correctedJet("raw"); //get the uncorrected jet (i hope)
-      loosejetPtUncorr.push_back(uncorrectedJet.pt());
-      loosejetEtaUncorr.push_back(uncorrectedJet.eta());
-      loosejetPhiUncorr.push_back(uncorrectedJet.phi());
-
       if ( jet.genJet() != 0 && jet.genParticle() != 0) {
-	
+		
 	loosejetGenParticlePDGId.push_back( jet.genParticle()->pdgId() );
 	loosejetInvisibleEnergy.push_back( jet.genJet()->invisibleEnergy());
 	//	std::cout<<jet.partonFlavour()<<"\t"<<jet.genParticle()->pdgId()<<"\t"<<jet.genJet()->invisibleEnergy()<<std::endl;
 	//std::cout<<"\t\t"<<jet.genJet()->getGenConstituents().size()<<std::endl;
-	
+
 	//We could add a function here to drill down through the jet constituents
 	//and sum up the missing *transverse* energy belonging to e.g. neutrinos
 	//i'm not going to implement this now
-	
-	// 	for (unsigned int ijet=0; ijet<jet.genJet()->getGenConstituents().size(); ijet++) {
-	// 	  std::cout<<"\t\t"<<jet.genJet()->getGenConstituents().at(ijet)->pdgId()
-	// 		   <<"\t"<<jet.genJet()->getGenConstituents().at(ijet)->energy()
-	// 		   <<"\t"<<jet.genJet()->getGenConstituents().at(ijet)->et()<<std::endl;
-	// 	}
+
+// 	for (unsigned int ijet=0; ijet<jet.genJet()->getGenConstituents().size(); ijet++) {
+// 	  std::cout<<"\t\t"<<jet.genJet()->getGenConstituents().at(ijet)->pdgId()
+// 		   <<"\t"<<jet.genJet()->getGenConstituents().at(ijet)->energy()
+// 		   <<"\t"<<jet.genJet()->getGenConstituents().at(ijet)->et()<<std::endl;
+// 	}
       }
       else {
 	//	std::cout<<jet.partonFlavour()<<"\tNo gen match!"<<std::endl;
 	loosejetGenParticlePDGId.push_back( -99 );
 	loosejetInvisibleEnergy.push_back( -99 );
       }
-      
-      
+
+
       for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
 	loosejetBTagDisc[btagAlgorithmNames_[ib]].push_back( jet.bDiscriminator(btagAlgorithmNames_[ib]) );
       }
@@ -651,31 +599,25 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     if (passTightCuts) {
       //allow us to reference things only stored for loose jets
       looseJetIndex.push_back( loosejetPt.size() - 1);
-      
+
       HT += jet.pt();
       jetPt.push_back( jet.pt() );
       jetEta.push_back(jet.eta());
       jetPhi.push_back(jet.phi());
       jetFlavor.push_back( jet.partonFlavour() );
-      
+
       float bdisc = 0;
-      bool foundSSVM=false;
+
       for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
-	bdisc = jet.bDiscriminator(btagAlgorithmNames_[ib]);
-	jetBTagDisc[btagAlgorithmNames_[ib]].push_back( bdisc );
+	jetBTagDisc[btagAlgorithmNames_[ib]].push_back( jet.bDiscriminator(btagAlgorithmNames_[ib]) );
 	//look especially for SSV
-	//when the tagger doesn't exist, it seems to return -1000. So this 'if' should fire only once per jet
-	//but to be safe we'll use this foundSSVM variable
-	if ( ((btagAlgorithmNames_[ib] == "simpleSecondaryVertexBJetTags") && (bdisc > -999))
-	     || ((btagAlgorithmNames_[ib] == "simpleSecondaryVertexHighEffBJetTags") && (bdisc >-999))) {
-	  //	  std::cout<<"Found SSV algorithm! jet = "<<ii<<std::endl; //debug
-	  if (bdisc>=1.74) foundSSVM=true;  //hard-coded SSV medium cut
-	}
+	if (btagAlgorithmNames_[ib] == "simpleSecondaryVertexBJetTags" || btagAlgorithmNames_[ib] == "simpleSecondaryVertexHighEffBJetTags")
+	  bdisc = jet.bDiscriminator(btagAlgorithmNames_[ib]);
       }
-      if (foundSSVM) nbSSVM++; //hard-coded SSV medium cut
-      
-    } //end of tight cuts block
-  } //end of loop over jets
+      if (bdisc>=1.74) nbSSVM++; //hard-coded SSV medium cut
+    }
+    
+  }
 
   MHT = sqrt( MHTx*MHTx + MHTy*MHTy);
   MHTphi = atan2(MHTy,MHTx);
@@ -715,78 +657,15 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
   jetInfoFilled_=true;
 }
 
-//this is more or less working.
-//next step is to make it fancier.
-//first need to decide if we actually care about this info!
-void
-BasicTreeMaker::fillBTagDBInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup)
-{
+// bool
+// BasicTreeMaker::passPV(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+// {
+//   //Primary vertex
+//   edm::Handle<std::vector<reco::Vertex> > pvHandle;
+//   iEvent.getByLabel(pvLabel_,pvHandle);
 
-  if (!jetInfoFilled_) assert(0);
-
-  //stealing generously from Freya et al.
-  //for now just hard-code stuff
-
-  std::vector<std::string> btaggingparamnames_;
-  btaggingparamnames_.push_back("MCCaloSSVHEMb");
-  btaggingparamnames_.push_back("MCCaloSSVHEMb");//yes, the duplication is intentional
-
-  std::vector<std::string> btaggingparaminputtypes_;
-  btaggingparaminputtypes_.push_back("BTAGBEFF");
-  btaggingparaminputtypes_.push_back("BTAGBERR");
-
-  std::map<std::string,float> bidParamsDiscCut_;
-
-  //this is stuff that we would move out of this function when everything is finalized
-  std::map<std::string,PerformanceResult::ResultType> btaggingparamtype_;
-  btaggingparamtype_["BTAGBEFF"]=PerformanceResult::BTAGBEFF;
-  btaggingparamtype_["BTAGBERR"]=PerformanceResult::BTAGBERR;
-  btaggingparamtype_["BTAGCEFF"]=PerformanceResult::BTAGCEFF;
-  btaggingparamtype_["BTAGCERR"]=PerformanceResult::BTAGCERR;
-  btaggingparamtype_["BTAGLEFF"]=PerformanceResult::BTAGLEFF;
-  btaggingparamtype_["BTAGLERR"]=PerformanceResult::BTAGLERR;
-  btaggingparamtype_["BTAGNBEFF"]=PerformanceResult::BTAGNBEFF;
-  btaggingparamtype_["BTAGNBERR"]=PerformanceResult::BTAGNBERR;
-  btaggingparamtype_["BTAGBEFFCORR"]=PerformanceResult::BTAGBEFFCORR;
-  btaggingparamtype_["BTAGBERRCORR"]=PerformanceResult::BTAGBERRCORR;
-  btaggingparamtype_["BTAGCEFFCORR"]=PerformanceResult::BTAGCEFFCORR;
-  btaggingparamtype_["BTAGCERRCORR"]=PerformanceResult::BTAGCERRCORR;
-  btaggingparamtype_["BTAGLEFFCORR"]=PerformanceResult::BTAGLEFFCORR;
-  btaggingparamtype_["BTAGLERRCORR"]=PerformanceResult::BTAGLERRCORR;
-  btaggingparamtype_["BTAGNBEFFCORR"]=PerformanceResult::BTAGNBEFFCORR;
-  btaggingparamtype_["BTAGNBERRCORR"]=PerformanceResult::BTAGNBERRCORR;
-  btaggingparamtype_["BTAGNBERRCORR"]=PerformanceResult::BTAGNBERRCORR;
-  btaggingparamtype_["MUEFF"]=PerformanceResult::MUEFF;
-  btaggingparamtype_["MUERR"]=PerformanceResult::MUERR;
-  btaggingparamtype_["MUFAKE"]=PerformanceResult::MUFAKE; 
-  btaggingparamtype_["MUEFAKE"]=PerformanceResult::MUEFAKE;
-
-
-  edm::ESHandle<BtagPerformance> perfH;
-  BinningPointByMap p;
-  for (size_t ii=0; ii<btaggingparamnames_.size(); ii++){
-     std::string beffstr = btaggingparamnames_[ii];
-     //std::cout <<" Studying Beff with label "<<beffstr <<std::endl; //debug
-     iSetup.get<BTagPerformanceRecord>().get(beffstr,perfH);  
-     const BtagPerformance & pbeff = *(perfH.product());
-     bidParamsDiscCut_[btaggingparamnames_[ii]]=pbeff.workingPoint().cut();
-     //std::cout << " Beff cut value is : " << bidParamsDiscCut_[btaggingparamnames_[ii]] << std::endl; //debug
-     // now loop over the jets:
-     std::string lookupname=btaggingparamnames_[ii]+"-"+btaggingparaminputtypes_[ii];
-     for (size_t ijet=0; ijet< loosejetEt.size(); ijet++) {
-       p.reset();
-       p.insert(BinningVariables::JetAbsEta,std::abs( loosejetEta[ijet] ));
-       p.insert(BinningVariables::JetEt,loosejetEt[ijet]);
-       float eff=0;
-       //	 if(pbeff.isResultOk(btaggingparamtype_[jj].second,p))
-       eff=pbeff.getResult(btaggingparamtype_[btaggingparaminputtypes_[ii]],p);
-       std::cout << "value " << lookupname << " (PerformanceResult:" << btaggingparamtype_[btaggingparaminputtypes_[ii]] <<  ") for jet " << ijet << "(et,eta):("<<loosejetEt[ijet]<< "," << loosejetEta[ijet]<< ")  is " << eff << std::endl;
-       //       jetSortedBIDParams_[lookupname + ID][ijet]=eff;
-
-     }
-  }
-
-}
+//   //TODO
+// }
 
 // ------------ method called to for each event  ------------
 void
@@ -803,7 +682,6 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   ret.set(false);
   cutResults.clear();
   cutResultsDon.clear();
-  passTrigger.clear();
   jetInfoFilled_=false;
   leptonInfoFilled_=false;
   trackInfoFilled_=false;
@@ -814,16 +692,11 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   jetFlavor.clear();
 
   loosejetPt.clear();
-  loosejetEt.clear();
   loosejetEta.clear();
   loosejetPhi.clear();
   loosejetFlavor.clear();
   loosejetGenParticlePDGId.clear();
   loosejetInvisibleEnergy.clear();
-
-  loosejetPtUncorr.clear();
-  loosejetEtaUncorr.clear();
-  loosejetPhiUncorr.clear();
 
   for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
     jetBTagDisc[btagAlgorithmNames_[ib]].clear();
@@ -865,14 +738,11 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   fillTriggerInfo(iEvent,iSetup);
 
   //primary vertex
+  //  cutResults.push_back( passPV(iEvent,iSetup)); //TODO
   cutResults.push_back( pvSelector_( iEvent ) );
 
   //fills jets cuts, as well as MET, and the values of DeltaPhi
   fillJetInfo( iEvent,iSetup);
-
-  /* for now we don't bother to do this */
-  //fill b efficiency info (must be done after jets are filled)
-  //fillBTagDBInfo(iEvent,iSetup);
 
   //fill muon, electron
   fillLeptonInfo(iEvent,iSetup);
@@ -914,17 +784,10 @@ BasicTreeMaker::beginJob()
 {
   //nfail_=0;
 
-  //== create tree branches ==
-
-  //tree that is filled only once per job
   infotree_->Branch("SUSY_cutNames",&cutNames);
-  infotree_->Branch("btagAlgorithms",&btagAlgorithmNames_);
-  infotree_->Branch("triggerList",&triggersOfInterest_);
 
-  //tree that is filled for each event
   tree_->Branch("SUSY_cutResults",&cutResultsDon);
   tree_->Branch("cutResults",&cutResults);
-  tree_->Branch("passTrigger",&passTrigger); //stores results for triggers listed in triggerList
   //jet branches
   tree_->Branch("looseJetIndex",&looseJetIndex);
   tree_->Branch("jetPt",&jetPt);
@@ -941,15 +804,9 @@ BasicTreeMaker::beginJob()
 
   //loose jet branches
   tree_->Branch("loosejetPt",&loosejetPt);
-  tree_->Branch("loosejetEt",&loosejetEt);
   tree_->Branch("loosejetEta",&loosejetEta);
   tree_->Branch("loosejetPhi",&loosejetPhi);
   tree_->Branch("loosejetFlavor",&loosejetFlavor);
-
-  tree_->Branch("loosejetPtUncorr",&loosejetPtUncorr);
-  tree_->Branch("loosejetEtaUncorr",&loosejetEtaUncorr);
-  tree_->Branch("loosejetPhiUncorr",&loosejetPhiUncorr);
-
   tree_->Branch("loosejetGenParticlePDGId",&loosejetGenParticlePDGId);
   tree_->Branch("loosejetInvisibleEnergy",&loosejetInvisibleEnergy);
   //ROOT does not allow us to put a map of vectors into a tree
