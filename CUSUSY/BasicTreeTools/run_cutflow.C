@@ -51,7 +51,8 @@ void run_cutflow()
     TChain ch("BasicTreeMaker/tree");
     ch.Add(samplefiles);
     basicLoop looper(&ch);
-    looper.setCutScheme(basicLoop::kRA2tcMETwithB); //this is a critical line! defines the cuts to use!
+    looper.setCutScheme(basicLoop::kRA2tcMET); //this is a critical line! defines the cuts to use!
+    looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
     looper.cutflow();
   }
 

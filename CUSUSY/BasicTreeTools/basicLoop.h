@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Wed Aug 25 16:53:46 2010 by ROOT version 5.22/00d
+// Tue Sep 14 15:22:19 2010 by ROOT version 5.26/00
 // from TTree tree/tree
-// found on file: /cu1/joshmt/BasicNtuples/V00-00-02/TTbarJets/BasicNtuple_1_1_p5X.root
+// found on file: ../data/BasicNtuples/V00-00-03/TTbarJets/BasicNtuple_10_1_d6n.root
 //////////////////////////////////////////////////////////
 
 #ifndef basicLoop_h
@@ -15,11 +15,12 @@
 // ========================================== begin
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
+// ---- this version is compatible with ntuple tag: V00-00-03 ----
 #include <iostream>
 #include <vector>
 
 //avoid spaces and funny characters!
-const char *CutSchemeNames_[]={"RA2", "RA2MET", "RA2withBtagging","RA2METwithBtagging", "RA2tcMETwithBtagging"};
+const char *CutSchemeNames_[]={"RA2", "RA2MET",  "RA2tcMET"};
 
 //we want to weight to 100 pb^-1
 const double lumi=100;
@@ -28,8 +29,9 @@ const double lumi=100;
 class basicLoop {
 public :
   // ========================================== begin
-  enum CutScheme {kRA2=0, kRA2MET, kRA2withB, kRA2METwithB, kRA2tcMETwithB, nCutSchemes};
+  enum CutScheme {kRA2=0, kRA2MET, kRA2tcMET, nCutSchemes};
   CutScheme theCutScheme_;
+  unsigned int nBcut_;
   std::vector<int> ignoredCut_; //allow more than 1 ignored cut!
 
   std::vector<TString> cutnames_;
@@ -41,13 +43,21 @@ public :
    Int_t           fCurrent; //!current Tree number in a TChain
 
    // Declaration of leaf types
-   vector<string>  *SUSY_cutNames;
    vector<bool>    *SUSY_cutResults;
    vector<bool>    *cutResults;
+   vector<int>     *looseJetIndex;
    vector<float>   *jetPt;
    vector<float>   *jetEta;
    vector<float>   *jetPhi;
-   vector<float>   *jetBTagDisc_simpleSecondaryVertexBJetTags; //unfortunately this changes depending on the sample!
+   vector<int>     *jetFlavor;
+   vector<float>   *jetBTagDisc_simpleSecondaryVertexBJetTags;
+   vector<float>   *loosejetPt;
+   vector<float>   *loosejetEta;
+   vector<float>   *loosejetPhi;
+   vector<int>     *loosejetFlavor;
+   vector<int>     *loosejetGenParticlePDGId;
+   vector<float>   *loosejetInvisibleEnergy;
+   vector<float>   *loosejetBTagDisc_simpleSecondaryVertexBJetTags;
    Int_t           nbSSVM;
    Float_t         HT;
    Float_t         MHT;
@@ -63,16 +73,25 @@ public :
    vector<float>   *trackEta;
    vector<float>   *trackPhi;
    Int_t           SUSY_nb;
+   Float_t         qScale;
    vector<int>     *topDecayCode;
 
    // List of branches
-   TBranch        *b_SUSY_cutNames;   //!
    TBranch        *b_SUSY_cutResults;   //!
    TBranch        *b_cutResults;   //!
+   TBranch        *b_looseJetIndex;   //!
    TBranch        *b_jetPt;   //!
    TBranch        *b_jetEta;   //!
    TBranch        *b_jetPhi;   //!
+   TBranch        *b_jetFlavor;   //!
    TBranch        *b_jetBTagDisc_simpleSecondaryVertexBJetTags;   //!
+   TBranch        *b_loosejetPt;   //!
+   TBranch        *b_loosejetEta;   //!
+   TBranch        *b_loosejetPhi;   //!
+   TBranch        *b_loosejetFlavor;   //!
+   TBranch        *b_loosejetGenParticlePDGId;   //!
+   TBranch        *b_loosejetInvisibleEnergy;   //!
+   TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexBJetTags;   //!
    TBranch        *b_nbSSVM;   //!
    TBranch        *b_HT;   //!
    TBranch        *b_MHT;   //!
@@ -88,6 +107,7 @@ public :
    TBranch        *b_trackEta;   //!
    TBranch        *b_trackPhi;   //!
    TBranch        *b_SUSY_nb;   //!
+   TBranch        *b_qScale;   //!
    TBranch        *b_topDecayCode;   //!
 
    basicLoop(TTree *tree=0);
@@ -99,15 +119,16 @@ public :
    virtual void     Loop();
    virtual Bool_t   Notify();
    virtual void     Show(Long64_t entry = -1);
-
    // ========================================== begin
    virtual void     compareRA2();
    virtual void     exampleLoop();
    virtual void     nbLoop();
+   virtual void     ABCDtree();
 
    bool setCutScheme(CutScheme cutscheme);
    void setIgnoredCut(const int cutIndex); //use to make N-1 plots! (and other things)
    void resetIgnoredCut() ;
+   void setBCut(unsigned int nb);
    
    void cutflow();
    bool cutRequired(unsigned int cutIndex) ;
@@ -121,6 +142,7 @@ public :
    double getDeltaPhib1b2();
    int getTopDecayCategory();
    double getMinDeltaPhi_bj(unsigned int bindex);
+   double getOverallMinDeltaR_bj();
    double getMinDeltaR_bj(unsigned int bindex);
    bool passBCut( unsigned int bindex);
    double getDeltaPhi(double phi1, double phi2);
@@ -133,15 +155,18 @@ public :
 
 #ifdef basicLoop_cxx
 basicLoop::basicLoop(TTree *tree)
-  :  theCutScheme_(kRA2) //====================== begin -> end
+//====================== begin
+  :  theCutScheme_(kRA2),
+     nBcut_(0) 
+//====================== end
 {
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
    if (tree == 0) {
-      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("/cu1/joshmt/BasicNtuples/V00-00-02/TTbarJets/BasicNtuple_1_1_p5X.root");
+      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("../data/BasicNtuples/V00-00-03/TTbarJets/BasicNtuple_10_1_d6n.root");
       if (!f) {
-         f = new TFile("/cu1/joshmt/BasicNtuples/V00-00-02/TTbarJets/BasicNtuple_1_1_p5X.root");
-         f->cd("/cu1/joshmt/BasicNtuples/V00-00-02/TTbarJets/BasicNtuple_1_1_p5X.root:/BasicTreeMaker");
+         f = new TFile("../data/BasicNtuples/V00-00-03/TTbarJets/BasicNtuple_10_1_d6n.root");
+         f->cd("../data/BasicNtuples/V00-00-03/TTbarJets/BasicNtuple_10_1_d6n.root:/BasicTreeMaker");
       }
       tree = (TTree*)gDirectory->Get("tree");
 
@@ -149,8 +174,8 @@ basicLoop::basicLoop(TTree *tree)
    Init(tree);
 
    // ========================================== begin
-   //this may well be stored in the event for now too.
-   //think about it
+   //this is now in the infotree
+   //not sure how to get that unless the user passes it in as an argument
    cutnames_.push_back("Inclusive");
    cutnames_.push_back("Trigger");
    cutnames_.push_back("PV");
@@ -179,6 +204,7 @@ basicLoop::~basicLoop()
   // delete fChain->GetCurrentFile();
   // ========================================== end
 }
+
 
 Int_t basicLoop::GetEntry(Long64_t entry)
 {
@@ -212,13 +238,21 @@ void basicLoop::Init(TTree *tree)
    // (once per file to be processed).
 
    // Set object pointer
-   SUSY_cutNames = 0;
    SUSY_cutResults = 0;
    cutResults = 0;
+   looseJetIndex = 0;
    jetPt = 0;
    jetEta = 0;
    jetPhi = 0;
+   jetFlavor = 0;
    jetBTagDisc_simpleSecondaryVertexBJetTags = 0;
+   loosejetPt = 0;
+   loosejetEta = 0;
+   loosejetPhi = 0;
+   loosejetFlavor = 0;
+   loosejetGenParticlePDGId = 0;
+   loosejetInvisibleEnergy = 0;
+   loosejetBTagDisc_simpleSecondaryVertexBJetTags = 0;
    trackPt = 0;
    trackEta = 0;
    trackPhi = 0;
@@ -229,13 +263,21 @@ void basicLoop::Init(TTree *tree)
    fCurrent = -1;
    fChain->SetMakeClass(1);
 
-   fChain->SetBranchAddress("SUSY_cutNames", &SUSY_cutNames, &b_SUSY_cutNames);
    fChain->SetBranchAddress("SUSY_cutResults", &SUSY_cutResults, &b_SUSY_cutResults);
    fChain->SetBranchAddress("cutResults", &cutResults, &b_cutResults);
+   fChain->SetBranchAddress("looseJetIndex", &looseJetIndex, &b_looseJetIndex);
    fChain->SetBranchAddress("jetPt", &jetPt, &b_jetPt);
    fChain->SetBranchAddress("jetEta", &jetEta, &b_jetEta);
    fChain->SetBranchAddress("jetPhi", &jetPhi, &b_jetPhi);
+   fChain->SetBranchAddress("jetFlavor", &jetFlavor, &b_jetFlavor);
    fChain->SetBranchAddress("jetBTagDisc_simpleSecondaryVertexBJetTags", &jetBTagDisc_simpleSecondaryVertexBJetTags, &b_jetBTagDisc_simpleSecondaryVertexBJetTags);
+   fChain->SetBranchAddress("loosejetPt", &loosejetPt, &b_loosejetPt);
+   fChain->SetBranchAddress("loosejetEta", &loosejetEta, &b_loosejetEta);
+   fChain->SetBranchAddress("loosejetPhi", &loosejetPhi, &b_loosejetPhi);
+   fChain->SetBranchAddress("loosejetFlavor", &loosejetFlavor, &b_loosejetFlavor);
+   fChain->SetBranchAddress("loosejetGenParticlePDGId", &loosejetGenParticlePDGId, &b_loosejetGenParticlePDGId);
+   fChain->SetBranchAddress("loosejetInvisibleEnergy", &loosejetInvisibleEnergy, &b_loosejetInvisibleEnergy);
+   fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexBJetTags", &loosejetBTagDisc_simpleSecondaryVertexBJetTags, &b_loosejetBTagDisc_simpleSecondaryVertexBJetTags);
    fChain->SetBranchAddress("nbSSVM", &nbSSVM, &b_nbSSVM);
    fChain->SetBranchAddress("HT", &HT, &b_HT);
    fChain->SetBranchAddress("MHT", &MHT, &b_MHT);
@@ -251,6 +293,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("trackEta", &trackEta, &b_trackEta);
    fChain->SetBranchAddress("trackPhi", &trackPhi, &b_trackPhi);
    fChain->SetBranchAddress("SUSY_nb", &SUSY_nb, &b_SUSY_nb);
+   fChain->SetBranchAddress("qScale", &qScale, &b_qScale);
    fChain->SetBranchAddress("topDecayCode", &topDecayCode, &b_topDecayCode);
    Notify();
 }
@@ -274,7 +317,13 @@ void basicLoop::Show(Long64_t entry)
    fChain->Show(entry);
 }
 
+
 // ========================================== begin
+
+void basicLoop::setBCut(unsigned int nb) {
+  nBcut_=nb;
+  cout<<"Requiring at least "<<nBcut_<<" b tags"<<endl;
+}
 
 void basicLoop::setIgnoredCut(const int cutIndex) {
 
@@ -318,8 +367,7 @@ bool basicLoop::cutRequired(const unsigned int cutIndex) {
   bool cutIsRequired=false;
 
   //RA2
-  if (theCutScheme_ == kRA2 || theCutScheme_==kRA2withB || theCutScheme_==kRA2METwithB 
-      || theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMETwithB) {
+  if (theCutScheme_ == kRA2 || theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET) {
     if      (cutIndex == 0)  cutIsRequired =  true;
     else if (cutIndex == 1)  cutIsRequired =  true;
     else if (cutIndex == 2)  cutIsRequired =  true;
@@ -329,20 +377,15 @@ bool basicLoop::cutRequired(const unsigned int cutIndex) {
     else if (cutIndex == 6)  cutIsRequired =  false;
     else if (cutIndex == 7)  cutIsRequired =  true;
     //MET
-    else if (cutIndex == 8)  cutIsRequired =  (theCutScheme_==kRA2METwithB || theCutScheme_==kRA2MET 
-					       || theCutScheme_==kRA2tcMETwithB);
+    else if (cutIndex == 8)  cutIsRequired =  (theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET);
     //MHT
-    else if (cutIndex == 9)  cutIsRequired =  (theCutScheme_!=kRA2METwithB && theCutScheme_!=kRA2MET
-					       && theCutScheme_!=kRA2tcMETwithB);
+    else if (cutIndex == 9)  cutIsRequired =  (theCutScheme_!=kRA2MET && theCutScheme_!=kRA2tcMET);
     else if (cutIndex == 10) cutIsRequired =  true;
     else if (cutIndex == 11) cutIsRequired =  true;
     else if (cutIndex == 12) cutIsRequired =  true;
-    else if (cutIndex == 13) cutIsRequired =  (theCutScheme_==kRA2withB || theCutScheme_==kRA2METwithB 
-					       || theCutScheme_==kRA2tcMETwithB);
-    else if (cutIndex == 14) cutIsRequired =  (theCutScheme_==kRA2withB || theCutScheme_==kRA2METwithB 
-					       || theCutScheme_==kRA2tcMETwithB);
-    else if (cutIndex == 15) cutIsRequired =  (theCutScheme_==kRA2withB || theCutScheme_==kRA2METwithB 
-					       || theCutScheme_==kRA2tcMETwithB);
+    else if (cutIndex == 13) cutIsRequired =  nBcut_ >=1;
+    else if (cutIndex == 14) cutIsRequired =  nBcut_ >=2;
+    else if (cutIndex == 15) cutIsRequired =  nBcut_ >=3;
     else assert(0);
   }
   else assert(0);
@@ -353,22 +396,32 @@ bool basicLoop::cutRequired(const unsigned int cutIndex) {
 bool basicLoop::passCut(const unsigned int cutIndex) {
 
   //implement special exceptions here
-  if ( theCutScheme_== kRA2tcMETwithB ) {
+  if ( theCutScheme_== kRA2tcMET ) {
     if (cutIndex == 8) { //cut on tc MET instead of caloMET
       return (tcMET > 150); //hardcoded MET cut
     }
   }
 
-  // -- in case we are using MET instead of MHT, we need to alter the DeltaPhi cuts --
+  //V00-00-03 still has a bug so there is no loosejetPhi info
   /*
+  // -- in case we are using MET instead of MHT, we need to alter the DeltaPhi cuts --
   if (cutIndex == 12 && 
-      ( theCutScheme_ == kRA2MET || theCutScheme_ == kRA2METwithB ||theCutScheme_ == kRA2tcMETwithB ) ) {
+      ( theCutScheme_ == kRA2MET ||theCutScheme_ == kRA2tcMET ) ) {
     
+    float phi_of_MET = (theCutScheme_ == kRA2tcMET) ? tcMETphi : METphi;
+
+    int nloosejets = loosejetPhi->size();
     //need to calculate DeltaPhi between jets and MET
     //for RA2 and MHT, this is done with *loose* jets!
-    //i don't have loose jets in the ntuple until V00-00-03
+    double dp0=0,dp1=0,dp2=0;
+    if (nloosejets>0) {dp0=getDeltaPhi( loosejetPhi->at(0), phi_of_MET);} else {return false;}
+    if (nloosejets>1) {dp1=getDeltaPhi( loosejetPhi->at(1), phi_of_MET);} else {return false;}
+    if (nloosejets>2) {dp2=getDeltaPhi( loosejetPhi->at(2), phi_of_MET);} else {return false;}
+    //here is the implementation of the DeltaPhi cuts
+    if ( dp0 >0.3 && dp1 >0.5 && dp2 >0.3 ) { return true; } else {return false;}
   }
   */
+
   //in case this is not an exception, return the cut result stored in the ntuple
   return cutResults->at(cutIndex);
 }
@@ -474,6 +527,20 @@ double basicLoop::getMinDeltaPhi_bj(unsigned int bindex) {
   }
 
   return minDeltaPhi;
+}
+
+double basicLoop::getOverallMinDeltaR_bj() {
+
+  double minDeltaR_bj=999;
+  //note that all tight jet vectors should have the same size
+  for (unsigned int ib = 0; ib< jetPhi->size(); ib++) {
+    if ( passBCut(ib)) { //refind the b jets
+      double mdr=getMinDeltaR_bj(ib); 
+      if (mdr<minDeltaR_bj) minDeltaR_bj=mdr;
+    }
+  }
+
+  return minDeltaR_bj;
 }
 
 double basicLoop::getMinDeltaR_bj(unsigned int bindex) {
@@ -647,5 +714,6 @@ bool basicLoop::setCutScheme(CutScheme cutscheme) {
 
 
 // ========================================== end
+
 
 #endif // #ifdef basicLoop_cxx

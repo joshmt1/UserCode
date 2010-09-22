@@ -1,5 +1,5 @@
 /* to do:
--- fix MET cut flows to use correct DeltaPhi
+-- fix MET cut flows to use correct DeltaPhi (almost done)
 -- perhaps implement fancier ABCD methods (either directly or via a tree)
 */
 
@@ -94,6 +94,63 @@ void basicLoop::cutflow()
   file.close();
 }
 
+/*
+ABCD tree maker
+*/
+void basicLoop::ABCDtree()
+{
+  if (fChain == 0) return;
+  
+  Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+
+  TString inname=findInputName(); //uses fChain
+  std::cout<<"Got an input file name as: "<<inname<<std::endl;
+  
+  double sigma = getCrossSection(inname);
+  TString sampleName = getSampleName(inname);
+  if (sigma<=0) return;
+  
+  if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
+  
+  double   weight = lumi * sigma / double(nentries); //calculate weight
+  
+  //open output file
+  TString outfilename="ABCDtree."; outfilename+=sampleName; outfilename+=".root";
+  TFile fout(outfilename,"RECREATE");
+
+  
+  // == make ABCD tree ==
+  double myMET;
+  double minDeltaPhi;
+  double minDeltaRbj;
+  double DeltaPhiMPTMET;
+
+  TTree ABCDtree("ABCDtree","ABCD tree");
+  ABCDtree.Branch("weight",&weight,"weight/D");
+  ABCDtree.Branch("MET",&myMET,"MET/D");
+  ABCDtree.Branch("minDeltaPhi",&minDeltaPhi,"minDeltaPhi/D");
+  ABCDtree.Branch("minDeltaRbj",&minDeltaRbj,"minDeltaRbj/D");
+  ABCDtree.Branch("DeltaPhiMPTMET",&DeltaPhiMPTMET,"DeltaPhiMPTMET/D");
+  //
+  
+  Long64_t nbytes = 0, nb = 0;
+  for (Long64_t jentry=0; jentry<nentries;jentry++) {
+    Long64_t ientry = LoadTree(jentry);
+    if (ientry < 0) break;
+    nb = fChain->GetEntry(jentry);   nbytes += nb;
+    
+    if (Cut(ientry) < 0) continue; //jmt use cut
+    myMET = MET; //could and should modify to use tcMET or caloMET
+    minDeltaPhi = getMinDeltaPhiMET(3);
+    minDeltaRbj = getOverallMinDeltaR_bj();
+    DeltaPhiMPTMET = getDeltaPhiMPTMET();
+    ABCDtree.Fill(); 
+  }
+
+  fout.Write();
+  fout.Close();
+  
+}
 
 /* 
 main plot-making loop
@@ -123,6 +180,7 @@ void basicLoop::Loop()
    TString outfilename="plots."; outfilename+=sampleName; outfilename+=".root";
    TFile fout(outfilename,"RECREATE");
 
+  
    // === make some histograms ===
    const   int offset=3;
    int njets_bins=10-offset;
@@ -235,9 +293,10 @@ void basicLoop::Loop()
    HminDeltaR_bj_vMET_ABCD_ge1b.Sumw2();
    HminDeltaR_bj_vMET_ABCD_ge2b.Sumw2();
 
+
    //event loop
    Long64_t nbytes = 0, nb = 0;
-   for (Long64_t jentry=0; jentry<nentries;jentry++) {
+   for (Long64_t jentry=0; jentry<nentries ;jentry++) {
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) {assert(0);}
       nb = fChain->GetEntry(jentry);   nbytes += nb;

@@ -16,7 +16,7 @@ these are not needed (assuming this macro is compiled) because of the include ab
 gSystem->Load("basicLoop_C.so");
 
 */
-const TString version = "V00-00-02";
+const TString version = "V00-00-03";
 
 void run_basicLoop()
 {
@@ -48,7 +48,7 @@ void run_basicLoop()
     cout<<"About to start on files: "<<samplefiles<<endl;
 
     if (samplefiles.Contains("MoreMSSM")) continue; //hack to skip some samples
-    //    if (samplefiles.Contains("QCD")) continue; //hack to skip some samples
+    //if (!samplefiles.Contains("LM")) continue; //hack to skip some samples
 
     TChain ch("BasicTreeMaker/tree");
     ch.Add(samplefiles);
