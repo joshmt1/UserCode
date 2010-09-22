@@ -13,10 +13,10 @@ root -b -l -q cutflow_twiki.C++
 void cutflow_twiki()
 {
   //first we need to load each text file (one sample at a time)
-  const TString filestub ="cutflow_RA2tcMETwithBtagging";
+  const TString filestub ="cutflow_RA2MET";
 
-  const int mode = 1; //mode 1 is print cut flow table ; mode 2 is print significance table
-  assert(mode==1 || mode==2);
+  const int mode = 3; //mode 1 is print cut flow table ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
+  assert(mode==1 || mode==2 || mode ==3);
 
   //in principle these are coded in basicLoop.C/h; do the easy thing for now
   std::vector<TString> cutnames;
@@ -40,9 +40,9 @@ void cutflow_twiki()
   char *qcd_list[]={"QCD100","QCD250","QCD500","QCD1000"};
   int nbackground = 6;
   char *background_list[]={"TTbarJets","SingleTop-tChannel","SingleTop-tWChannel","Zinvisible","WJets","ZJets"};
-  int nsignal = 6;//16; //oops, where did LM3 go?
+  int nsignal = 4;//16; //oops, where did LM3 go?
   //  char *signal_list[]={"LM0", "LM1", "LM2", "LM4", "LM5", "LM6","LM7", "LM8","LM9","LM9p", "LM9t175", "LM10", "LM11", "LM12","LM13","mMSSM"};
-  char *signal_list[]={"LM0", "LM9","LM13","mMSSM","mMSSMv2","mMSSMv3"};
+  char *signal_list[]={"LM9","mMSSM","mMSSMv2","mMSSMv3"};
 
   //as long as i compile, I can use the most basic stl containers
   // ... what was I thinking? what i really want is a map of these, indexed by the names.
@@ -162,6 +162,11 @@ void cutflow_twiki()
       else if (mode==2) {
 	if (signal[signal_list[isignal]].at(i)+ background_total >0)
 	  cout<<signal[signal_list[isignal]].at(i)/sqrt(signal[signal_list[isignal]].at(i)+ background_total)  << col;
+	else  cout<<" - "<<endl;
+      }
+      else if (mode==3) {
+	if ( background_total >0)
+	  cout<<signal[signal_list[isignal]].at(i)/sqrt(background_total)  << col;
 	else  cout<<" - "<<endl;
       }
     }

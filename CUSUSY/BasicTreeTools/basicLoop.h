@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Tue Sep 14 15:22:19 2010 by ROOT version 5.26/00
+// Wed Sep 22 11:54:45 2010 by ROOT version 5.22/00d
 // from TTree tree/tree
-// found on file: ../data/BasicNtuples/V00-00-03/TTbarJets/BasicNtuple_10_1_d6n.root
+// found on file: /cu1/joshmt/BasicNtuples/V00-00-04/TTbarJets/BasicNtuple_1_1_2v3.root
 //////////////////////////////////////////////////////////
 
 #ifndef basicLoop_h
@@ -15,7 +15,7 @@
 // ========================================== begin
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
-// ---- this version is compatible with ntuple tag: V00-00-03 ----
+// ---- this version is compatible with ntuple tag: V00-00-04 ----
 #include <iostream>
 #include <vector>
 
@@ -45,18 +45,31 @@ public :
    // Declaration of leaf types
    vector<bool>    *SUSY_cutResults;
    vector<bool>    *cutResults;
+   vector<bool>    *passTrigger;
    vector<int>     *looseJetIndex;
    vector<float>   *jetPt;
    vector<float>   *jetEta;
    vector<float>   *jetPhi;
    vector<int>     *jetFlavor;
+   vector<float>   *jetBTagDisc_trackCountingHighPurBJetTags;
+   vector<float>   *jetBTagDisc_trackCountingHighEffBJetTags;
+   vector<float>   *jetBTagDisc_simpleSecondaryVertexHighEffBJetTags;
+   vector<float>   *jetBTagDisc_simpleSecondaryVertexHighPurBJetTags;
    vector<float>   *jetBTagDisc_simpleSecondaryVertexBJetTags;
    vector<float>   *loosejetPt;
+   vector<float>   *loosejetEt;
    vector<float>   *loosejetEta;
    vector<float>   *loosejetPhi;
    vector<int>     *loosejetFlavor;
+   vector<float>   *loosejetPtUncorr;
+   vector<float>   *loosejetEtaUncorr;
+   vector<float>   *loosejetPhiUncorr;
    vector<int>     *loosejetGenParticlePDGId;
    vector<float>   *loosejetInvisibleEnergy;
+   vector<float>   *loosejetBTagDisc_trackCountingHighPurBJetTags;
+   vector<float>   *loosejetBTagDisc_trackCountingHighEffBJetTags;
+   vector<float>   *loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags;
+   vector<float>   *loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags;
    vector<float>   *loosejetBTagDisc_simpleSecondaryVertexBJetTags;
    Int_t           nbSSVM;
    Float_t         HT;
@@ -79,18 +92,31 @@ public :
    // List of branches
    TBranch        *b_SUSY_cutResults;   //!
    TBranch        *b_cutResults;   //!
+   TBranch        *b_passTrigger;   //!
    TBranch        *b_looseJetIndex;   //!
    TBranch        *b_jetPt;   //!
    TBranch        *b_jetEta;   //!
    TBranch        *b_jetPhi;   //!
    TBranch        *b_jetFlavor;   //!
+   TBranch        *b_jetBTagDisc_trackCountingHighPurBJetTags;   //!
+   TBranch        *b_jetBTagDisc_trackCountingHighEffBJetTags;   //!
+   TBranch        *b_jetBTagDisc_simpleSecondaryVertexHighEffBJetTags;   //!
+   TBranch        *b_jetBTagDisc_simpleSecondaryVertexHighPurBJetTags;   //!
    TBranch        *b_jetBTagDisc_simpleSecondaryVertexBJetTags;   //!
    TBranch        *b_loosejetPt;   //!
+   TBranch        *b_loosejetEt;   //!
    TBranch        *b_loosejetEta;   //!
    TBranch        *b_loosejetPhi;   //!
    TBranch        *b_loosejetFlavor;   //!
+   TBranch        *b_loosejetPtUncorr;   //!
+   TBranch        *b_loosejetEtaUncorr;   //!
+   TBranch        *b_loosejetPhiUncorr;   //!
    TBranch        *b_loosejetGenParticlePDGId;   //!
    TBranch        *b_loosejetInvisibleEnergy;   //!
+   TBranch        *b_loosejetBTagDisc_trackCountingHighPurBJetTags;   //!
+   TBranch        *b_loosejetBTagDisc_trackCountingHighEffBJetTags;   //!
+   TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags;   //!
+   TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags;   //!
    TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexBJetTags;   //!
    TBranch        *b_nbSSVM;   //!
    TBranch        *b_HT;   //!
@@ -148,7 +174,6 @@ public :
    double getDeltaPhi(double phi1, double phi2);
    // ========================================== end
 
-
 };
 
 #endif
@@ -163,16 +188,15 @@ basicLoop::basicLoop(TTree *tree)
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
    if (tree == 0) {
-      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("../data/BasicNtuples/V00-00-03/TTbarJets/BasicNtuple_10_1_d6n.root");
+      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("/cu1/joshmt/BasicNtuples/V00-00-04/TTbarJets/BasicNtuple_1_1_2v3.root");
       if (!f) {
-         f = new TFile("../data/BasicNtuples/V00-00-03/TTbarJets/BasicNtuple_10_1_d6n.root");
-         f->cd("../data/BasicNtuples/V00-00-03/TTbarJets/BasicNtuple_10_1_d6n.root:/BasicTreeMaker");
+         f = new TFile("/cu1/joshmt/BasicNtuples/V00-00-04/TTbarJets/BasicNtuple_1_1_2v3.root");
+         f->cd("/cu1/joshmt/BasicNtuples/V00-00-04/TTbarJets/BasicNtuple_1_1_2v3.root:/BasicTreeMaker");
       }
       tree = (TTree*)gDirectory->Get("tree");
 
    }
    Init(tree);
-
    // ========================================== begin
    //this is now in the infotree
    //not sure how to get that unless the user passes it in as an argument
@@ -204,7 +228,6 @@ basicLoop::~basicLoop()
   // delete fChain->GetCurrentFile();
   // ========================================== end
 }
-
 
 Int_t basicLoop::GetEntry(Long64_t entry)
 {
@@ -240,18 +263,31 @@ void basicLoop::Init(TTree *tree)
    // Set object pointer
    SUSY_cutResults = 0;
    cutResults = 0;
+   passTrigger = 0;
    looseJetIndex = 0;
    jetPt = 0;
    jetEta = 0;
    jetPhi = 0;
    jetFlavor = 0;
+   jetBTagDisc_trackCountingHighPurBJetTags = 0;
+   jetBTagDisc_trackCountingHighEffBJetTags = 0;
+   jetBTagDisc_simpleSecondaryVertexHighEffBJetTags = 0;
+   jetBTagDisc_simpleSecondaryVertexHighPurBJetTags = 0;
    jetBTagDisc_simpleSecondaryVertexBJetTags = 0;
    loosejetPt = 0;
+   loosejetEt = 0;
    loosejetEta = 0;
    loosejetPhi = 0;
    loosejetFlavor = 0;
+   loosejetPtUncorr = 0;
+   loosejetEtaUncorr = 0;
+   loosejetPhiUncorr = 0;
    loosejetGenParticlePDGId = 0;
    loosejetInvisibleEnergy = 0;
+   loosejetBTagDisc_trackCountingHighPurBJetTags = 0;
+   loosejetBTagDisc_trackCountingHighEffBJetTags = 0;
+   loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags = 0;
+   loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags = 0;
    loosejetBTagDisc_simpleSecondaryVertexBJetTags = 0;
    trackPt = 0;
    trackEta = 0;
@@ -265,18 +301,31 @@ void basicLoop::Init(TTree *tree)
 
    fChain->SetBranchAddress("SUSY_cutResults", &SUSY_cutResults, &b_SUSY_cutResults);
    fChain->SetBranchAddress("cutResults", &cutResults, &b_cutResults);
+   fChain->SetBranchAddress("passTrigger", &passTrigger, &b_passTrigger);
    fChain->SetBranchAddress("looseJetIndex", &looseJetIndex, &b_looseJetIndex);
    fChain->SetBranchAddress("jetPt", &jetPt, &b_jetPt);
    fChain->SetBranchAddress("jetEta", &jetEta, &b_jetEta);
    fChain->SetBranchAddress("jetPhi", &jetPhi, &b_jetPhi);
    fChain->SetBranchAddress("jetFlavor", &jetFlavor, &b_jetFlavor);
+   fChain->SetBranchAddress("jetBTagDisc_trackCountingHighPurBJetTags", &jetBTagDisc_trackCountingHighPurBJetTags, &b_jetBTagDisc_trackCountingHighPurBJetTags);
+   fChain->SetBranchAddress("jetBTagDisc_trackCountingHighEffBJetTags", &jetBTagDisc_trackCountingHighEffBJetTags, &b_jetBTagDisc_trackCountingHighEffBJetTags);
+   fChain->SetBranchAddress("jetBTagDisc_simpleSecondaryVertexHighEffBJetTags", &jetBTagDisc_simpleSecondaryVertexHighEffBJetTags, &b_jetBTagDisc_simpleSecondaryVertexHighEffBJetTags);
+   fChain->SetBranchAddress("jetBTagDisc_simpleSecondaryVertexHighPurBJetTags", &jetBTagDisc_simpleSecondaryVertexHighPurBJetTags, &b_jetBTagDisc_simpleSecondaryVertexHighPurBJetTags);
    fChain->SetBranchAddress("jetBTagDisc_simpleSecondaryVertexBJetTags", &jetBTagDisc_simpleSecondaryVertexBJetTags, &b_jetBTagDisc_simpleSecondaryVertexBJetTags);
    fChain->SetBranchAddress("loosejetPt", &loosejetPt, &b_loosejetPt);
+   fChain->SetBranchAddress("loosejetEt", &loosejetEt, &b_loosejetEt);
    fChain->SetBranchAddress("loosejetEta", &loosejetEta, &b_loosejetEta);
    fChain->SetBranchAddress("loosejetPhi", &loosejetPhi, &b_loosejetPhi);
    fChain->SetBranchAddress("loosejetFlavor", &loosejetFlavor, &b_loosejetFlavor);
+   fChain->SetBranchAddress("loosejetPtUncorr", &loosejetPtUncorr, &b_loosejetPtUncorr);
+   fChain->SetBranchAddress("loosejetEtaUncorr", &loosejetEtaUncorr, &b_loosejetEtaUncorr);
+   fChain->SetBranchAddress("loosejetPhiUncorr", &loosejetPhiUncorr, &b_loosejetPhiUncorr);
    fChain->SetBranchAddress("loosejetGenParticlePDGId", &loosejetGenParticlePDGId, &b_loosejetGenParticlePDGId);
    fChain->SetBranchAddress("loosejetInvisibleEnergy", &loosejetInvisibleEnergy, &b_loosejetInvisibleEnergy);
+   fChain->SetBranchAddress("loosejetBTagDisc_trackCountingHighPurBJetTags", &loosejetBTagDisc_trackCountingHighPurBJetTags, &b_loosejetBTagDisc_trackCountingHighPurBJetTags);
+   fChain->SetBranchAddress("loosejetBTagDisc_trackCountingHighEffBJetTags", &loosejetBTagDisc_trackCountingHighEffBJetTags, &b_loosejetBTagDisc_trackCountingHighEffBJetTags);
+   fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags", &loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags, &b_loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags);
+   fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags", &loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags, &b_loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags);
    fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexBJetTags", &loosejetBTagDisc_simpleSecondaryVertexBJetTags, &b_loosejetBTagDisc_simpleSecondaryVertexBJetTags);
    fChain->SetBranchAddress("nbSSVM", &nbSSVM, &b_nbSSVM);
    fChain->SetBranchAddress("HT", &HT, &b_HT);
@@ -316,7 +365,6 @@ void basicLoop::Show(Long64_t entry)
    if (!fChain) return;
    fChain->Show(entry);
 }
-
 
 // ========================================== begin
 
@@ -402,8 +450,6 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
     }
   }
 
-  //V00-00-03 still has a bug so there is no loosejetPhi info
-  /*
   // -- in case we are using MET instead of MHT, we need to alter the DeltaPhi cuts --
   if (cutIndex == 12 && 
       ( theCutScheme_ == kRA2MET ||theCutScheme_ == kRA2tcMET ) ) {
@@ -420,8 +466,7 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
     //here is the implementation of the DeltaPhi cuts
     if ( dp0 >0.3 && dp1 >0.5 && dp2 >0.3 ) { return true; } else {return false;}
   }
-  */
-
+  
   //in case this is not an exception, return the cut result stored in the ntuple
   return cutResults->at(cutIndex);
 }
@@ -501,8 +546,20 @@ double basicLoop::getDeltaPhiMPTMET() {
 }
 
 bool basicLoop::passBCut( unsigned int bindex) {
+  //bindex is taken to be the index of a *tight* jet
 
-  return  jetBTagDisc_simpleSecondaryVertexBJetTags->at(bindex) >= 1.74;
+  //use tagger simpleSecondaryVertexHighEffBJetTags
+  //which in older samples is called simpleSecondaryVertexBJetTags
+
+  bool pass=false;
+  float oldval=jetBTagDisc_simpleSecondaryVertexBJetTags->at(bindex);
+  float newval=jetBTagDisc_simpleSecondaryVertexHighEffBJetTags->at(bindex);
+
+  //if the tagger is not valid, there seems to be a value -1000 returned by CMSSW
+  //so clearly that will fail the cut
+  if ( (oldval >=1.74) || (newval >=1.74)) pass=true;
+
+  return  pass;
 }
 
 double basicLoop::getDeltaPhi(double phi1, double phi2) {

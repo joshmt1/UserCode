@@ -14,7 +14,7 @@ gSystem->Load("basicLoop_C.so");
 
 */
 
-const TString version = "V00-00-02";
+const TString version = "V00-00-04";
 
 void run_cutflow()
 {
@@ -51,7 +51,7 @@ void run_cutflow()
     TChain ch("BasicTreeMaker/tree");
     ch.Add(samplefiles);
     basicLoop looper(&ch);
-    looper.setCutScheme(basicLoop::kRA2tcMET); //this is a critical line! defines the cuts to use!
+    looper.setCutScheme(basicLoop::kRA2MET); //this is a critical line! defines the cuts to use!
     looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
     looper.cutflow();
   }
