@@ -13,6 +13,7 @@
 #include <TFile.h>
 
 // ========================================== begin
+#include "/afs/cern.ch/user/j/joshmt/root/util/MiscUtil.cxx" //need to either make this file public or remove this hard-coding
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
 // ---- this version is compatible with ntuple tag: V00-00-04 ----
@@ -32,8 +33,10 @@ public :
   enum CutScheme {kRA2=0, kRA2MET, kRA2tcMET, nCutSchemes};
   CutScheme theCutScheme_;
   unsigned int nBcut_;
+  enum theCutFlow {cutInclusive=0,cutTrigger=1,cutPV=2,cut3Jets=3,cutJetPt1=4,cutJetPt2=5,cutJetPt3=6,cutHT=7,cutMET=8,cutMHT=9,
+		   cutMuVeto=10,cutEleVeto=11,cutDeltaPhi=12,cut1B=13,cut2B=14,cut3B=15};
   std::vector<int> ignoredCut_; //allow more than 1 ignored cut!
-
+  //if theCutFlow changes, be sure to change cutnames_ as well
   std::vector<TString> cutnames_;
 
   enum TopDecayCategory {kTTbarUnknown=0,kAllLeptons=1,kAllHadronic=2,kOneElectron=3,kOneMuon=4,kOneTauE=5,kOneTauMu=6,kOneTauHadronic=7,kAllTau=8, nTopCategories=9};
@@ -155,6 +158,7 @@ public :
    void setIgnoredCut(const int cutIndex); //use to make N-1 plots! (and other things)
    void resetIgnoredCut() ;
    void setBCut(unsigned int nb);
+   TString getCutDescriptionString();
    
    void cutflow();
    bool cutRequired(unsigned int cutIndex) ;
@@ -166,6 +170,7 @@ public :
    double getMinDeltaPhibMET() ;
    double getMinDeltaPhiMET(unsigned int maxjets) ;
    double getDeltaPhib1b2();
+   double getUncorrectedHT(const double threshold);
    int getTopDecayCategory();
    double getMinDeltaPhi_bj(unsigned int bindex);
    double getOverallMinDeltaR_bj();
@@ -200,22 +205,23 @@ basicLoop::basicLoop(TTree *tree)
    // ========================================== begin
    //this is now in the infotree
    //not sure how to get that unless the user passes it in as an argument
+   //update -- still not using the infotree, now changing these so they can easily be used in file names
    cutnames_.push_back("Inclusive");
    cutnames_.push_back("Trigger");
    cutnames_.push_back("PV");
-   cutnames_.push_back(">= 3 Jets");
-   cutnames_.push_back("First Jet");
-   cutnames_.push_back("2nd Jet");
-   cutnames_.push_back("3rd Jet");
-   cutnames_.push_back("HT Cut");
-   cutnames_.push_back("MET Cut");
-   cutnames_.push_back("MHT Cut");
-   cutnames_.push_back("Muon veto");
-   cutnames_.push_back("electron veto");
-   cutnames_.push_back("Delta Phi");
-   cutnames_.push_back(">=1 b");
-   cutnames_.push_back(">=2 b");
-   cutnames_.push_back(">=3 b");
+   cutnames_.push_back(">=3Jets");
+   cutnames_.push_back("JetPt1");
+   cutnames_.push_back("JetPt2");
+   cutnames_.push_back("JetPt3");
+   cutnames_.push_back("HT");
+   cutnames_.push_back("MET");
+   cutnames_.push_back("MHT");
+   cutnames_.push_back("MuVeto");
+   cutnames_.push_back("EleVeto");
+   cutnames_.push_back("DeltaPhi");
+   cutnames_.push_back(">=1b");
+   cutnames_.push_back(">=2b");
+   cutnames_.push_back(">=3b");
    // ========================================== end
    
 }
@@ -388,7 +394,7 @@ void basicLoop::resetIgnoredCut() {
 }
 
 bool basicLoop::cutRequired(const unsigned int cutIndex) {
-  //not quite sure what the best (most elegant) way to implement this is....
+  //this is now implemented as an enum!
   // *        0 *        0 * Inclusive *
   // *        0 *        1 *   Trigger *
   // *        0 *        2 *        PV *
@@ -445,13 +451,13 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
 
   //implement special exceptions here
   if ( theCutScheme_== kRA2tcMET ) {
-    if (cutIndex == 8) { //cut on tc MET instead of caloMET
+    if (cutIndex == cutMET) { //cut on tc MET instead of caloMET
       return (tcMET > 150); //hardcoded MET cut
     }
   }
 
   // -- in case we are using MET instead of MHT, we need to alter the DeltaPhi cuts --
-  if (cutIndex == 12 && 
+  if (cutIndex == cutDeltaPhi && 
       ( theCutScheme_ == kRA2MET ||theCutScheme_ == kRA2tcMET ) ) {
     
     float phi_of_MET = (theCutScheme_ == kRA2tcMET) ? tcMETphi : METphi;
@@ -480,6 +486,24 @@ Int_t basicLoop::Cut(Long64_t entry)
   
   return 1;
   
+}
+
+double basicLoop::getUncorrectedHT(const double threshold) {
+
+  /*
+I have realized that if I want to do a crude trigger simulation, then I need to store every jet
+with Uncorrect Pt>20 GeV, not just jets passing my 'loose' cuts
+
+   vector<float>   *loosejetPtUncorr;
+   vector<float>   *loosejetEtaUncorr;
+   vector<float>   *loosejetPhiUncorr;*/
+  double ht=0;
+  for (unsigned int ijet=0; ijet<loosejetPtUncorr->size(); ijet++) {
+    double thispt =fabs(loosejetPtUncorr->at(ijet));
+    if (thispt>=threshold)   ht+= thispt;
+  }
+  
+   return ht;
 }
 
 double basicLoop::getMinDeltaPhiMET(unsigned int maxjets) {
@@ -767,6 +791,16 @@ bool basicLoop::setCutScheme(CutScheme cutscheme) {
   cout<<"Cut scheme set to: "<<CutSchemeNames_[theCutScheme_]<<endl;
 
   return true;
+}
+
+TString basicLoop::getCutDescriptionString() {
+
+  TString cuts = CutSchemeNames_[theCutScheme_];
+  for (unsigned int icut=0; icut<ignoredCut_.size() ; icut++) {
+    cuts+="_No";
+    cuts += jmt::fortranize(cutnames_.at(ignoredCut_.at(icut)));
+  }
+  return cuts; 
 }
 
 

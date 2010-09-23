@@ -1,12 +1,8 @@
-/* to do:
--- fix MET cut flows to use correct DeltaPhi (almost done)
--- perhaps implement fancier ABCD methods (either directly or via a tree)
-*/
-
 #define basicLoop_cxx
 #include "basicLoop.h"
 #include <TH1.h>
 #include <TH2.h>
+#include <TDatime.h>
 #include <TFile.h>
 #include <TStyle.h>
 #include <fstream>
@@ -131,6 +127,16 @@ void basicLoop::ABCDtree()
   ABCDtree.Branch("minDeltaPhi",&minDeltaPhi,"minDeltaPhi/D");
   ABCDtree.Branch("minDeltaRbj",&minDeltaRbj,"minDeltaRbj/D");
   ABCDtree.Branch("DeltaPhiMPTMET",&DeltaPhiMPTMET,"DeltaPhiMPTMET/D");
+  //some additional variables, not really for ABCD....
+  int ntightjets;
+  int ntightMCbjets;
+  int nloosejets;
+  int nlooseMCbjets;
+  ABCDtree.Branch("ntightjets",&ntightjets,"ntightjets/I");
+  ABCDtree.Branch("ntightMCbjets",&ntightMCbjets,"ntightMCbjets/I");
+  ABCDtree.Branch("nloosejets",&nloosejets,"nloosejets/I");
+  ABCDtree.Branch("nlooseMCbjets",&nlooseMCbjets,"nlooseMCbjets/I");
+
   //
   
   Long64_t nbytes = 0, nb = 0;
@@ -144,6 +150,16 @@ void basicLoop::ABCDtree()
     minDeltaPhi = getMinDeltaPhiMET(3);
     minDeltaRbj = getOverallMinDeltaR_bj();
     DeltaPhiMPTMET = getDeltaPhiMPTMET();
+
+    ntightjets=jetPt->size();
+    nloosejets=loosejetPt->size();
+    ntightMCbjets=0;
+    nlooseMCbjets=0;
+    for (unsigned int ijet=0; ijet<jetFlavor->size(); ijet++)
+      if (abs(jetFlavor->at(ijet))==5) ntightMCbjets++;
+    for (unsigned int ijet=0; ijet<loosejetFlavor->size(); ijet++)
+      if (abs(loosejetFlavor->at(ijet))==5) nlooseMCbjets++;
+    
     ABCDtree.Fill(); 
   }
 
@@ -177,7 +193,10 @@ void basicLoop::Loop()
    double   weight = lumi * sigma / double(nentries); //calculate weight
 
    //open output file
-   TString outfilename="plots."; outfilename+=sampleName; outfilename+=".root";
+   TString outfilename="plots."; 
+   outfilename+=getCutDescriptionString();
+   outfilename+=".";    outfilename+=sampleName; 
+   outfilename+=".root";
    TFile fout(outfilename,"RECREATE");
 
   
@@ -216,6 +235,10 @@ void basicLoop::Loop()
    TH1D H_MHT_ge3b("H_MHT_ge3b","MHT (RA2 && >=3b)",nbins, met_min , met_max);
    TH1D H_MET_ge3b("H_MET_ge3b","MET (RA2 && >=3b)",nbins, met_min , met_max);
 
+   TH2D HpassMET45("HpassMET45","pass MET45 versus MET (RA2)",nbins,met_min,met_max,2,0,2);
+   TH2D HpassMET45_ge1b("HpassMET45_ge1b","pass MET45 versus MET (RA2 && >=1b)",nbins,met_min,met_max,2,0,2);
+   TH2D HpassMET45_ge2b("HpassMET45_ge2b","pass MET45 versus MET (RA2 && >=2b)",nbins,met_min,met_max,2,0,2);
+
    TH2D HdeltaPhib1b2_MET("HdeltaPhib1b2_MET","DeltaPhi(b1,b2) v MET (>=2b)",nbins,met_min,met_max,nbins,0,pi);
    TH2D HminDeltaPhiMETb_MET_ge2b("HminDeltaPhiMETb_MET_ge2b","minDeltaPhi(b,MET) v MET (>=2b)",nbins,met_min,met_max,nbins,0,pi);
    TH2D HminDeltaPhiMETj_MET_ge2b("HminDeltaPhiMETj_MET_ge2b","minDeltaPhi(j,MET) v MET (>=2b)",nbins,met_min,met_max,nbins,0,pi);
@@ -246,6 +269,12 @@ void basicLoop::Loop()
    met_max=met_min+nbins*10;
    TH2D HminDeltaR_bj_vMET_ABCD_ge1b("HminDeltaR_bj_vMET_ABCD_ge1b","minimum deltaR(b,j) v. MET (RA2 && >=1b)",nbins,met_min,met_max,nbinsDR,dr_min,dr_max);
    TH2D HminDeltaR_bj_vMET_ABCD_ge2b("HminDeltaR_bj_vMET_ABCD_ge2b","minimum deltaR(b,j) v. MET (RA2 && >=2b)",nbins,met_min,met_max,nbinsDR,dr_min,dr_max);
+
+   double ht_min=0,ht_max=900;
+   int ht_nbins=300;
+   TH2D HpassHT100U("HpassHT100U","pass HT100U versus HT (RA2)",ht_nbins,ht_min,ht_max,2,0,2);
+   TH2D HpassHT100U_ge1b("HpassHT100U_ge1b","pass HT100U versus HT (RA2 && >=1b)",ht_nbins,ht_min,ht_max,2,0,2);
+   TH2D HpassHT100U_ge2b("HpassHT100U_ge2b","pass HT100U versus HT (RA2 && >=2b)",ht_nbins,ht_min,ht_max,2,0,2);
 
    //as usual, perhaps we should manage our histos with HistHolder (but let's keep it simple instead)
    Hnjets.Sumw2();
@@ -293,6 +322,16 @@ void basicLoop::Loop()
    HminDeltaR_bj_vMET_ABCD_ge1b.Sumw2();
    HminDeltaR_bj_vMET_ABCD_ge2b.Sumw2();
 
+   HpassHT100U.Sumw2();
+   HpassHT100U_ge1b.Sumw2();
+   HpassHT100U_ge2b.Sumw2();
+
+   HpassMET45.Sumw2();
+   HpassMET45_ge1b.Sumw2();
+   HpassMET45_ge2b.Sumw2();
+
+   //keep track of performance
+   TDatime starttime; //default ctor is for current time
 
    //event loop
    Long64_t nbytes = 0, nb = 0;
@@ -312,10 +351,18 @@ void basicLoop::Loop()
       H_MHT.Fill(MHT ,weight);
       H_MET.Fill(MET ,weight);
 
+      int passHTtrig = passTrigger->at(0) ? 1:0; //index 0 is HLT_HT100U
+      int passMETtrig = passTrigger->at(2) ? 1:0; //index 2 is HLT_MET45
+      HpassHT100U.Fill(HT,passHTtrig); //note -- NOT using weight here!
+      HpassMET45.Fill(MET,passMETtrig);
+
       if ( nbSSVM < 1) continue; //cut on the number of b tags
       Hnjets_ge1b.Fill( jetPt->size(), weight );
       H_MHT_ge1b.Fill(MHT ,weight);
       H_MET_ge1b.Fill(MET ,weight);
+
+      HpassHT100U_ge1b.Fill(HT,passHTtrig); //note -- NOT using weight here!
+      HpassMET45_ge1b.Fill(MET,passMETtrig);
 
       double minDeltaPhi_b_MET= getMinDeltaPhibMET();
       double minDeltaPhi_j_MET= getMinDeltaPhiMET(3);
@@ -349,6 +396,9 @@ void basicLoop::Loop()
       H_MET_ge2b.Fill(MET ,weight);
       HdeltaPhiMPTMET_ge2b.Fill( dp_MPTMET,weight);
 
+      HpassHT100U_ge2b.Fill(HT,passHTtrig);
+      HpassMET45_ge2b.Fill(MET,passMETtrig);
+
       HminDeltaPhiMETb_ge2b.Fill(minDeltaPhi_b_MET,weight);
       HminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,weight);
 
@@ -377,9 +427,13 @@ void basicLoop::Loop()
       H_MHT_ge3b.Fill(MHT ,weight);
       H_MET_ge3b.Fill(MET ,weight);
    }
+   TDatime stoptime; //default ctor is for current time
+   UInt_t elapsed= stoptime.Convert() - starttime.Convert();
 
+   cout<<"events / time = "<<nentries<<" / "<<elapsed<<" = "<<double(nentries)/double(elapsed)<<" Hz"<<endl;
    fout.Write();
    fout.Close();
+
 }
 
 

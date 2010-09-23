@@ -28,7 +28,6 @@ void run_basicLoop()
   TString dir = "/cu1/joshmt/"; //default is dellcmscornell
   if (computername =="JoshPC") {
     dir="~/data/";
-    //  libname="basicLoop_C.dll";
   }
 
   dir += "BasicNtuples/";
@@ -48,7 +47,7 @@ void run_basicLoop()
     cout<<"About to start on files: "<<samplefiles<<endl;
 
     //    if (samplefiles.Contains("MoreMSSM")) continue; //hack to skip some samples
-    //if (!samplefiles.Contains("LM")) continue; //hack to skip some samples
+    if (!samplefiles.Contains("LM")) continue; //hack to skip some samples
 
     TChain ch("BasicTreeMaker/tree");
     ch.Add(samplefiles);
@@ -57,9 +56,11 @@ void run_basicLoop()
     looper.setCutScheme(basicLoop::kRA2MET);
     //no b tagging cut so that plots can apply it selectively
     //careful what is set here!
-    //looper.setIgnoredCut(8); //MET
-    //    looper.setIgnoredCut(12); //DeltaPhi
-
+    looper.setIgnoredCut(basicLoop::cutTrigger);
+    //    looper.setIgnoredCut(basicLoop::cutHT);
+    looper.setIgnoredCut(basicLoop::cutMET); //MET
+    //    looper.setIgnoredCut(basicLoop::cutDeltaPhi); //DeltaPhi
+    
     looper.Loop();  //go!
   }
 

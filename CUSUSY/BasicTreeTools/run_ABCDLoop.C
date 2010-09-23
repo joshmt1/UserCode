@@ -16,7 +16,7 @@ these are not needed (assuming this macro is compiled) because of the include ab
 gSystem->Load("basicLoop_C.so");
 
 */
-const TString version = "V00-00-03";
+const TString version = "V00-00-04";
 
 void run_ABCDLoop()
 {
@@ -56,11 +56,11 @@ void run_ABCDLoop()
     ch.Add(samplefiles);
     basicLoop looper(&ch);
     //important! this is where cuts are defined
-    //-- dang...this ought to be redone a bit...as written, this requires 3(!) b tags!
     looper.setCutScheme(basicLoop::kRA2MET);
-    looper.setBCut(2);
+    looper.setBCut(0);
     //careful what is set here!
     looper.setIgnoredCut(8); //MET
+    looper.setIgnoredCut(3); //njets
     //    looper.setIgnoredCut(12); //DeltaPhi
 
     looper.ABCDtree();  //go!
