@@ -164,14 +164,3 @@ void PlotUtil::addSample(TString sampleid,TTree* sampletree,TString sampleName,U
 
 }
 
-TString PlotUtil::fortranize(TString cut) {
-
-  cut.ReplaceAll("==","eq");
-  cut.ReplaceAll(">=","gte");
-  cut.ReplaceAll("<=","lte");
-
-  cut.ReplaceAll(">","gt");
-  cut.ReplaceAll("<","lt");
-
-  return cut;
-}
