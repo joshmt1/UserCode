@@ -13,13 +13,14 @@ Uses STL vectors for arrays of data. This seems to work fine for analysis in bar
 using a class created with MakeClass.
 
 Developed and tested with CMSSW_3_6_2
-(Now moving to CMSSW_3_6_3)
-
+(Works fine in CMSSW_3_6_3 too)
+  Recipe is kept here:
+https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 */
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.5 2010/09/15 12:09:37 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.6 2010/09/21 09:13:23 joshmt Exp $
 //
 //
 
@@ -189,6 +190,7 @@ private:
   //for convenience I will keep some duplication for now
 
   //loose jet info
+  std::vector<int> verylooseJetIndex; //map from loose jet to very loose jet list
   std::vector<float> loosejetPt;
   std::vector<float> loosejetEt;
   std::vector<float> loosejetEta;
@@ -197,9 +199,11 @@ private:
   std::vector<int> loosejetGenParticlePDGId;
   std::vector<float> loosejetInvisibleEnergy;
   std::map < std::string, std::vector<float> > loosejetBTagDisc;
-  std::vector<float> loosejetPtUncorr; //uncorrected jet info
-  std::vector<float> loosejetEtaUncorr;
-  std::vector<float> loosejetPhiUncorr;
+
+  //realized that I don't want even the 'loose' offline cuts for these jets
+  std::vector<float> veryloosejetPtUncorr; //uncorrected jet info
+  std::vector<float> veryloosejetEtaUncorr;
+  std::vector<float> veryloosejetPhiUncorr;
 
   int nbSSVM; //FIXME this is still in need of a more sophisticated approach (for now this works...)
 
@@ -592,6 +596,14 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     //now pull out that jet
     const pat::Jet & jet = jets[jj];
     
+    //fill the 'very loose' vectors with uncorrected jet info
+    pat::Jet uncorrectedJet = jet.correctedJet("raw"); //get the uncorrected jet (i hope)
+    if (uncorrectedJet.pt() >= 10) { //can apply tighter cuts offline
+      veryloosejetPtUncorr.push_back(uncorrectedJet.pt());
+      veryloosejetEtaUncorr.push_back(uncorrectedJet.eta());
+      veryloosejetPhiUncorr.push_back(uncorrectedJet.phi());
+    }
+    
     //MHT is calculated using loose jet cuts
     //HT is calculated using regular jet cuts
     bool passJetID = false;
@@ -607,6 +619,8 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     
     //now fill ntuple!
     if (passLooseCuts) {
+      verylooseJetIndex.push_back( veryloosejetPtUncorr.size() - 1);
+
       MHTx -= jet.px();
       MHTy -= jet.py();
       loosejetPt.push_back( jet.pt() );
@@ -614,11 +628,6 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       loosejetEta.push_back(jet.eta());
       loosejetPhi.push_back(jet.phi());
       loosejetFlavor.push_back( jet.partonFlavour() );
-
-      pat::Jet uncorrectedJet = jet.correctedJet("raw"); //get the uncorrected jet (i hope)
-      loosejetPtUncorr.push_back(uncorrectedJet.pt());
-      loosejetEtaUncorr.push_back(uncorrectedJet.eta());
-      loosejetPhiUncorr.push_back(uncorrectedJet.phi());
 
       if ( jet.genJet() != 0 && jet.genParticle() != 0) {
 	
@@ -808,6 +817,7 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   leptonInfoFilled_=false;
   trackInfoFilled_=false;
   looseJetIndex.clear();
+  verylooseJetIndex.clear();
   jetPt.clear();
   jetEta.clear();
   jetPhi.clear();
@@ -821,9 +831,9 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   loosejetGenParticlePDGId.clear();
   loosejetInvisibleEnergy.clear();
 
-  loosejetPtUncorr.clear();
-  loosejetEtaUncorr.clear();
-  loosejetPhiUncorr.clear();
+  veryloosejetPtUncorr.clear();
+  veryloosejetEtaUncorr.clear();
+  veryloosejetPhiUncorr.clear();
 
   for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
     jetBTagDisc[btagAlgorithmNames_[ib]].clear();
@@ -927,6 +937,7 @@ BasicTreeMaker::beginJob()
   tree_->Branch("passTrigger",&passTrigger); //stores results for triggers listed in triggerList
   //jet branches
   tree_->Branch("looseJetIndex",&looseJetIndex);
+  tree_->Branch("verylooseJetIndex",&verylooseJetIndex);
   tree_->Branch("jetPt",&jetPt);
   tree_->Branch("jetEta",&jetEta);
   tree_->Branch("jetPhi",&jetPhi);
@@ -946,9 +957,9 @@ BasicTreeMaker::beginJob()
   tree_->Branch("loosejetPhi",&loosejetPhi);
   tree_->Branch("loosejetFlavor",&loosejetFlavor);
 
-  tree_->Branch("loosejetPtUncorr",&loosejetPtUncorr);
-  tree_->Branch("loosejetEtaUncorr",&loosejetEtaUncorr);
-  tree_->Branch("loosejetPhiUncorr",&loosejetPhiUncorr);
+  tree_->Branch("veryloosejetPtUncorr",&veryloosejetPtUncorr);
+  tree_->Branch("veryloosejetEtaUncorr",&veryloosejetEtaUncorr);
+  tree_->Branch("veryloosejetPhiUncorr",&veryloosejetPhiUncorr);
 
   tree_->Branch("loosejetGenParticlePDGId",&loosejetGenParticlePDGId);
   tree_->Branch("loosejetInvisibleEnergy",&loosejetInvisibleEnergy);
