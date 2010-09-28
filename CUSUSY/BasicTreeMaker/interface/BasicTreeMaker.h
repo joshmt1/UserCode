@@ -19,7 +19,7 @@ eg:
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id:$
+// $Id: BasicTreeMaker.h,v 1.1 2010/09/28 07:50:28 joshmt Exp $
 //
 //
 
@@ -88,6 +88,7 @@ private:
   TTree* infotree_;
 
   bool isMC_;
+  bool doPrescale_;
 
   std::vector<std::string> btagAlgorithmNames_;
   std::vector<std::string> triggersOfInterest_;

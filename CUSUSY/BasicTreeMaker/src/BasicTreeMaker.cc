@@ -20,7 +20,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.7 2010/09/23 10:58:37 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.8 2010/09/28 07:50:28 joshmt Exp $
 //
 //
 
@@ -86,6 +86,7 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   infotree_(0),
 
   isMC_(iConfig.getParameter<bool>("MCflag")),
+  doPrescale_(false),
 
   btagAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("btagAlgorithms")),
   triggersOfInterest_(iConfig.getParameter<std::vector<std::string> >("triggersOfInterest")),
@@ -189,7 +190,7 @@ BasicTreeMaker::fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup&
 	  passTrig = passed;
 	}
 
-	if (!isMC_) { //in data, get the prescale
+        if (!isMC_ && doPrescale_) { //in data, get the prescale
 	  prescale =  hltConfig_.prescaleValue(iEvent,iSetup,triggersOfInterest_.at(itrig));
 	  //  std::cout<< triggersOfInterest_.at(itrig) <<"Prescale = "<<prescale<<std::endl;
 	}
@@ -548,10 +549,12 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
   MET = metHandle->front().et();
   METphi = metHandle->front().phi();
 
-  edm::Handle<edm::View<pat::MET> > tcmetHandle; //i dunno if I really need a new one of these; can't hurt
-  iEvent.getByLabel(tcMetLabel_,tcmetHandle);
-  tcMET = tcmetHandle->front().et();
-  tcMETphi = tcmetHandle->front().phi();
+  if (tcMetLabel_.encode() != "") {
+    edm::Handle<edm::View<pat::MET> > tcmetHandle; //i dunno if I really need a new one of these; can't hurt
+    iEvent.getByLabel(tcMetLabel_,tcmetHandle);
+    tcMET = tcmetHandle->front().et();
+    tcMETphi = tcmetHandle->front().phi();
+  }
 
   cutResults.push_back(MET >= metMin_); //note that we are cutting on caloMET
   //the cut will have to be redone in order to use tcMET
@@ -756,7 +759,7 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 void
 BasicTreeMaker::beginRun(const edm::Run & iRun, const edm::EventSetup & iSetup)
 {
-
+  if (doPrescale_) {
   //compiles but does not run (at least on a test MC PAT tuple)
   bool hltChanged=false;
   if (  hltConfig_.init(iRun, iSetup, "HLT", hltChanged) ) {
@@ -766,6 +769,7 @@ BasicTreeMaker::beginRun(const edm::Run & iRun, const edm::EventSetup & iSetup)
   }
   else {
     std::cout<<"ERROR -- something went wrong in hltConfig.init()!"<<std::endl;
+  }
   }
 }
 
