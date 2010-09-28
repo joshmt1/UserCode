@@ -7,15 +7,17 @@ process = cms.Process("BasicTreeMaker")
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 process.source = cms.Source("PoolSource",
     # replace 'myfile.root' with the source file you want to use
     fileNames = cms.untracked.vstring(
+    'INPUT'
     #'file:/cu1/joshmt/DonPAT/MoreMSSM_PAT_10_1_osg.root'
     #'file:/cu1/joshmt/DonPAT/TTbarJets_SPRING10_PAT_99_7.root'
-    'file:/cu1/joshmt/data/Run2010B/9E73F38F-ECC9-DF11-8BFD-00304879FC6C.root'
-                                'file:/cu1/joshmt/RECO/FAB95B26-0769-DF11-BF53-003048CB87DE.root'
+#    '/store/user/wteo/MinimumBias/commissioning_jetmettau_jun14thskim/c4203bae27064fcbcff856a81ef504ae/PAT_362_commissioningJune14th_jetmettau_49_3_MI6.root'
+#    'file:/cu1/joshmt/data/Run2010B/9E73F38F-ECC9-DF11-8BFD-00304879FC6C.root'
+#                                'file:/cu1/joshmt/RECO/FAB95B26-0769-DF11-BF53-003048CB87DE.root'
     #    '/store/user/wteo/LM3/lm3_spring10_v1/838332be00fca3dd34042237dc5fc2e8/LM3_SPRING10_PAT_1_4.root'
     )
 )
@@ -39,11 +41,11 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                                                      "simpleSecondaryVertexBJetTags"), #for older samples
 #extract individual tags from don's python
 #first the names of various collections
-                                        jetTag = cms.InputTag('cleanPatJetsAK5Calo'),
-                                        caloMetTag = cms.InputTag('patMETsAK5Calo'),
-                                        tcMetTag = cms.InputTag('patMETsTC'),
-                                        eleTag = cms.InputTag('cleanPatElectrons'),
-                                        muoTag = cms.InputTag('cleanPatMuons'),
+                                        jetTag = cms.InputTag('selectedPatJets'), #cleanPatJetsAK5Calo
+                                        caloMetTag = cms.InputTag('patMETs'), #patMETsAK5Calo 
+                                        tcMetTag = cms.InputTag(''), #patMETsTC
+                                        eleTag = cms.InputTag('selectedPatElectrons'), #cleanPatElectrons
+                                        muoTag = cms.InputTag('selectedPatMuons'), #cleanPatMuons
 #configuration of the cut flow and what cuts to use when storing to the ntuple
 #the 'SUSY trigger' used in the cut flow is the first one listed here
                                         triggersOfInterest = cms.vstring("HLT_HT100U","HLT_HT120U","HLT_HT140U","HLT_HT200",
