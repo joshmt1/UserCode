@@ -20,7 +20,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.6 2010/09/21 09:13:23 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.7 2010/09/23 10:58:37 joshmt Exp $
 //
 //
 
@@ -64,180 +64,17 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 #include "DataFormats/Candidate/interface/Candidate.h"
 #include "DataFormats/HLTReco/interface/TriggerEvent.h"
 
-#include "CUSUSY/Selection/interface/SUSYEventSelector.h"
+//pulled in from Don's code
+#include "DataFormats/Common/interface/TriggerResults.h"
+#include "FWCore/Common/interface/TriggerNames.h"
 
-//Root includes
-#include "TFile.h"
-#include "TTree.h"
-#include "TH1.h"
+#include "PhysicsTools/SelectorUtils/interface/ElectronVPlusJetsIDSelectionFunctor.h"
+#include "PhysicsTools/SelectorUtils/interface/MuonVPlusJetsIDSelectionFunctor.h"
 
+#include "DataFormats/PatCandidates/interface/MET.h"
 
-//
-// class declaration
-//
+#include "CUSUSY/BasicTreeMaker/interface/BasicTreeMaker.h"
 
-class BasicTreeMaker : public edm::EDAnalyzer {
-public:
-  explicit BasicTreeMaker(const edm::ParameterSet&);
-  ~BasicTreeMaker();
-  
-  
-private:
-  virtual void beginJob() ;
-  virtual void analyze(const edm::Event&, const edm::EventSetup&);
-  virtual void endJob() ;
-  
-  //  bool passPV(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-  void fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-  void fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-  void fillTrackInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-  void fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-  void fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-  void fillBTagDBInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-
-  int  findSUSYMaternity( const reco::Candidate & cand );
-  int  findTopDecayMode( const reco::Candidate & cand );
-
-  //a clever piece of code stolen from Freya
-  template <class C>
-  struct IndexSorter {
-    IndexSorter (const C& values, bool decreasing = true) : 
-      values_(values), decrease_(decreasing) {}
-    std::vector<int> operator() () const {
-      std::vector<int> result;
-      result.reserve(values_.size());
-      for ( size_t i=0; i<values_.size(); ++i )  result.push_back(i);
-      sort(result.begin(),result.end(),*this);
-      return result;
-    }
-    bool operator() (int a, int b) {
-      if ( decrease_ )
-	return values_[a]>values_[b];
-      else
-	return values_[a]<values_[b];
-    }
-    const C& values_;
-    bool decrease_;
-  };
-
-  // ----------member data ---------------------------
-  edm::CPUTimer* thetimer_;
-  TH1D* Heventcount_;
-  TTree* tree_;
-  TTree* infotree_;
-
-  std::vector<std::string> btagAlgorithmNames_;
-  std::vector<std::string> triggersOfInterest_;
-
-  SUSYEventSelector* susyCutFlow_;
-
-  PVSelector                           pvSelector_;
-
-  //configuration strings (largely copied from don's and freya's code)
-  //  edm::InputTag triggerLabel_;
-  edm::InputTag jetLabel_;
-  edm::InputTag caloMetLabel_;
-  edm::InputTag tcMetLabel_;
-
-  edm::InputTag eleLabel_;
-  edm::InputTag muoLabel_;
-
-  std::string susyTrigger_;
-
-  JetIDSelectionFunctor                jetIdLoose_;
-  MuonVPlusJetsIDSelectionFunctor      muonId_;
-  ElectronVPlusJetsIDSelectionFunctor  electronId_;
-
-
-  //cut values
-  int minJets_; //min number of Tight jets
-
-  double jetPtMin_ ;
-  double jetEtaMax_;  
-  double loosejetPtMin_ ;
-  double loosejetEtaMax_;  
-
-  double muPtMin_  ;
-  double muEtaMax_ ;
-  double eleEtMin_ ;
-  double eleEtaMax_;
-
-  double mhtMin_;
-  double metMin_;
- 
-  //bookkeeping
-  bool jetInfoFilled_;
-  bool leptonInfoFilled_;
-  bool trackInfoFilled_;
-
-  // ====== define variables for the tree ======
-  std::vector<std::string> cutNames;
-  std::vector<bool> cutResultsDon;
-  std::vector<bool> cutResults;
-
-  std::vector<bool> passTrigger;
-
-  //tight jet info
-  std::vector<int> looseJetIndex; //map from tight jet list to loose jet list
-  std::vector<float> jetPt;
-  std::vector<float> jetEta;
-  std::vector<float> jetPhi;
-  std::vector<int> jetFlavor;
-  std::map < std::string, std::vector<float> > jetBTagDisc; 
-
-  //this structure duplicates info between the tight and loose lists
-  //i am starting to fix this using the looseJetIndex.
-  //for convenience I will keep some duplication for now
-
-  //loose jet info
-  std::vector<int> verylooseJetIndex; //map from loose jet to very loose jet list
-  std::vector<float> loosejetPt;
-  std::vector<float> loosejetEt;
-  std::vector<float> loosejetEta;
-  std::vector<float> loosejetPhi;
-  std::vector<int> loosejetFlavor;
-  std::vector<int> loosejetGenParticlePDGId;
-  std::vector<float> loosejetInvisibleEnergy;
-  std::map < std::string, std::vector<float> > loosejetBTagDisc;
-
-  //realized that I don't want even the 'loose' offline cuts for these jets
-  std::vector<float> veryloosejetPtUncorr; //uncorrected jet info
-  std::vector<float> veryloosejetEtaUncorr;
-  std::vector<float> veryloosejetPhiUncorr;
-
-  int nbSSVM; //FIXME this is still in need of a more sophisticated approach (for now this works...)
-
-  float HT;
-  float MHT;
-  float MHTphi;
-  float DeltaPhi_JetMHT1;
-  float DeltaPhi_JetMHT2;
-  float DeltaPhi_JetMHT3;
-  //MET info
-  float MET;
-  float METphi;
-  float tcMET;
-  float tcMETphi;
-
-  //track info
-  std::vector<float> trackPt;
-  std::vector<float> trackEta;
-  std::vector<float> trackPhi;
-
-  //MC info
-  int SUSY_nb;
-  float qScale;
-  std::vector<int> topDecayCode;
-
-};
-
-//
-// constants, enums and typedefs
-//
-
-//
-// static data member definitions
-//
 
 //
 // constructors and destructor
@@ -248,10 +85,10 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   tree_(0),
   infotree_(0),
 
+  isMC_(iConfig.getParameter<bool>("MCflag")),
+
   btagAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("btagAlgorithms")),
   triggersOfInterest_(iConfig.getParameter<std::vector<std::string> >("triggersOfInterest")),
-
-  susyCutFlow_( new SUSYEventSelector( iConfig.getParameter<edm::ParameterSet>("susyBJetsSelection" ))),
 
   pvSelector_      (iConfig.getParameter<edm::ParameterSet>("pvSelector") ),
 
@@ -269,6 +106,9 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   jetIdLoose_      (iConfig.getParameter<edm::ParameterSet>("jetIdLoose") ),
   muonId_          (iConfig.getParameter<edm::ParameterSet>("muonId") ),
   electronId_      (iConfig.getParameter<edm::ParameterSet>("electronId") ),
+
+  //need something for hlt Config here?
+  processName_(""),
 
   minJets_         (iConfig.getParameter<int>("minJets")),
 
@@ -321,17 +161,8 @@ BasicTreeMaker::fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup&
 
   bool passTrig=false;
   
-  //some code from Josh Bendavid to automagically get the trigger tag (in MC)
-  //https://hypernews.cern.ch/HyperNews/CMS/get/physTools/1791/1/1/1/1/1/2.html
-
-  //i feel like i should not have to do this for every event (to save time)
-  //but I can't put it in beginJob (I think) because there is no edm::Event at that point
-  //-- could implement a global so that it only runs once
-  Handle<trigger::TriggerEvent> triggerEventHLT;
-  iEvent.getByLabel("hltTriggerSummaryAOD", triggerEventHLT);
-  
-  InputTag trigResultsTag("TriggerResults","",triggerEventHLT.provenance()->processName()); 
-  //std::cout<<"Will use trigger tag = "<<triggerEventHLT.provenance()->processName()<<std::endl;
+  findHLTProcessName(iEvent); //fill processName_
+  InputTag trigResultsTag("TriggerResults","",processName_); 
 
   // get HLT trigger information
   Handle<TriggerResults> HLTResults;
@@ -348,7 +179,7 @@ BasicTreeMaker::fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup&
     for (unsigned int itrig = 0; itrig< triggersOfInterest_.size(); itrig++) {
       
       unsigned int trigger_position = triggerNames.triggerIndex(triggersOfInterest_.at(itrig));
-      
+      unsigned int prescale=1;
       if (trigger_position < trigger_size) {
 	bool passed=HLTResults->accept(trigger_position);
 	passTrigger.push_back( passed );
@@ -357,9 +188,16 @@ BasicTreeMaker::fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup&
 	  foundAGoodTrigger=true;
 	  passTrig = passed;
 	}
+
+	if (!isMC_) { //in data, get the prescale
+	  prescale =  hltConfig_.prescaleValue(iEvent,iSetup,triggersOfInterest_.at(itrig));
+	  //  std::cout<< triggersOfInterest_.at(itrig) <<"Prescale = "<<prescale<<std::endl;
+	}
+	hltPrescale.push_back( prescale);
       }
       else {	//	std::cout << "WARNING -- Trigger position not found" << std::endl;
 	passTrigger.push_back(false);
+	hltPrescale.push_back( 0);
       }
       
     }
@@ -374,7 +212,6 @@ BasicTreeMaker::fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup&
   else {
     std::cout << "WARNING -- TriggerResults missing from this event." << std::endl;
   }
-  
   cutResults.push_back(passTrig); //store main trigger result in cut flow
 }
 
@@ -806,13 +643,10 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   //  cout<<" ==== "<<endl;
   Heventcount_->Fill(0.5);
   
-  pat::strbitset  ret =susyCutFlow_->getBitTemplate();
-
   //reset tree variables
-  ret.set(false);
   cutResults.clear();
-  cutResultsDon.clear();
   passTrigger.clear();
+  hltPrescale.clear();
   jetInfoFilled_=false;
   leptonInfoFilled_=false;
   trackInfoFilled_=false;
@@ -860,16 +694,17 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   //start analyzin'
 
   //run don's selector and copy to tree
-  (*susyCutFlow_)(iEvent, ret);
-  for (vector<string>::const_iterator iname = cutNames.begin(); iname!=cutNames.end() ; ++iname) {
-    cutResultsDon.push_back( ret[*iname]);
+  //  (*susyCutFlow_)(iEvent, ret);
+//   for (vector<string>::const_iterator iname = cutNames.begin(); iname!=cutNames.end() ; ++iname) {
+//     cutResultsDon.push_back( ret[*iname]);
 
-    //i'm not taking the trigger info from here anymore either....this code is rather silly now
-    if (*iname == string("Inclusive") ) {
-      cutResults.push_back( ret[*iname]);
-      //cout<<"Found cut name = "<<*iname<<endl;
-    }
-  }
+//     //i'm not taking the trigger info from here anymore either....this code is rather silly now
+//     if (*iname == string("Inclusive") ) {
+//       cutResults.push_back( ret[*iname]);
+//       //cout<<"Found cut name = "<<*iname<<endl;
+//     }
+//   }
+  cutResults.push_back(true); //"Inclusive" step
 
   //trigger
   fillTriggerInfo(iEvent,iSetup);
@@ -902,7 +737,7 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 
   fillTrackInfo(iEvent,iSetup);
-  fillMCInfo(iEvent,iSetup);
+  if (isMC_)  fillMCInfo(iEvent,iSetup);
 
   tree_->Fill();
 
@@ -917,6 +752,39 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 // #endif
 }
 
+// ------------ method called once per run  ------------
+void
+BasicTreeMaker::beginRun(const edm::Run & iRun, const edm::EventSetup & iSetup)
+{
+
+  //compiles but does not run (at least on a test MC PAT tuple)
+  bool hltChanged=false;
+  if (  hltConfig_.init(iRun, iSetup, "HLT", hltChanged) ) {
+    if (hltChanged) {
+      std::cout<<"beginRun: The HLT config has changed!"<<std::endl;
+    }
+  }
+  else {
+    std::cout<<"ERROR -- something went wrong in hltConfig.init()!"<<std::endl;
+  }
+}
+
+void BasicTreeMaker::findHLTProcessName(const edm::Event& iEvent) {
+  using namespace edm;
+
+  //run this only once
+  if (processName_!="") return;
+
+  //some code from Josh Bendavid to automagically get the trigger tag (in MC)
+  //https://hypernews.cern.ch/HyperNews/CMS/get/physTools/1791/1/1/1/1/1/2.html
+
+  Handle<trigger::TriggerEvent> triggerEventHLT;
+  iEvent.getByLabel("hltTriggerSummaryAOD", triggerEventHLT);
+
+  processName_ = triggerEventHLT.provenance()->processName();
+  std::cout<<"[BasicTreeMaker::findHLTProcessName] Will use trigger tag = "<<processName_<<std::endl;
+
+}
 
 // ------------ method called once each job just before starting event loop  ------------
 void 
@@ -932,9 +800,9 @@ BasicTreeMaker::beginJob()
   infotree_->Branch("triggerList",&triggersOfInterest_);
 
   //tree that is filled for each event
-  tree_->Branch("SUSY_cutResults",&cutResultsDon);
   tree_->Branch("cutResults",&cutResults);
   tree_->Branch("passTrigger",&passTrigger); //stores results for triggers listed in triggerList
+  tree_->Branch("hltPrescale",&hltPrescale);
   //jet branches
   tree_->Branch("looseJetIndex",&looseJetIndex);
   tree_->Branch("verylooseJetIndex",&verylooseJetIndex);
@@ -1021,7 +889,7 @@ BasicTreeMaker::endJob() {
 
   infotree_->Fill();
 
-  susyCutFlow_->print(std::cout);
+  //  susyCutFlow_->print(std::cout);
 
   //  cout<<"nfail = "<<nfail_<<endl;
 

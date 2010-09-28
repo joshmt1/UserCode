@@ -7,10 +7,10 @@
 <use name=RecoBTag/Records>
 <use name=RecoBTag/PerformanceDB>
 <use name=CondFormats/PhysicsToolsObjects>
+<use name=HLTrigger/HLTcore>
 <use   name=PhysicsTools/Utilities>
 <use   name=PhysicsTools/SelectorUtils>
 <use   name=DataFormats/Math>
-<use name=CUSUSY/Selection>
 <use   name=clhep>
 <flags EDM_PLUGIN=1>
 <export>
@@ -24,6 +24,5 @@
    <use   name=PhysicsTools/Utilities>
    <use   name=PhysicsTools/SelectorUtils>
    <use   name=DataFormats/Math>
-   <use name=CUSUSY/Selection>
    <use   name=clhep>
 </export>
