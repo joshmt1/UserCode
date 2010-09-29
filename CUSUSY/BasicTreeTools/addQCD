@@ -1,1 +1,3 @@
-hadd plots.QCD.root plots.QCD100.root plots.QCD250.root plots.QCD500.root plots.QCD1000.root
+#!/bin/sh
+
+hadd plots.$1.QCD.root plots.$1.QCD100.root plots.$1.QCD250.root plots.$1.QCD500.root plots.$1.QCD1000.root

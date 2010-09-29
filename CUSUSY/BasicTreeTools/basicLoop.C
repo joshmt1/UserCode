@@ -57,8 +57,8 @@ void basicLoop::cutflow()
     nb = fChain->GetEntry(jentry);   nbytes += nb;
     
     for (unsigned int i=0 ; i<cutResults->size(); i++) {
-      if (cutRequired(i) && cutResults->at(i) )   npass.at(i) = npass.at(i) +1;
-      else if (cutRequired(i) && !cutResults->at(i) ) break;
+      if (cutRequired(i) && passCut(i) )   npass.at(i) = npass.at(i) +1;
+      else if (cutRequired(i) && !passCut(i) ) break;
     }
     
   }
@@ -111,20 +111,25 @@ void basicLoop::ABCDtree()
   double   weight = lumi * sigma / double(nentries); //calculate weight
   
   //open output file
-  TString outfilename="ABCDtree."; outfilename+=sampleName; outfilename+=".root";
+  //FIXME hardcoded for dellcmscornell here
+  TString outfilename="/cu1/joshmt/ABCDtrees/ABCDtree."; outfilename+=sampleName; outfilename+=".root";
   TFile fout(outfilename,"RECREATE");
 
   
   // == make ABCD tree ==
   double myMET;
-  double minDeltaPhi;
+  double myMHT;
+  double minDeltaPhiMET;
+  double minDeltaPhiMHT;
   double minDeltaRbj;
   double DeltaPhiMPTMET;
 
   TTree ABCDtree("ABCDtree","ABCD tree");
   ABCDtree.Branch("weight",&weight,"weight/D");
   ABCDtree.Branch("MET",&myMET,"MET/D");
-  ABCDtree.Branch("minDeltaPhi",&minDeltaPhi,"minDeltaPhi/D");
+  ABCDtree.Branch("MHT",&myMHT,"MHT/D");
+  ABCDtree.Branch("minDeltaPhiMET",&minDeltaPhiMET,"minDeltaPhiMET/D");
+  ABCDtree.Branch("minDeltaPhiMHT",&minDeltaPhiMHT,"minDeltaPhiMHT/D");
   ABCDtree.Branch("minDeltaRbj",&minDeltaRbj,"minDeltaRbj/D");
   ABCDtree.Branch("DeltaPhiMPTMET",&DeltaPhiMPTMET,"DeltaPhiMPTMET/D");
   //some additional variables, not really for ABCD....
@@ -132,11 +137,13 @@ void basicLoop::ABCDtree()
   int ntightMCbjets;
   int nloosejets;
   int nlooseMCbjets;
-  ABCDtree.Branch("ntightjets",&ntightjets,"ntightjets/I");
-  ABCDtree.Branch("ntightMCbjets",&ntightMCbjets,"ntightMCbjets/I");
-  ABCDtree.Branch("nloosejets",&nloosejets,"nloosejets/I");
-  ABCDtree.Branch("nlooseMCbjets",&nlooseMCbjets,"nlooseMCbjets/I");
-
+  const bool doExtra=false;
+  if (doExtra) {
+    ABCDtree.Branch("ntightjets",&ntightjets,"ntightjets/I");
+    ABCDtree.Branch("ntightMCbjets",&ntightMCbjets,"ntightMCbjets/I");
+    ABCDtree.Branch("nloosejets",&nloosejets,"nloosejets/I");
+    ABCDtree.Branch("nlooseMCbjets",&nlooseMCbjets,"nlooseMCbjets/I");
+  }
   //
   
   Long64_t nbytes = 0, nb = 0;
@@ -147,19 +154,23 @@ void basicLoop::ABCDtree()
     
     if (Cut(ientry) < 0) continue; //jmt use cut
     myMET = MET; //could and should modify to use tcMET or caloMET
-    minDeltaPhi = getMinDeltaPhiMET(3);
+    myMHT = MHT;
+    minDeltaPhiMET = getMinDeltaPhiMET(3);
+    minDeltaPhiMHT = getMinDeltaPhiMHT(3);
     minDeltaRbj = getOverallMinDeltaR_bj();
     DeltaPhiMPTMET = getDeltaPhiMPTMET();
 
-    ntightjets=jetPt->size();
-    nloosejets=loosejetPt->size();
-    ntightMCbjets=0;
-    nlooseMCbjets=0;
-    for (unsigned int ijet=0; ijet<jetFlavor->size(); ijet++)
-      if (abs(jetFlavor->at(ijet))==5) ntightMCbjets++;
-    for (unsigned int ijet=0; ijet<loosejetFlavor->size(); ijet++)
-      if (abs(loosejetFlavor->at(ijet))==5) nlooseMCbjets++;
-    
+    if (doExtra) {
+      ntightjets=jetPt->size();
+      nloosejets=loosejetPt->size();
+      ntightMCbjets=0;
+      nlooseMCbjets=0;
+      for (unsigned int ijet=0; ijet<jetFlavor->size(); ijet++)
+	if (abs(jetFlavor->at(ijet))==5) ntightMCbjets++;
+      for (unsigned int ijet=0; ijet<loosejetFlavor->size(); ijet++)
+	if (abs(loosejetFlavor->at(ijet))==5) nlooseMCbjets++;
+    }
+
     ABCDtree.Fill(); 
   }
 
@@ -213,6 +224,7 @@ void basicLoop::Loop()
    int nbins=50;
 
    TH1D HdeltaPhiMPTMET("HdeltaPhiMPTMET","DeltaPhi(MET,MPT) (RA2)",nbins,0,pi);
+   TH1D HdeltaPhiMPTMET_ge1b("HdeltaPhiMPTMET_ge1b","DeltaPhi(MET,MPT) (RA2 && >=1b)",nbins,0,pi);
    TH1D HdeltaPhiMPTMET_ge2b("HdeltaPhiMPTMET_ge2b","DeltaPhi(MET,MPT) (RA2 && >=2b)",nbins,0,pi);
 
    TH1D HminDeltaPhiMETb_ge1b("HminDeltaPhiMETb_ge1b","minDeltaPhi(b,MET) (RA2 && >=1b)",nbins,0,pi);
@@ -284,6 +296,7 @@ void basicLoop::Loop()
    Hnjets_ge3b.Sumw2();
 
    HdeltaPhiMPTMET.Sumw2();
+   HdeltaPhiMPTMET_ge1b.Sumw2();
    HdeltaPhiMPTMET_ge2b.Sumw2();
    HdeltaPhib1b2_minDeltaPhiMETb.Sumw2();
    HminDeltaPhiMETb_ge1b.Sumw2();
@@ -360,6 +373,8 @@ void basicLoop::Loop()
       Hnjets_ge1b.Fill( jetPt->size(), weight );
       H_MHT_ge1b.Fill(MHT ,weight);
       H_MET_ge1b.Fill(MET ,weight);
+
+      HdeltaPhiMPTMET_ge1b.Fill( dp_MPTMET,weight);
 
       HpassHT100U_ge1b.Fill(HT,passHTtrig); //note -- NOT using weight here!
       HpassMET45_ge1b.Fill(MET,passMETtrig);

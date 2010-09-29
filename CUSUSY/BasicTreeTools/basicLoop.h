@@ -21,7 +21,7 @@
 #include <vector>
 
 //avoid spaces and funny characters!
-const char *CutSchemeNames_[]={"RA2", "RA2MET",  "RA2tcMET"};
+const char *CutSchemeNames_[]={"RA2", "RA2MET",  "RA2tcMET", "RA2minDP"};
 
 //we want to weight to 100 pb^-1
 const double lumi=100;
@@ -30,7 +30,7 @@ const double lumi=100;
 class basicLoop {
 public :
   // ========================================== begin
-  enum CutScheme {kRA2=0, kRA2MET, kRA2tcMET, nCutSchemes};
+  enum CutScheme {kRA2=0, kRA2MET, kRA2tcMET, kRA2minDP, nCutSchemes};
   CutScheme theCutScheme_;
   unsigned int nBcut_;
   enum theCutFlow {cutInclusive=0,cutTrigger=1,cutPV=2,cut3Jets=3,cutJetPt1=4,cutJetPt2=5,cutJetPt3=6,cutHT=7,cutMET=8,cutMHT=9,
@@ -169,6 +169,7 @@ public :
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
    double getMinDeltaPhiMET(unsigned int maxjets) ;
+   double getMinDeltaPhiMHT(unsigned int maxjets) ;
    double getDeltaPhib1b2();
    double getUncorrectedHT(const double threshold);
    int getTopDecayCategory();
@@ -421,7 +422,7 @@ bool basicLoop::cutRequired(const unsigned int cutIndex) {
   bool cutIsRequired=false;
 
   //RA2
-  if (theCutScheme_ == kRA2 || theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET) {
+  if (theCutScheme_ == kRA2 || theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET || theCutScheme_==kRA2minDP) {
     if      (cutIndex == 0)  cutIsRequired =  true;
     else if (cutIndex == 1)  cutIsRequired =  true;
     else if (cutIndex == 2)  cutIsRequired =  true;
@@ -461,7 +462,7 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
       ( theCutScheme_ == kRA2MET ||theCutScheme_ == kRA2tcMET ) ) {
     
     float phi_of_MET = (theCutScheme_ == kRA2tcMET) ? tcMETphi : METphi;
-
+    
     int nloosejets = loosejetPhi->size();
     //need to calculate DeltaPhi between jets and MET
     //for RA2 and MHT, this is done with *loose* jets!
@@ -471,6 +472,10 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
     if (nloosejets>2) {dp2=getDeltaPhi( loosejetPhi->at(2), phi_of_MET);} else {return false;}
     //here is the implementation of the DeltaPhi cuts
     if ( dp0 >0.3 && dp1 >0.5 && dp2 >0.3 ) { return true; } else {return false;}
+  }
+  else if (cutIndex == cutDeltaPhi && //replace normal DeltaPhi cut with minDeltaPhi cut
+	   ( theCutScheme_ == kRA2minDP ) ) {
+    return ( getMinDeltaPhiMHT(3) >= 0.3 );
   }
   
   //in case this is not an exception, return the cut result stored in the ntuple
@@ -517,6 +522,23 @@ double basicLoop::getMinDeltaPhiMET(unsigned int maxjets) {
   for (unsigned int i=0; i< maxjets; i++) {
 
     double dp =  acos(cos( jetPhi->at(i) - METphi));
+    if (dp<mindp) mindp=dp;
+
+  }
+  return mindp;
+}
+
+double basicLoop::getMinDeltaPhiMHT(unsigned int maxjets) {
+
+  unsigned int njets=  jetPhi->size();
+
+  if (njets < maxjets) maxjets = njets;
+
+  //get the minimum angle between the first n jets and MET
+  double mindp=99;
+  for (unsigned int i=0; i< maxjets; i++) {
+
+    double dp =  acos(cos( jetPhi->at(i) - MHTphi));
     if (dp<mindp) mindp=dp;
 
   }

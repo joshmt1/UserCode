@@ -10,13 +10,18 @@ usage:
 root -b -l -q cutflow_twiki.C++
 */
 
+//#include "TCanvas.h"
+//TCanvas * Ccutflow;
+
 void cutflow_twiki()
 {
   //first we need to load each text file (one sample at a time)
-  const TString filestub ="cutflow_RA2MET";
+  const TString filestub ="cutflow_RA2tcMET";
 
-  const int mode = 3; //mode 1 is print cut flow table ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
+  const int mode = 1; //mode 1 is print cut flow table ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
   assert(mode==1 || mode==2 || mode ==3);
+
+  //  const bool drawplots=true;
 
   //in principle these are coded in basicLoop.C/h; do the easy thing for now
   std::vector<TString> cutnames;
@@ -25,8 +30,8 @@ void cutflow_twiki()
   cutnames.push_back("PV");
   cutnames.push_back(">= 3 Jets");
   cutnames.push_back("HT Cut");
-  //  cutnames.push_back("MHT Cut");
-  cutnames.push_back("MET Cut"); //sub in this one
+  if (filestub.Contains("MET")) { cutnames.push_back("MET Cut")}
+  else { cutnames.push_back("MHT Cut");}
   cutnames.push_back("Muon veto");
   cutnames.push_back("electron veto");
   cutnames.push_back("Delta Phi");

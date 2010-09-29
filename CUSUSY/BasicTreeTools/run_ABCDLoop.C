@@ -56,12 +56,13 @@ void run_ABCDLoop()
     ch.Add(samplefiles);
     basicLoop looper(&ch);
     //important! this is where cuts are defined
-    looper.setCutScheme(basicLoop::kRA2MET);
+    looper.setCutScheme(basicLoop::kRA2); //usually this is kRA2MET
     looper.setBCut(0);
     //careful what is set here!
-    looper.setIgnoredCut(8); //MET
-    looper.setIgnoredCut(3); //njets
-    //    looper.setIgnoredCut(12); //DeltaPhi
+    //    looper.setIgnoredCut(basicLoop::cutMET); //MET
+    looper.setIgnoredCut(basicLoop::cutMHT); //for kRA2
+    //looper.setIgnoredCut(3); //njets
+    looper.setIgnoredCut(basicLoop::cutDeltaPhi); //DeltaPhi
 
     looper.ABCDtree();  //go!
   }

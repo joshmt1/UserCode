@@ -3,7 +3,8 @@
   //======
   // to do -- split SUSY into 'SUSY signal' and 'SUSY background' ?
   //======
-  const TString dir="plots_V00-00-02/";
+  //  const TString dir="plots_V00-00-02/";
+  const TString dir="";
 
   //const TString hname="Hnjets";
   //  const TString hname="Hnjets_ge3b";
@@ -18,7 +19,7 @@
   //  const TString hname="HdeltaPhiMPTMET_ge2b";
   //  const TString xtitle="#Delta #Phi (MET,MPT)";
   
-  const TString signalfile = "plots.LM9.root";
+  const TString signalfile = "plots.RA2MET.LM9.root";
 
   //
 
@@ -27,11 +28,11 @@
   FileHolder fh;
 
   //samples!
-  TFile fqcd(dir+"plots.QCD.root"); //combined with hadd
-  TFile fttbar(dir+"plots.TTbarJets.root");
-  TFile fwjets(dir+"plots.WJets.root");
-  TFile fzjets(dir+"plots.ZJets.root");
-  TFile fzinvisible(dir+"plots.Zinvisible.root");
+  TFile fqcd(dir+"plots.RA2MET.QCD.root"); //combined with hadd
+  TFile fttbar(dir+"plots.RA2MET.TTbarJets.root");
+  TFile fwjets(dir+"plots.RA2MET.WJets.root");
+  TFile fzjets(dir+"plots.RA2MET.ZJets.root");
+  TFile fzinvisible(dir+"plots.RA2MET.Zinvisible.root");
   TFile fsusy(dir+signalfile);
 
   fh.add(&fqcd);
