@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Wed Sep 22 11:54:45 2010 by ROOT version 5.22/00d
+// Thu Sep 30 11:17:35 2010 by ROOT version 5.22/00d
 // from TTree tree/tree
-// found on file: /cu1/joshmt/BasicNtuples/V00-00-04/TTbarJets/BasicNtuple_1_1_2v3.root
+// found on file: /cu1/joshmt/BasicNtuples/V00-00-04b/LM13/BasicNtuple_1_1_3yK.root
 //////////////////////////////////////////////////////////
 
 #ifndef basicLoop_h
@@ -16,7 +16,7 @@
 #include "/afs/cern.ch/user/j/joshmt/root/util/MiscUtil.cxx" //need to either make this file public or remove this hard-coding
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
-// ---- this version is compatible with ntuple tag: V00-00-04 ----
+// ---- this version is compatible with ntuple tag: V00-00-04b ----
 #include <iostream>
 #include <vector>
 
@@ -51,7 +51,6 @@ public :
 
   enum TopDecayCategory {kTTbarUnknown=0,kAllLeptons=1,kAllHadronic=2,kOneElectron=3,kOneMuon=4,kOneTauE=5,kOneTauMu=6,kOneTauHadronic=7,kAllTau=8, nTopCategories=9};
   // ========================================== end
-
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
    Int_t           fCurrent; //!current Tree number in a TChain
 
@@ -60,6 +59,7 @@ public :
    vector<bool>    *cutResults;
    vector<bool>    *passTrigger;
    vector<int>     *looseJetIndex;
+   vector<int>     *verylooseJetIndex;
    vector<float>   *jetPt;
    vector<float>   *jetEta;
    vector<float>   *jetPhi;
@@ -74,9 +74,9 @@ public :
    vector<float>   *loosejetEta;
    vector<float>   *loosejetPhi;
    vector<int>     *loosejetFlavor;
-   vector<float>   *loosejetPtUncorr;
-   vector<float>   *loosejetEtaUncorr;
-   vector<float>   *loosejetPhiUncorr;
+   vector<float>   *veryloosejetPtUncorr;
+   vector<float>   *veryloosejetEtaUncorr;
+   vector<float>   *veryloosejetPhiUncorr;
    vector<int>     *loosejetGenParticlePDGId;
    vector<float>   *loosejetInvisibleEnergy;
    vector<float>   *loosejetBTagDisc_trackCountingHighPurBJetTags;
@@ -107,6 +107,7 @@ public :
    TBranch        *b_cutResults;   //!
    TBranch        *b_passTrigger;   //!
    TBranch        *b_looseJetIndex;   //!
+   TBranch        *b_verylooseJetIndex;   //!
    TBranch        *b_jetPt;   //!
    TBranch        *b_jetEta;   //!
    TBranch        *b_jetPhi;   //!
@@ -121,9 +122,9 @@ public :
    TBranch        *b_loosejetEta;   //!
    TBranch        *b_loosejetPhi;   //!
    TBranch        *b_loosejetFlavor;   //!
-   TBranch        *b_loosejetPtUncorr;   //!
-   TBranch        *b_loosejetEtaUncorr;   //!
-   TBranch        *b_loosejetPhiUncorr;   //!
+   TBranch        *b_veryloosejetPtUncorr;   //!
+   TBranch        *b_veryloosejetEtaUncorr;   //!
+   TBranch        *b_veryloosejetPhiUncorr;   //!
    TBranch        *b_loosejetGenParticlePDGId;   //!
    TBranch        *b_loosejetInvisibleEnergy;   //!
    TBranch        *b_loosejetBTagDisc_trackCountingHighPurBJetTags;   //!
@@ -164,6 +165,8 @@ public :
    virtual void     nbLoop();
    virtual void     ABCDtree();
 
+   bool isVersion04b();
+
    bool setCutScheme(CutScheme cutscheme);
    void setIgnoredCut(const int cutIndex); //use to make N-1 plots! (and other things)
    void resetIgnoredCut() ;
@@ -189,7 +192,6 @@ public :
    bool passBCut( unsigned int bindex);
    double getDeltaPhi(double phi1, double phi2);
    // ========================================== end
-
 };
 
 #endif
@@ -204,10 +206,10 @@ basicLoop::basicLoop(TTree *tree)
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
    if (tree == 0) {
-      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("/cu1/joshmt/BasicNtuples/V00-00-04/TTbarJets/BasicNtuple_1_1_2v3.root");
+      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("/cu1/joshmt/BasicNtuples/V00-00-04b/LM13/BasicNtuple_1_1_3yK.root");
       if (!f) {
-         f = new TFile("/cu1/joshmt/BasicNtuples/V00-00-04/TTbarJets/BasicNtuple_1_1_2v3.root");
-         f->cd("/cu1/joshmt/BasicNtuples/V00-00-04/TTbarJets/BasicNtuple_1_1_2v3.root:/BasicTreeMaker");
+         f = new TFile("/cu1/joshmt/BasicNtuples/V00-00-04b/LM13/BasicNtuple_1_1_3yK.root");
+         f->cd("/cu1/joshmt/BasicNtuples/V00-00-04b/LM13/BasicNtuple_1_1_3yK.root:/BasicTreeMaker");
       }
       tree = (TTree*)gDirectory->Get("tree");
 
@@ -282,6 +284,7 @@ void basicLoop::Init(TTree *tree)
    cutResults = 0;
    passTrigger = 0;
    looseJetIndex = 0;
+   verylooseJetIndex = 0;
    jetPt = 0;
    jetEta = 0;
    jetPhi = 0;
@@ -296,9 +299,9 @@ void basicLoop::Init(TTree *tree)
    loosejetEta = 0;
    loosejetPhi = 0;
    loosejetFlavor = 0;
-   loosejetPtUncorr = 0;
-   loosejetEtaUncorr = 0;
-   loosejetPhiUncorr = 0;
+   veryloosejetPtUncorr = 0;
+   veryloosejetEtaUncorr = 0;
+   veryloosejetPhiUncorr = 0;
    loosejetGenParticlePDGId = 0;
    loosejetInvisibleEnergy = 0;
    loosejetBTagDisc_trackCountingHighPurBJetTags = 0;
@@ -320,6 +323,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("cutResults", &cutResults, &b_cutResults);
    fChain->SetBranchAddress("passTrigger", &passTrigger, &b_passTrigger);
    fChain->SetBranchAddress("looseJetIndex", &looseJetIndex, &b_looseJetIndex);
+   if (isVersion04b())   fChain->SetBranchAddress("verylooseJetIndex", &verylooseJetIndex, &b_verylooseJetIndex); //=== begin end
    fChain->SetBranchAddress("jetPt", &jetPt, &b_jetPt);
    fChain->SetBranchAddress("jetEta", &jetEta, &b_jetEta);
    fChain->SetBranchAddress("jetPhi", &jetPhi, &b_jetPhi);
@@ -334,9 +338,11 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("loosejetEta", &loosejetEta, &b_loosejetEta);
    fChain->SetBranchAddress("loosejetPhi", &loosejetPhi, &b_loosejetPhi);
    fChain->SetBranchAddress("loosejetFlavor", &loosejetFlavor, &b_loosejetFlavor);
-   fChain->SetBranchAddress("loosejetPtUncorr", &loosejetPtUncorr, &b_loosejetPtUncorr);
-   fChain->SetBranchAddress("loosejetEtaUncorr", &loosejetEtaUncorr, &b_loosejetEtaUncorr);
-   fChain->SetBranchAddress("loosejetPhiUncorr", &loosejetPhiUncorr, &b_loosejetPhiUncorr);
+   if (isVersion04b()) {//=== begin end
+   fChain->SetBranchAddress("veryloosejetPtUncorr", &veryloosejetPtUncorr, &b_veryloosejetPtUncorr);
+   fChain->SetBranchAddress("veryloosejetEtaUncorr", &veryloosejetEtaUncorr, &b_veryloosejetEtaUncorr);
+   fChain->SetBranchAddress("veryloosejetPhiUncorr", &veryloosejetPhiUncorr, &b_veryloosejetPhiUncorr);
+   }//=== begin end
    fChain->SetBranchAddress("loosejetGenParticlePDGId", &loosejetGenParticlePDGId, &b_loosejetGenParticlePDGId);
    fChain->SetBranchAddress("loosejetInvisibleEnergy", &loosejetInvisibleEnergy, &b_loosejetInvisibleEnergy);
    fChain->SetBranchAddress("loosejetBTagDisc_trackCountingHighPurBJetTags", &loosejetBTagDisc_trackCountingHighPurBJetTags, &b_loosejetBTagDisc_trackCountingHighPurBJetTags);
@@ -510,6 +516,8 @@ Int_t basicLoop::Cut(Long64_t entry)
 
 double basicLoop::getUncorrectedHT(const double threshold) {
 
+  if (!isVersion04b()) return 0; //doesn't work in older versions
+
   /*
 I have realized that if I want to do a crude trigger simulation, then I need to store every jet
 with Uncorrect Pt>20 GeV, not just jets passing my 'loose' cuts
@@ -518,8 +526,8 @@ with Uncorrect Pt>20 GeV, not just jets passing my 'loose' cuts
    vector<float>   *loosejetEtaUncorr;
    vector<float>   *loosejetPhiUncorr;*/
   double ht=0;
-  for (unsigned int ijet=0; ijet<loosejetPtUncorr->size(); ijet++) {
-    double thispt =fabs(loosejetPtUncorr->at(ijet));
+  for (unsigned int ijet=0; ijet<veryloosejetPtUncorr->size(); ijet++) {
+    double thispt =fabs(veryloosejetPtUncorr->at(ijet));
     if (thispt>=threshold)   ht+= thispt;
   }
   
@@ -840,6 +848,15 @@ TString basicLoop::getCutDescriptionString() {
   return cuts; 
 }
 
+bool basicLoop::isVersion04b() {
+  
+  TString fn=findInputName();
+  if (fn.Contains("/V00-00-04b/")
+      || fn.Contains("/V00-00-05/")) return true;
+  
+  return false;
+  
+}
 
 // ========================================== end
 
