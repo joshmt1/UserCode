@@ -20,8 +20,18 @@
 #include <iostream>
 #include <vector>
 
+/*
+improvement to make:
+I already bifurcated the btagging from the "CutScheme" into its own thing. This is good.
+I think what I really need is more than one 'cut scheme' enum.
+So an enum for 'METtype' with options: MHT, MET, tcMET
+and an enum for 'DeltaPhiType' with options: DeltaPhi, minDeltaPhi, etc
+
+but i don't want to do this for now out of fear that i will screw something up.
+*/
+
 //avoid spaces and funny characters!
-const char *CutSchemeNames_[]={"RA2", "RA2MET",  "RA2tcMET", "RA2minDP"};
+const char *CutSchemeNames_[]={"RA2", "RA2MET",  "RA2tcMET", "RA2minDP", "RA2METminDP"};
 
 //we want to weight to 100 pb^-1
 const double lumi=100;
@@ -30,7 +40,7 @@ const double lumi=100;
 class basicLoop {
 public :
   // ========================================== begin
-  enum CutScheme {kRA2=0, kRA2MET, kRA2tcMET, kRA2minDP, nCutSchemes};
+  enum CutScheme {kRA2=0, kRA2MET, kRA2tcMET, kRA2minDP, kRA2METminDP, nCutSchemes};
   CutScheme theCutScheme_;
   unsigned int nBcut_;
   enum theCutFlow {cutInclusive=0,cutTrigger=1,cutPV=2,cut3Jets=3,cutJetPt1=4,cutJetPt2=5,cutJetPt3=6,cutHT=7,cutMET=8,cutMHT=9,
@@ -422,7 +432,8 @@ bool basicLoop::cutRequired(const unsigned int cutIndex) {
   bool cutIsRequired=false;
 
   //RA2
-  if (theCutScheme_ == kRA2 || theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET || theCutScheme_==kRA2minDP) {
+  if (theCutScheme_ == kRA2 || theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET 
+      || theCutScheme_==kRA2minDP ||theCutScheme_==kRA2METminDP) {
     if      (cutIndex == 0)  cutIsRequired =  true;
     else if (cutIndex == 1)  cutIsRequired =  true;
     else if (cutIndex == 2)  cutIsRequired =  true;
@@ -432,9 +443,9 @@ bool basicLoop::cutRequired(const unsigned int cutIndex) {
     else if (cutIndex == 6)  cutIsRequired =  false;
     else if (cutIndex == 7)  cutIsRequired =  true;
     //MET
-    else if (cutIndex == 8)  cutIsRequired =  (theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET);
+    else if (cutIndex == 8)  cutIsRequired =  (theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET || theCutScheme_==kRA2METminDP);
     //MHT
-    else if (cutIndex == 9)  cutIsRequired =  (theCutScheme_!=kRA2MET && theCutScheme_!=kRA2tcMET);
+    else if (cutIndex == 9)  cutIsRequired =  (theCutScheme_!=kRA2MET && theCutScheme_!=kRA2tcMET && theCutScheme_!=kRA2METminDP);
     else if (cutIndex == 10) cutIsRequired =  true;
     else if (cutIndex == 11) cutIsRequired =  true;
     else if (cutIndex == 12) cutIsRequired =  true;
@@ -477,7 +488,11 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
 	   ( theCutScheme_ == kRA2minDP ) ) {
     return ( getMinDeltaPhiMHT(3) >= 0.3 );
   }
-  
+  else if (cutIndex == cutDeltaPhi && //replace normal DeltaPhi cut with minDeltaPhi cut
+	   ( theCutScheme_ == kRA2METminDP ) ) {
+    return ( getMinDeltaPhiMET(3) >= 0.3 );
+  }
+
   //in case this is not an exception, return the cut result stored in the ntuple
   return cutResults->at(cutIndex);
 }
