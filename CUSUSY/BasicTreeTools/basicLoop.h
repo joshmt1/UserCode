@@ -33,8 +33,8 @@ but i don't want to do this for now out of fear that i will screw something up.
 //avoid spaces and funny characters!
 const char *CutSchemeNames_[]={"RA2", "RA2MET",  "RA2tcMET", "RA2minDP", "RA2METminDP"};
 
-//we want to weight to 100 pb^-1
-const double lumi=100;
+//we want to weight to 50 pb^-1
+const double lumi=50;
 // ========================================== end
 
 class basicLoop {
@@ -172,6 +172,7 @@ public :
    void resetIgnoredCut() ;
    void setBCut(unsigned int nb);
    TString getCutDescriptionString();
+   TString getBCutDescriptionString();
    
    void cutflow();
    bool cutRequired(unsigned int cutIndex) ;
@@ -846,6 +847,14 @@ TString basicLoop::getCutDescriptionString() {
     cuts += jmt::fortranize(cutnames_.at(ignoredCut_.at(icut)));
   }
   return cuts; 
+}
+
+TString basicLoop::getBCutDescriptionString() {
+
+  TString thecut="ge";
+  thecut += nBcut_;
+  thecut+="b";
+  return thecut;
 }
 
 bool basicLoop::isVersion04b() {

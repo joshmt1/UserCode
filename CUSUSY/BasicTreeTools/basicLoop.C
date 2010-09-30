@@ -22,7 +22,6 @@ void basicLoop::exampleLoop()
       nb = fChain->GetEntry(jentry);   nbytes += nb;
 
       if (Cut(ientry) < 0) continue; //jmt use cut
-
    }
 }
 
@@ -112,9 +111,12 @@ void basicLoop::ABCDtree()
   
   //open output file
   //FIXME hardcoded for dellcmscornell here
-  TString outfilename="/cu1/joshmt/ABCDtrees/ABCDtree."; outfilename+=sampleName; outfilename+=".root";
+  TString outfilename="/cu1/joshmt/ABCDtrees/ABCDtree.";
+  outfilename+=getCutDescriptionString();
+  outfilename+=".";    outfilename+=getBCutDescriptionString(); 
+  outfilename+=".";    outfilename+=sampleName; 
+  outfilename+=".root";
   TFile fout(outfilename,"RECREATE");
-
   
   // == make ABCD tree ==
   double myMET;
