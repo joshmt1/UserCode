@@ -229,9 +229,26 @@ void basicLoop::Loop()
    TH1D HdeltaPhiMPTMET_ge1b("HdeltaPhiMPTMET_ge1b","DeltaPhi(MET,MPT) (RA2 && >=1b)",nbins,0,pi);
    TH1D HdeltaPhiMPTMET_ge2b("HdeltaPhiMPTMET_ge2b","DeltaPhi(MET,MPT) (RA2 && >=2b)",nbins,0,pi);
 
+   TH1D HminDeltaPhiMETj("HminDeltaPhiMETj","minDeltaPhi(j,MET) (RA2)",nbins,0,pi);
    TH1D HminDeltaPhiMETb_ge1b("HminDeltaPhiMETb_ge1b","minDeltaPhi(b,MET) (RA2 && >=1b)",nbins,0,pi);
    TH1D HminDeltaPhiMETj_ge1b("HminDeltaPhiMETj_ge1b","minDeltaPhi(j,MET) (RA2 && >=1b)",nbins,0,pi);
    TH2D HdeltaPhib1b2_minDeltaPhiMETb("HdeltaPhib1b2_minDeltaPhiMETb","DeltaPhi(b1,b2) v minDeltaPhi(b,MET) (RA2 && >=2b)",nbins,0,pi,nbins,0,pi);
+
+   int vnbins=8;
+   double vbins[]={0, 0.15, 0.3, 0.5, 0.7, 1, 1.5, 2, pi};
+   TH1D HVminDeltaPhiMETj("HVminDeltaPhiMETj","minDeltaPhi(j,MET) (RA2)",vnbins,vbins);
+   TH1D HVminDeltaPhiMETj_ge1b("HVminDeltaPhiMETj_ge1b","minDeltaPhi(j,MET) (RA2 && >=1b)",vnbins,vbins);
+   TH1D HVminDeltaPhiMETj_ge2b("HVminDeltaPhiMETj_ge2b","minDeltaPhi(j,MET) (RA2 && >=2b)",vnbins,vbins);
+
+   TH1D HVminDeltaPhiMHTj("HVminDeltaPhiMHTj","minDeltaPhi(j,MHT) (RA2)",vnbins,vbins);
+   TH1D HVminDeltaPhiMHTj_ge1b("HVminDeltaPhiMHTj_ge1b","minDeltaPhi(j,MHT) (RA2 && >=1b)",vnbins,vbins);
+   TH1D HVminDeltaPhiMHTj_ge2b("HVminDeltaPhiMHTj_ge2b","minDeltaPhi(j,MHT) (RA2 && >=2b)",vnbins,vbins);
+
+   int vnbins2=2;
+   double vbins2[]={0,  0.3, pi};
+   TH1D HV2minDeltaPhiMETj("HV2minDeltaPhiMETj","minDeltaPhi(j,MET) (RA2)",vnbins2,vbins2);
+   TH1D HV2minDeltaPhiMETj_ge1b("HV2minDeltaPhiMETj_ge1b","minDeltaPhi(j,MET) (RA2 && >=1b)",vnbins2,vbins2);
+   TH1D HV2minDeltaPhiMETj_ge2b("HV2minDeltaPhiMETj_ge2b","minDeltaPhi(j,MET) (RA2 && >=2b)",vnbins2,vbins2);
 
    TH1D HminDeltaPhiMETb_ge2b("HminDeltaPhiMETb_ge2b","minDeltaPhi(b,MET) (RA2 && >=2b)",nbins,0,pi);
    TH1D HminDeltaPhiMETj_ge2b("HminDeltaPhiMETj_ge2b","minDeltaPhi(j,MET) (RA2 && >=2b)",nbins,0,pi);
@@ -303,9 +320,22 @@ void basicLoop::Loop()
    HdeltaPhib1b2_minDeltaPhiMETb.Sumw2();
    HminDeltaPhiMETb_ge1b.Sumw2();
    HminDeltaPhiMETj_ge1b.Sumw2();
+   HminDeltaPhiMETj.Sumw2();
 
    HminDeltaPhiMETb_ge2b.Sumw2();
    HminDeltaPhiMETj_ge2b.Sumw2();
+
+   HVminDeltaPhiMETj.Sumw2();
+   HVminDeltaPhiMETj_ge1b.Sumw2();
+   HVminDeltaPhiMETj_ge2b.Sumw2();
+
+   HVminDeltaPhiMHTj.Sumw2();
+   HVminDeltaPhiMHTj_ge1b.Sumw2();
+   HVminDeltaPhiMHTj_ge2b.Sumw2();
+
+   HV2minDeltaPhiMETj.Sumw2();
+   HV2minDeltaPhiMETj_ge1b.Sumw2();
+   HV2minDeltaPhiMETj_ge2b.Sumw2();
 
    H_MHT.Sumw2();
    H_MET.Sumw2();
@@ -371,6 +401,14 @@ void basicLoop::Loop()
       HpassHT100U.Fill(HT,passHTtrig); //note -- NOT using weight here!
       HpassMET45.Fill(MET,passMETtrig);
 
+      double minDeltaPhi_j_MET= getMinDeltaPhiMET(3);
+      double minDeltaPhi_j_MHT= getMinDeltaPhiMHT(3);
+
+      HminDeltaPhiMETj.Fill(minDeltaPhi_j_MET,weight);
+      HVminDeltaPhiMETj.Fill(minDeltaPhi_j_MET,weight);
+      HVminDeltaPhiMHTj.Fill(minDeltaPhi_j_MHT,weight);
+      HV2minDeltaPhiMETj.Fill(minDeltaPhi_j_MET,weight);
+
       if ( nbSSVM < 1) continue; //cut on the number of b tags
       Hnjets_ge1b.Fill( jetPt->size(), weight );
       H_MHT_ge1b.Fill(MHT ,weight);
@@ -382,9 +420,12 @@ void basicLoop::Loop()
       HpassMET45_ge1b.Fill(MET,passMETtrig);
 
       double minDeltaPhi_b_MET= getMinDeltaPhibMET();
-      double minDeltaPhi_j_MET= getMinDeltaPhiMET(3);
+
       HminDeltaPhiMETb_ge1b.Fill(minDeltaPhi_b_MET,weight);
       HminDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
+      HVminDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
+      HVminDeltaPhiMHTj_ge1b.Fill(minDeltaPhi_j_MHT,weight);
+      HV2minDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
 
       int topcat = getTopDecayCategory();
       double minDeltaR_bj=999;
@@ -418,6 +459,9 @@ void basicLoop::Loop()
 
       HminDeltaPhiMETb_ge2b.Fill(minDeltaPhi_b_MET,weight);
       HminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,weight);
+      HVminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,weight);
+      HVminDeltaPhiMHTj_ge2b.Fill(minDeltaPhi_j_MHT,weight);
+      HV2minDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,weight);
 
       double deltaPhi_b1b2 = getDeltaPhib1b2();
       HdeltaPhib1b2_minDeltaPhiMETb.Fill(minDeltaPhi_b_MET,deltaPhi_b1b2,weight);
