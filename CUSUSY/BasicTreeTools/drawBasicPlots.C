@@ -8,31 +8,42 @@
 
   //const TString hname="Hnjets";
   //  const TString hname="Hnjets_ge3b";
-  //  const TString hname="HdeltaPhiMPTMET_ge2b";
-  const TString hname="HminDeltaR_bj_ge2b";
+  const TString hname="HdeltaPhiMPTMET_ge2b";
+   //const TString hname="HminDeltaR_bj_ge2b";
   //const TString hname="Hnjets_nocuts";
   //  const TString xtitle="Number of jets";
-  //  const TString xtitle="DeltaPhi(MPT,MET)";
-  const TString xtitle="event minimum DeltaR(b,non-b)";
+  const TString xtitle="#Delta #phi (MPT,MET)";
+  //const TString xtitle="event minimum DeltaR(b,non-b)";
 
   //  const TString hname="HdeltaPhiMPTMET";
   //  const TString hname="HdeltaPhiMPTMET_ge2b";
   //  const TString xtitle="#Delta #Phi (MET,MPT)";
   
-  const TString signalfile = "plots.RA2MET.LM9.root";
+  const TString cutstring = "RA2METminDP_NoDeltaPhi";
 
+  const TString sigsample = "LM13";
   //
 
   const TString ytitle="Weighted events";
 
   FileHolder fh;
 
+  TString signalfile = "plots.";
+  signalfile+=cutstring;
+  signalfile+=".";
+  signalfile+=sigsample;
+  signalfile+=".root";
+
+  TString filebase=dir;
+  filebase+="plots.";
+  filebase+=cutstring;
+
   //samples!
-  TFile fqcd(dir+"plots.RA2MET.QCD.root"); //combined with hadd
-  TFile fttbar(dir+"plots.RA2MET.TTbarJets.root");
-  TFile fwjets(dir+"plots.RA2MET.WJets.root");
-  TFile fzjets(dir+"plots.RA2MET.ZJets.root");
-  TFile fzinvisible(dir+"plots.RA2MET.Zinvisible.root");
+  TFile fqcd(filebase+".QCD.root"); //combined with hadd
+  TFile fttbar(filebase+".TTbarJets.root");
+  TFile fwjets(filebase+".WJets.root");
+  TFile fzjets(filebase+".ZJets.root");
+  TFile fzinvisible(filebase+".Zinvisible.root");
   TFile fsusy(dir+signalfile);
 
   fh.add(&fqcd);
@@ -65,8 +76,8 @@
 
       TString filename=fh.at(i)->GetName();
       TObjArray* pieces = filename.Tokenize(".");
-      //gonna have to be careful to stick with filename convention = plots.sampleName.root
-      TString sampleName=pieces->At(1)->GetName();
+      //gonna have to be careful to stick with filename convention = plots.blah.sampleName.root
+      TString sampleName=pieces->At(2)->GetName();
       leg.AddEntry( hh_njets.find(hname,fh.at(i)), sampleName);
 
       char ccc[100];
