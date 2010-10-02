@@ -9,10 +9,24 @@
 #include "TText.h"
 #include "TF1.h"
 
+#include "TStyle.h"
+
 #include <iostream>
 
 TCanvas * Cabcd;
 TCanvas * Cfit;
+
+/*
+usage:
+
+.L doABCD.C++
+ABCD a("MET","minDeltaPhiMET")
+a.doABCD()
+
+*/
+
+//const TString cutDescription_ = "RA2METminDP_NoMET_NoDeltaPhi.ge2b";
+const TString cutDescription_ = "RA2METminDP_NoMET.ge0b";
 
 class ABCD {
 public :
@@ -74,6 +88,7 @@ ABCD::ABCD(TString xvar,TString yvar) :
   extendedEstimate_(0),
   extendedEstimateErr_(0)
 {
+  gStyle->SetOptFit(1);
 
   for (int i=0; i<2; i++) {
     for (int j=0; j<2; j++) {
@@ -100,11 +115,12 @@ ABCD::ABCD(TString xvar,TString yvar) :
     yl_high = 2;
     
     yh_low = 2; 
-    yh_high = 5.5;//50;
+    yh_high = 50;
 
     yplotmin=yl_low; // *0.9
     yplotmax=5.5;//6;
     flippedY_=true;
+    doFit_=false;
   }
   else if (yvar_=="DeltaPhiMPTMET") {
     yl_low = 0;
@@ -114,13 +130,14 @@ ABCD::ABCD(TString xvar,TString yvar) :
     yplotmin=yl_low;
     yplotmax=yh_high;
     flippedY_=true;
+    doFit_=false;
   }
   else if (yvar_=="minDeltaPhiMET" || yvar_=="minDeltaPhiMHT") {
     yl_low = 0;
     yl_high = 0.3;
     
     yh_low = 0.3; 
-    yh_high = 4;
+    yh_high = TMath::Pi();
     yplotmin=yl_low;
     yplotmax=yh_high;
     flippedY_=false;
@@ -223,17 +240,19 @@ void ABCD::doABCD() {
   const TString dir="/cu1/joshmt/ABCDtrees/"; //must include trailing /
 
   //-----------------------------------------
-  bool dottbar=false;
-  bool dosignal=false;
+  const  bool dottbar=false;
+  const  bool dosignal=false;
 
+  TString myname=dir+"ABCDtree.";
+  myname += cutDescription_;
   //get the QCD tree
-  TFile fqcd(dir+"ABCDtree.QCD.root");
+  TFile fqcd(myname+".QCD.root");
   TTree* Tqcd = (TTree*) fqcd.Get("ABCDtree");
 
-  TFile fsig(dir+"ABCDtree.LM9.root");
+  TFile fsig(myname+".LM13.root"); //FIXME hard-coded!
   TTree* Tsignal = (TTree*) fsig.Get("ABCDtree");
 
-  TFile fttbar(dir+"ABCDtree.TTbarJets.root");
+  TFile fttbar(myname+".TTbarJets.root");
   TTree* Tttbar = (TTree*) fttbar.Get("ABCDtree");
 
   gROOT->cd();
@@ -272,19 +291,25 @@ void ABCD::doABCD() {
 
   cout<<"Actual number found in SR = "<<total[1][0]<<" +/- "<<error[1][0]<<endl;
   cout<<"Estimated number in SR    = "<<total[1][1]*total[0][0]/total[0][1]<<" +/- "<<totalerr<<endl;
+  cout<<"----"<<endl;
+  cout<<"Actual numbers in low MET regions = "<<total[0][0]<<" +/- "<<error[0][0]<<endl
+      <<"                                  = "<<total[0][1]<<" +/- "<<error[0][1]<<endl;
+  cout<<"Actual number found in high MET control region = "<<  total[1][1]<<" +/- "<<error[1][1]<<endl;
 
   if (doFit_) {
     Cfit->cd();
+    /*
     Cfit->Divide(2,2);
     Cfit->cd(1);
     Hx_H->Draw();
     Cfit->cd(3);
     Hx_L->Draw();
+    */
     Hx_ratio->Divide(Hx_H,Hx_L);
     expfunc_ = new TF1("expfunc","[0]*exp([1]*x)",xl_low,xl_high);
     expfunc_->SetParameter(0,Hx_ratio->GetBinContent(1));
     expfunc_->SetParameter(1,-2e-2); //completely empirical
-    Cfit->cd(4);
+    //    Cfit->cd(4);
     Hx_ratio->Fit(expfunc_,"R");
     loopOverTree(Tqcd,true,true);
     if (dottbar)  loopOverTree(Tttbar,false,true);
