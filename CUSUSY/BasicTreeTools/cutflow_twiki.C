@@ -25,7 +25,7 @@ void cutflow_twiki()
   //first we need to load each text file (one sample at a time)
   const TString filestub ="cutflow_RA2METminDP";
 
-  const int mode = 3; //mode 1 is print cut flow table ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
+  const int mode = 2; //mode 1 is print cut flow table ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
   assert(mode==1 || mode==2 || mode ==3);
 
   TString modeDescription="";
@@ -56,9 +56,9 @@ void cutflow_twiki()
   char *qcd_list[]={"QCD100","QCD250","QCD500","QCD1000"};
   int nbackground = 6;
   char *background_list[]={"TTbarJets","SingleTop-tChannel","SingleTop-tWChannel","Zinvisible","WJets","ZJets"};
-  int nsignal = 4;//16; //oops, where did LM3 go?
+  int nsignal = 5;//16; //oops, where did LM3 go?
   //  char *signal_list[]={"LM0", "LM1", "LM2", "LM4", "LM5", "LM6","LM7", "LM8","LM9","LM9p", "LM9t175", "LM10", "LM11", "LM12","LM13","mMSSM"};
-  char *signal_list[]={"LM9","mMSSM","mMSSMv2","mMSSMv3"};
+  char *signal_list[]={"LM0", "LM1", "LM9","LM13","mMSSMv3"};
 
   //these are only relevant for mode==1
   const int drawsignalindex = 3; //this is the signal to use for the plot
@@ -154,6 +154,7 @@ void cutflow_twiki()
       Hcutflow[TString(signal_list[i])] = new TH1D("H"+TString(signal_list[i]),TString(signal_list[i]),cutnames.size(),0,cutnames.size());
       cout<<"Created histogram name = "<<Hcutflow[TString(signal_list[i])]->GetName()<<endl;
       Hcutflow[TString(signal_list[i])]->SetLineColor(icolor); 
+      Hcutflow[TString(signal_list[i])]->SetLineWidth(2); 
       Hcutflow[TString(signal_list[i])]->SetMarkerColor(icolor);
       //      Hcutflow[TString(signal_list[i])]->SetFillColor(icolor); //don't want this for modes 2 and 3
       icolor++;
@@ -262,34 +263,44 @@ void cutflow_twiki()
   //etc
 
   Ccutflow = new TCanvas("Ccutflow");
-  if (mode==1)  Ccutflow->SetLogy();
+  //  if (mode==1)  Ccutflow->SetLogy();
   THStack mystack("mystack","Cut Flow Steps"); //only used for mode 1
   float legx1=0.6,legy1=0.6,legx2=0.9,legy2=0.9;
   if (mode==2 || mode==3) {
-    legx1=0.2; legx2=0.5;
+    legx1=0.1; legx2=0.3;
   }
   TLegend leg(legx1,legy1,legx2,legy2);
   leg.SetFillColor(0);
 
   TString opt="";
   double highest=0;
-  for ( std::map<TString, TH1D*>::const_iterator ib=Hcutflow.begin(); ib!=Hcutflow.end(); ++ib) {
-    if (mode==1) mystack.Add( ib->second );
-    else {
+  if (mode==1) {
+    mystack.Add( Hcutflow["QCD"]); //add qcd first
+    leg.AddEntry(Hcutflow["QCD"],"QCD");
+    for (int ib=0; ib<nbackground; ib++)  {
+      mystack.Add( Hcutflow[ background_list[ib]]); //then backgrounds
+      leg.AddEntry(Hcutflow[ background_list[ib]],background_list[ib]);
+    }
+    mystack.Add(Hcutflow[mysig]); //finally signal
+    leg.AddEntry(Hcutflow[mysig],mysig);
+  }
+  else {
+    for ( std::map<TString, TH1D*>::const_iterator ib=Hcutflow.begin(); ib!=Hcutflow.end(); ++ib) {
       ib->second->Draw(opt);
       opt="SAME";
       double height=ib->second->GetMaximum();
       if (height>highest) highest=height;
+      leg.AddEntry(ib->second,ib->first);
     }
-    leg.AddEntry(ib->second,ib->first);
   }
 
   gStyle->SetOptStat(0);
   TAxis* ax=0;
   if (mode==1) {
+    mystack.SetMaximum(750); //hard-coded!
     mystack.Draw("HIST");
     TH1* hax=mystack.GetHistogram();
-    cout<<hax<<endl;
+    hax->SetYTitle("Events (50 pb^{-1})");
     ax = hax->GetXaxis();
   }
   else { //this is tricky
@@ -307,8 +318,10 @@ void cutflow_twiki()
 
   TString outname = filestub;
   outname+=".";
-  outname+=mysig;
-  outname+=".";
+  if (mode==1) {
+    outname+=mysig;
+    outname+=".";
+  }
   outname+=mode;
   outname+=".eps";
   Ccutflow->SaveAs(outname);
