@@ -184,7 +184,7 @@ void basicLoop::ABCDtree()
 /* 
 main plot-making loop
 */
-void basicLoop::Loop()
+void basicLoop::Loop(unsigned int dataindex)
 {
   const double pi=4*atan(1);
   //
@@ -199,16 +199,22 @@ void basicLoop::Loop()
    
    double sigma = getCrossSection(inname);
    TString sampleName = getSampleName(inname);
-   if (sigma<=0) return;
+   bool isData = (sampleName=="data") ? true : false; //for data
+   if (isData) std::cout<<"This is real data!"<<std::endl;
+   if (sigma<=0 && !isData) return;
 
    if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
 
-   double   weight = lumi * sigma / double(nentries); //calculate weight
+   double   weight = isData ? 1 : lumi * sigma / double(nentries); //calculate weight
 
    //open output file
    TString outfilename="plots."; 
    outfilename+=getCutDescriptionString();
    outfilename+=".";    outfilename+=sampleName; 
+   if (isData) {
+     outfilename+="-";
+     outfilename+=dataindex;
+   }
    outfilename+=".root";
    TFile fout(outfilename,"RECREATE");
 
@@ -278,7 +284,7 @@ void basicLoop::Loop()
 					       nbins,0,pi,nbins,0,pi);
    TH2D HdeltaPhiMPTMET_MET_ge2b("HdeltaPhiMPTMET_MET_ge2b","DeltaPhi(MET,MPT) v MET (RA2 && >=2b)",nbins,met_min,met_max,nbins,0,pi);
 
-   TH1D HtopDecayCategory_ge2b("HtopDecayCategory_ge2b","top decay category (RA2 && >=2b)",nTopCategories,-0.5,nTopCategories-0.5);
+   TH1D HtopDecayCategory_ge2b("HtopDecayCategory_ge2b","top decay category (RA2 && >=2b)",nTopCategories-1,0.5,nTopCategories-0.5);
 
    TH1D HdeltaPhi_bj_ge2b("HdeltaPhi_bj_ge2b","deltaPhi(b,j) (RA2 && >=2b)",nbins,0,pi);
 
@@ -396,6 +402,7 @@ void basicLoop::Loop()
       H_MHT.Fill(MHT ,weight);
       H_MET.Fill(MET ,weight);
 
+      //FIXME -- this will not work in general
       int passHTtrig = passTrigger->at(0) ? 1:0; //index 0 is HLT_HT100U
       int passMETtrig = passTrigger->at(2) ? 1:0; //index 2 is HLT_MET45
       HpassHT100U.Fill(HT,passHTtrig); //note -- NOT using weight here!
@@ -427,7 +434,7 @@ void basicLoop::Loop()
       HVminDeltaPhiMHTj_ge1b.Fill(minDeltaPhi_j_MHT,weight);
       HV2minDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
 
-      int topcat = getTopDecayCategory();
+      int topcat = isData ? -99 : getTopDecayCategory(); //no sense in looking at MC truth in the data
       double minDeltaR_bj=999;
       //note that all tight jet vectors should have the same size
       for (unsigned int ib = 0; ib< jetPhi->size(); ib++) {
@@ -552,7 +559,9 @@ void basicLoop::nbLoop()
 
 }
 
-
+//this function was used in V00-00-01 to cross check my implementation of the cut flow
+//against Don's. It is no longer useful
+/*
 void basicLoop::compareRA2()
 {
   Long64_t nbad=0,ngood=0;
@@ -579,3 +588,4 @@ void basicLoop::compareRA2()
    std::cout<<"Bad  = "<<nbad<<std::endl;
 
 }
+*/

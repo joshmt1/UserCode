@@ -17,6 +17,7 @@
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
 // ---- this version is compatible with ntuple tag: V00-00-04b ----
+// ---- should also be compatible with V00-00-05
 #include <iostream>
 #include <vector>
 
@@ -49,13 +50,13 @@ public :
   //if theCutFlow changes, be sure to change cutnames_ as well
   std::vector<TString> cutnames_;
 
-  enum TopDecayCategory {kTTbarUnknown=0,kAllLeptons=1,kAllHadronic=2,kOneElectron=3,kOneMuon=4,kOneTauE=5,kOneTauMu=6,kOneTauHadronic=7,kAllTau=8, nTopCategories=9};
+  enum TopDecayCategory {kTTbarUnknown=0,kAllLeptons=1,kAllHadronic=2,kOneElectron=3,kOneMuon=4,kOneTauE=5,kOneTauMu=6,kOneTauHadronic=7,kAllTau=8,kTauPlusLepton=9, nTopCategories=10};
   // ========================================== end
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
    Int_t           fCurrent; //!current Tree number in a TChain
 
    // Declaration of leaf types
-   vector<bool>    *SUSY_cutResults;
+   //   vector<bool>    *SUSY_cutResults;
    vector<bool>    *cutResults;
    vector<bool>    *passTrigger;
    vector<int>     *looseJetIndex;
@@ -103,7 +104,7 @@ public :
    vector<int>     *topDecayCode;
 
    // List of branches
-   TBranch        *b_SUSY_cutResults;   //!
+   //   TBranch        *b_SUSY_cutResults;   //!
    TBranch        *b_cutResults;   //!
    TBranch        *b_passTrigger;   //!
    TBranch        *b_looseJetIndex;   //!
@@ -156,11 +157,11 @@ public :
    virtual Int_t    GetEntry(Long64_t entry);
    virtual Long64_t LoadTree(Long64_t entry);
    virtual void     Init(TTree *tree);
-   virtual void     Loop();
    virtual Bool_t   Notify();
    virtual void     Show(Long64_t entry = -1);
    // ========================================== begin
-   virtual void     compareRA2();
+   virtual void     Loop(unsigned int dataindex=0);
+   //   virtual void     compareRA2(); //deprecated function
    virtual void     exampleLoop();
    virtual void     nbLoop();
    virtual void     ABCDtree();
@@ -281,7 +282,7 @@ void basicLoop::Init(TTree *tree)
    // (once per file to be processed).
 
    // Set object pointer
-   SUSY_cutResults = 0;
+  //   SUSY_cutResults = 0;
    cutResults = 0;
    passTrigger = 0;
    looseJetIndex = 0;
@@ -320,7 +321,7 @@ void basicLoop::Init(TTree *tree)
    fCurrent = -1;
    fChain->SetMakeClass(1);
 
-   fChain->SetBranchAddress("SUSY_cutResults", &SUSY_cutResults, &b_SUSY_cutResults);
+   //   fChain->SetBranchAddress("SUSY_cutResults", &SUSY_cutResults, &b_SUSY_cutResults);
    fChain->SetBranchAddress("cutResults", &cutResults, &b_cutResults);
    fChain->SetBranchAddress("passTrigger", &passTrigger, &b_passTrigger);
    fChain->SetBranchAddress("looseJetIndex", &looseJetIndex, &b_looseJetIndex);
@@ -724,7 +725,12 @@ int basicLoop::getTopDecayCategory() {
     else if ( (code1==kTauHadronic && code2==kHadronic) || (code2==kTauHadronic && code1==kHadronic) ) code=kOneTauHadronic;
     //this logic depends on all of the highest categories being tau
     else if ( code1>=kTauHadronic && code2>=kTauHadronic ) code=kAllTau;
-    else {code=kTTbarUnknown;}
+    else if ( code1>=kTauHadronic && (code2==kElectron || code2==kMuon) ) code=kTauPlusLepton;
+    else if ( code2>=kTauHadronic && (code1==kElectron || code1==kMuon) ) code=kTauPlusLepton;
+    else {
+      code=kTTbarUnknown;
+      std::cout<<"TopCode = "<<code1<<"\t"<<code2<<std::endl;
+    }
   }
   //  else if (ntop==1) { //maybe we expect this for single top?
   //
@@ -767,6 +773,8 @@ TString basicLoop::getSampleName(const TString inname) {
   else if (inname.Contains("/WJets/"))                     return "WJets";
   else if (inname.Contains("/ZJets/"))                     return "ZJets";
   else if (inname.Contains("/Zinvisible/"))                return "Zinvisible";
+
+  else if (inname.Contains("/DATA/"))                return "data"; //need to decide if this works
   
   std::cout<<"Cannot find sample name for this sample!"<<std::endl;
   
@@ -806,6 +814,8 @@ double basicLoop::getCrossSection(const TString inname) {
   else if (inname.Contains("/ZJets/"))                     return 2907;
   else if (inname.Contains("/Zinvisible/"))                return 4500;
   
+  else if (inname.Contains("/DATA/"))                return -2;
+
   std::cout<<"Cannot find cross section for this sample!"<<std::endl; 
   return -1;
   
