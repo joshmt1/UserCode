@@ -17,7 +17,8 @@
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
 // ---- this version is compatible with ntuple tag: V00-00-04b ----
-// ---- should also be compatible with V00-00-05
+// ---- is also be compatible with V00-00-05.
+// ---- ::Loop() and ::ABCDtree() are now compatible with data
 #include <iostream>
 #include <vector>
 
@@ -29,10 +30,11 @@ So an enum for 'METtype' with options: MHT, MET, tcMET
 and an enum for 'DeltaPhiType' with options: DeltaPhi, minDeltaPhi, etc
 
 but i don't want to do this for now out of fear that i will screw something up.
+(do it after the SUSY mtg talk)
 */
 
 //avoid spaces and funny characters!
-const char *CutSchemeNames_[]={"RA2", "RA2MET",  "RA2tcMET", "RA2minDP", "RA2METminDP"};
+const char *CutSchemeNames_[]={"RA2", "RA2MET",  "RA2tcMET", "RA2minDP", "RA2METminDP", "RA2METMPT", "RA2medMET", "RA2wideMETminDP"};
 
 //we want to weight to 50 pb^-1
 const double lumi=50;
@@ -41,7 +43,7 @@ const double lumi=50;
 class basicLoop {
 public :
   // ========================================== begin
-  enum CutScheme {kRA2=0, kRA2MET, kRA2tcMET, kRA2minDP, kRA2METminDP, nCutSchemes};
+  enum CutScheme {kRA2=0, kRA2MET, kRA2tcMET, kRA2minDP, kRA2METminDP, kRA2METMPT, kRA2medMET, kRA2wideMETminDP, nCutSchemes};
   CutScheme theCutScheme_;
   unsigned int nBcut_;
   enum theCutFlow {cutInclusive=0,cutTrigger=1,cutPV=2,cut3Jets=3,cutJetPt1=4,cutJetPt2=5,cutJetPt3=6,cutHT=7,cutMET=8,cutMHT=9,
@@ -164,7 +166,7 @@ public :
    //   virtual void     compareRA2(); //deprecated function
    virtual void     exampleLoop();
    virtual void     nbLoop();
-   virtual void     ABCDtree();
+   virtual void     ABCDtree(unsigned int dataindex=0);
 
    bool isVersion04b();
 
@@ -441,7 +443,7 @@ bool basicLoop::cutRequired(const unsigned int cutIndex) {
 
   //RA2
   if (theCutScheme_ == kRA2 || theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET 
-      || theCutScheme_==kRA2minDP ||theCutScheme_==kRA2METminDP) {
+      || theCutScheme_==kRA2minDP ||theCutScheme_==kRA2METminDP || theCutScheme_==kRA2METMPT ||theCutScheme_==kRA2medMET ||theCutScheme_==kRA2wideMETminDP) {
     if      (cutIndex == 0)  cutIsRequired =  true;
     else if (cutIndex == 1)  cutIsRequired =  true;
     else if (cutIndex == 2)  cutIsRequired =  true;
@@ -451,9 +453,9 @@ bool basicLoop::cutRequired(const unsigned int cutIndex) {
     else if (cutIndex == 6)  cutIsRequired =  false;
     else if (cutIndex == 7)  cutIsRequired =  true;
     //MET
-    else if (cutIndex == 8)  cutIsRequired =  (theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET || theCutScheme_==kRA2METminDP);
+    else if (cutIndex == 8)  cutIsRequired =  (theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET || theCutScheme_==kRA2METminDP||theCutScheme_==kRA2METMPT || theCutScheme_==kRA2medMET ||theCutScheme_==kRA2wideMETminDP);
     //MHT
-    else if (cutIndex == 9)  cutIsRequired =  (theCutScheme_!=kRA2MET && theCutScheme_!=kRA2tcMET && theCutScheme_!=kRA2METminDP);
+    else if (cutIndex == 9)  cutIsRequired =  (theCutScheme_!=kRA2MET && theCutScheme_!=kRA2tcMET && theCutScheme_!=kRA2METminDP && theCutScheme_!=kRA2METMPT && theCutScheme_!=kRA2medMET &&theCutScheme_!=kRA2wideMETminDP);
     else if (cutIndex == 10) cutIsRequired =  true;
     else if (cutIndex == 11) cutIsRequired =  true;
     else if (cutIndex == 12) cutIsRequired =  true;
@@ -476,6 +478,15 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
     }
   }
 
+  if (cutIndex==cutMET &&
+      theCutScheme_==kRA2medMET) { //special cut to select a medium MET region
+    return (MET >= 50  && MET<150);
+  }
+  else  if (cutIndex==cutMET &&
+	    theCutScheme_==kRA2wideMETminDP) { //special cut to select a loose met cut
+    return (MET >= 50);
+  }
+  
   // -- in case we are using MET instead of MHT, we need to alter the DeltaPhi cuts --
   if (cutIndex == cutDeltaPhi && 
       ( theCutScheme_ == kRA2MET ||theCutScheme_ == kRA2tcMET ) ) {
@@ -497,8 +508,12 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
     return ( getMinDeltaPhiMHT(3) >= 0.3 );
   }
   else if (cutIndex == cutDeltaPhi && //replace normal DeltaPhi cut with minDeltaPhi cut
-	   ( theCutScheme_ == kRA2METminDP ) ) {
+	   ( theCutScheme_ == kRA2METminDP || theCutScheme_==kRA2wideMETminDP ) ) {
     return ( getMinDeltaPhiMET(3) >= 0.3 );
+  }
+  else if (cutIndex == cutDeltaPhi && //replace normal DeltaPhi cut with DeltaPhi(MPT,MET) cut
+	   ( theCutScheme_ == kRA2METMPT ) ) {
+    return ( getDeltaPhiMPTMET() < 2.0 );
   }
 
   //in case this is not an exception, return the cut result stored in the ntuple
