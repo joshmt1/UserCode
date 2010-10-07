@@ -25,8 +25,11 @@ a.doABCD()
 
 */
 
-//const TString cutDescription_ = "RA2METminDP_NoMET_NoDeltaPhi.ge2b";
-const TString cutDescription_ = "RA2METminDP_NoMET.ge0b";
+const TString cutDescription_ = "RA2METminDP_NoMET_NoDeltaPhi.ge0b";
+//const TString cutDescription_ = "RA2METminDP_NoMET.ge0b";
+
+const bool isData=true;
+//dottbar and dosignal are buried lower in the code
 
 class ABCD {
 public :
@@ -246,7 +249,10 @@ void ABCD::doABCD() {
   TString myname=dir+"ABCDtree.";
   myname += cutDescription_;
   //get the QCD tree
-  TFile fqcd(myname+".QCD.root");
+  TString qcdname=myname;
+  if (isData) qcdname+=".data.root";
+  else   qcdname+=".QCD.root";
+  TFile fqcd(qcdname);
   TTree* Tqcd = (TTree*) fqcd.Get("ABCDtree");
 
   TFile fsig(myname+".LM13.root"); //FIXME hard-coded!
