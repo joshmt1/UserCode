@@ -18,14 +18,30 @@ root -b -l -q cutflow_twiki.C++
 #include "TAxis.h"
 TCanvas * Ccutflow;
 
+//utility function for making output more readable
+TString format_nevents(double n,double e) {
+  char out[100];
+  if (e>=1  ||  e < 0.00001) {
+    sprintf(out,"%.0f +/- %.0f",n,e);
+  }
+  else {
+    int nfig = ceil(fabs(log10(e)));
+    TString form="%.";
+    form+=nfig; form+="f +/- %.";
+    form+=nfig; form+="f";
+    sprintf(out,form.Data(),n,e);
+  }
+  return TString(out);
+}
 
 void cutflow_twiki()
 {
   //  gROOT->SetStyle("BABAR");
   //first we need to load each text file (one sample at a time)
   const TString filestub ="cutflow_RA2METminDP";
+  //  const TString filestub ="cutflow_RA2METMPT";
 
-  const int mode = 2; //mode 1 is print cut flow table ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
+  const int mode = 1; //mode 1 is print cut flow table ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
   assert(mode==1 || mode==2 || mode ==3);
 
   TString modeDescription="";
@@ -213,11 +229,11 @@ void cutflow_twiki()
     float background_total_err=qcd_total_err; //before taking the square root
 
     qcd_total_err = sqrt(qcd_total_err);
-    if (mode==1) cout<< qcd_total << pm << qcd_total_err<<col;
+    if (mode==1) cout<< format_nevents(qcd_total , qcd_total_err)<<col;
 
     for (int ibackground=0 ; ibackground<nbackground; ibackground++) {
       if (mode==1)
-	cout<< background[background_list[ibackground]].at(i) <<pm<<backgrounderr[background_list[ibackground]].at(i) << col;
+	cout<< format_nevents(background[background_list[ibackground]].at(i) ,backgrounderr[background_list[ibackground]].at(i)) << col;
       background_total += background[background_list[ibackground]].at(i);
       background_total_err += pow(backgrounderr[background_list[ibackground]].at(i),2);
     }
@@ -226,7 +242,7 @@ void cutflow_twiki()
     background_total_err = sqrt(background_total_err);
 
     for (int isignal=0 ; isignal<nsignal; isignal++) {
-      if (mode==1)      cout<<signal[signal_list[isignal]].at(i) <<pm<< signalerr[signal_list[isignal]].at(i) << col;
+      if (mode==1)      cout<<format_nevents(signal[signal_list[isignal]].at(i) , signalerr[signal_list[isignal]].at(i)) << col;
       else if (mode==2) {
 	if (signal[signal_list[isignal]].at(i)+ background_total >0)
 	  cout<<signal[signal_list[isignal]].at(i)/sqrt(signal[signal_list[isignal]].at(i)+ background_total)  << col;
