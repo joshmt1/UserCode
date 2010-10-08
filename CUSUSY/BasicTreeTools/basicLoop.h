@@ -16,8 +16,7 @@
 #include "/afs/cern.ch/user/j/joshmt/root/util/MiscUtil.cxx" //need to either make this file public or remove this hard-coding
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
-// ---- this version is compatible with ntuple tag: V00-00-04b ----
-// ---- is also be compatible with V00-00-05.
+// ---- this version is compatible with ntuple tag: V00-00-04, V00-00-04b, and V00-00-05 ----
 // ---- ::Loop() and ::ABCDtree() are now compatible with data
 #include <iostream>
 #include <vector>
@@ -34,7 +33,11 @@ but i don't want to do this for now out of fear that i will screw something up.
 */
 
 //avoid spaces and funny characters!
-const char *CutSchemeNames_[]={"RA2", "RA2MET",  "RA2tcMET", "RA2minDP", "RA2METminDP", "RA2METMPT", "RA2medMET", "RA2wideMETminDP"};
+const char *CutSchemeNames_[]={"RA2"};
+const char *METTypeNames_[]={"MHT", "MET",  "tcMET"};
+const char *METRangeNames_[]={"med",  "high", "wide"}; //'no cut' is not given, because the cut can always be skipped!
+
+const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT"};
 
 //we want to weight to 50 pb^-1
 const double lumi=50;
@@ -43,9 +46,16 @@ const double lumi=50;
 class basicLoop {
 public :
   // ========================================== begin
-  enum CutScheme {kRA2=0, kRA2MET, kRA2tcMET, kRA2minDP, kRA2METminDP, kRA2METMPT, kRA2medMET, kRA2wideMETminDP, nCutSchemes};
+  enum CutScheme {kRA2=0, nCutSchemes}; //after introducing these other enums, there is only one cut scheme!
   CutScheme theCutScheme_;
+  enum METType {kMHT=0, kMET, ktcMET};
+  METType theMETType_;
+  enum METRange {kMedium=0, kHigh, kWide};
+  METRange theMETRange_;
+  enum dpType {kDeltaPhi=0, kminDP, kMPT};
+  dpType theDPType_;
   unsigned int nBcut_;
+
   enum theCutFlow {cutInclusive=0,cutTrigger=1,cutPV=2,cut3Jets=3,cutJetPt1=4,cutJetPt2=5,cutJetPt3=6,cutHT=7,cutMET=8,cutMHT=9,
 		   cutMuVeto=10,cutEleVeto=11,cutDeltaPhi=12,cut1B=13,cut2B=14,cut3B=15};
   std::vector<int> ignoredCut_; //allow more than 1 ignored cut!
@@ -169,8 +179,12 @@ public :
    virtual void     ABCDtree(unsigned int dataindex=0);
 
    bool isVersion04b();
+   void printState();
 
    bool setCutScheme(CutScheme cutscheme);
+   void setMETType(METType mettype);
+   void setMETRange(METRange metrange);
+   void setDPType(dpType dptype);
    void setIgnoredCut(const int cutIndex); //use to make N-1 plots! (and other things)
    void resetIgnoredCut() ;
    void setBCut(unsigned int nb);
@@ -183,9 +197,11 @@ public :
    TString getSampleName(const TString inname) ;
    double getCrossSection(const TString inname) ;
    TString findInputName() ;
+
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
    double getMinDeltaPhiMET(unsigned int maxjets) ;
+   double getMinDeltaPhitcMET(unsigned int maxjets) ;
    double getMinDeltaPhiMHT(unsigned int maxjets) ;
    double getDeltaPhib1b2();
    double getUncorrectedHT(const double threshold);
@@ -204,6 +220,9 @@ public :
 basicLoop::basicLoop(TTree *tree)
 //====================== begin
   :  theCutScheme_(kRA2),
+     theMETType_(kMET),
+     theMETRange_(kHigh),
+     theDPType_(kminDP),
      nBcut_(0) 
 //====================== end
 {
@@ -397,14 +416,12 @@ void basicLoop::Show(Long64_t entry)
 
 void basicLoop::setBCut(unsigned int nb) {
   nBcut_=nb;
-  cout<<"Requiring at least "<<nBcut_<<" b tags"<<endl;
 }
 
 void basicLoop::setIgnoredCut(const int cutIndex) {
 
   //could do this via exception handling....but no, i won't
   if ( cutIndex>= int(cutnames_.size())) {cout<<"Invalid cutIndex"<<endl; return;}
-  cout<<"Will ignore cut: "<<cutnames_.at(cutIndex)<<endl;
 
   ignoredCut_.push_back(cutIndex);
 
@@ -442,26 +459,25 @@ bool basicLoop::cutRequired(const unsigned int cutIndex) {
   bool cutIsRequired=false;
 
   //RA2
-  if (theCutScheme_ == kRA2 || theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET 
-      || theCutScheme_==kRA2minDP ||theCutScheme_==kRA2METminDP || theCutScheme_==kRA2METMPT ||theCutScheme_==kRA2medMET ||theCutScheme_==kRA2wideMETminDP) {
-    if      (cutIndex == 0)  cutIsRequired =  true;
-    else if (cutIndex == 1)  cutIsRequired =  true;
-    else if (cutIndex == 2)  cutIsRequired =  true;
-    else if (cutIndex == 3)  cutIsRequired =  true;
-    else if (cutIndex == 4)  cutIsRequired =  false;
-    else if (cutIndex == 5)  cutIsRequired =  false;
-    else if (cutIndex == 6)  cutIsRequired =  false;
-    else if (cutIndex == 7)  cutIsRequired =  true;
+  if (theCutScheme_ == kRA2 ) {
+    if      (cutIndex == cutInclusive)  cutIsRequired =  true;
+    else if (cutIndex == cutTrigger)  cutIsRequired =  true;
+    else if (cutIndex == cutPV)  cutIsRequired =  true;
+    else if (cutIndex == cut3Jets)  cutIsRequired =  true;
+    else if (cutIndex == cutJetPt1)  cutIsRequired =  false;
+    else if (cutIndex == cutJetPt2)  cutIsRequired =  false;
+    else if (cutIndex == cutJetPt3)  cutIsRequired =  false;
+    else if (cutIndex == cutHT)  cutIsRequired =  true;
     //MET
-    else if (cutIndex == 8)  cutIsRequired =  (theCutScheme_==kRA2MET || theCutScheme_==kRA2tcMET || theCutScheme_==kRA2METminDP||theCutScheme_==kRA2METMPT || theCutScheme_==kRA2medMET ||theCutScheme_==kRA2wideMETminDP);
+    else if (cutIndex == cutMET)  cutIsRequired =  (theMETType_== kMET || theMETType_==ktcMET);
     //MHT
-    else if (cutIndex == 9)  cutIsRequired =  (theCutScheme_!=kRA2MET && theCutScheme_!=kRA2tcMET && theCutScheme_!=kRA2METminDP && theCutScheme_!=kRA2METMPT && theCutScheme_!=kRA2medMET &&theCutScheme_!=kRA2wideMETminDP);
-    else if (cutIndex == 10) cutIsRequired =  true;
-    else if (cutIndex == 11) cutIsRequired =  true;
-    else if (cutIndex == 12) cutIsRequired =  true;
-    else if (cutIndex == 13) cutIsRequired =  nBcut_ >=1;
-    else if (cutIndex == 14) cutIsRequired =  nBcut_ >=2;
-    else if (cutIndex == 15) cutIsRequired =  nBcut_ >=3;
+    else if (cutIndex == cutMHT)  cutIsRequired =  (theMETType_==kMHT);
+    else if (cutIndex == cutMuVeto) cutIsRequired =  true;
+    else if (cutIndex == cutEleVeto) cutIsRequired =  true;
+    else if (cutIndex == cutDeltaPhi) cutIsRequired =  true;
+    else if (cutIndex == cut1B) cutIsRequired =  nBcut_ >=1;
+    else if (cutIndex == cut2B) cutIsRequired =  nBcut_ >=2;
+    else if (cutIndex == cut3B) cutIsRequired =  nBcut_ >=3;
     else assert(0);
   }
   else assert(0);
@@ -470,28 +486,31 @@ bool basicLoop::cutRequired(const unsigned int cutIndex) {
 }
 
 bool basicLoop::passCut(const unsigned int cutIndex) {
-
   //implement special exceptions here
-  if ( theCutScheme_== kRA2tcMET ) {
-    if (cutIndex == cutMET) { //cut on tc MET instead of caloMET
-      return (tcMET > 150); //hardcoded MET cut
-    }
-  }
 
-  if (cutIndex==cutMET &&
-      theCutScheme_==kRA2medMET) { //special cut to select a medium MET region
-    return (MET >= 50  && MET<150);
-  }
-  else  if (cutIndex==cutMET &&
-	    theCutScheme_==kRA2wideMETminDP) { //special cut to select a loose met cut
-    return (MET >= 50);
+  //MET
+  //it is now an anachronism that we treat MET and MHT as different cut flow steps
+  //this block of code should now evaluate *the same* for both steps
+  if (cutIndex == cutMET || cutIndex==cutMHT) {
+    float mymet = 0;
+    if      ( theMETType_ == kMET )   mymet=MET;
+    else if ( theMETType_ == ktcMET ) mymet=tcMET;
+    else if ( theMETType_ == kMHT)    mymet=MHT;
+    else {assert(0);}
+
+    if (theMETRange_ == kMedium) return (mymet>=50 && mymet<150);
+    //on the next line we are redoing the default that is stored in the ntuple. I think this is ok
+    else if (theMETRange_ == kHigh) return (mymet >=150);
+    else if (theMETRange_ == kWide) return (mymet >=50);
+    else {assert(0);}
   }
   
   // -- in case we are using MET instead of MHT, we need to alter the DeltaPhi cuts --
   if (cutIndex == cutDeltaPhi && 
-      ( theCutScheme_ == kRA2MET ||theCutScheme_ == kRA2tcMET ) ) {
+      (theDPType_ == kDeltaPhi && theMETType_!=kMHT)) {
+    //      ( theCutScheme_ == kRA2MET ||theCutScheme_ == kRA2tcMET ) ) {
     
-    float phi_of_MET = (theCutScheme_ == kRA2tcMET) ? tcMETphi : METphi;
+    float phi_of_MET = (theMETType_ == ktcMET) ? tcMETphi : METphi;
     
     int nloosejets = loosejetPhi->size();
     //need to calculate DeltaPhi between jets and MET
@@ -504,16 +523,17 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
     if ( dp0 >0.3 && dp1 >0.5 && dp2 >0.3 ) { return true; } else {return false;}
   }
   else if (cutIndex == cutDeltaPhi && //replace normal DeltaPhi cut with minDeltaPhi cut
-	   ( theCutScheme_ == kRA2minDP ) ) {
-    return ( getMinDeltaPhiMHT(3) >= 0.3 );
-  }
-  else if (cutIndex == cutDeltaPhi && //replace normal DeltaPhi cut with minDeltaPhi cut
-	   ( theCutScheme_ == kRA2METminDP || theCutScheme_==kRA2wideMETminDP ) ) {
-    return ( getMinDeltaPhiMET(3) >= 0.3 );
+	   ( theDPType_ == kminDP ) ) {
+    
+    if (theMETType_ == kMHT)     return ( getMinDeltaPhiMHT(3) >= 0.3 );
+    else if (theMETType_ ==kMET) return ( getMinDeltaPhiMET(3) >= 0.3 );
+    else if (theMETType_ ==ktcMET) return ( getMinDeltaPhitcMET(3) >= 0.3 );
+    else {assert(0);}
   }
   else if (cutIndex == cutDeltaPhi && //replace normal DeltaPhi cut with DeltaPhi(MPT,MET) cut
-	   ( theCutScheme_ == kRA2METMPT ) ) {
-    return ( getDeltaPhiMPTMET() < 2.0 );
+	   ( theDPType_ == kMPT ) ) {
+    if (theMETType_ == kMET)    return ( getDeltaPhiMPTMET() < 2.0 );
+    else {cout<<"DeltaPhiMPTMET not implemented for that MET type!"<<endl; assert(0);}
   }
 
   //in case this is not an exception, return the cut result stored in the ntuple
@@ -562,6 +582,23 @@ double basicLoop::getMinDeltaPhiMET(unsigned int maxjets) {
   for (unsigned int i=0; i< maxjets; i++) {
 
     double dp =  acos(cos( jetPhi->at(i) - METphi));
+    if (dp<mindp) mindp=dp;
+
+  }
+  return mindp;
+}
+
+double basicLoop::getMinDeltaPhitcMET(unsigned int maxjets) {
+
+  unsigned int njets=  jetPhi->size();
+
+  if (njets < maxjets) maxjets = njets;
+
+  //get the minimum angle between the first n jets and MET
+  double mindp=99;
+  for (unsigned int i=0; i< maxjets; i++) {
+
+    double dp =  acos(cos( jetPhi->at(i) - tcMETphi));
     if (dp<mindp) mindp=dp;
 
   }
@@ -856,17 +893,33 @@ TString basicLoop::findInputName() {
 bool basicLoop::setCutScheme(CutScheme cutscheme) {
 
   if (cutscheme == nCutSchemes) return false;
-
   theCutScheme_ = cutscheme;
-
-  cout<<"Cut scheme set to: "<<CutSchemeNames_[theCutScheme_]<<endl;
-
   return true;
 }
 
+void basicLoop::setMETType(METType mettype) {
+
+  theMETType_ = mettype;
+}
+
+void basicLoop::setMETRange(METRange metrange) {
+
+  theMETRange_ = metrange;
+}
+
+void basicLoop::setDPType(dpType dptype) {
+
+  theDPType_ = dptype;
+
+}
 TString basicLoop::getCutDescriptionString() {
 
   TString cuts = CutSchemeNames_[theCutScheme_];
+  cuts += "_";
+  cuts += METTypeNames_[theMETType_];
+  cuts += METRangeNames_[theMETRange_];
+  cuts += "_";
+  cuts+= dpTypeNames_[theDPType_];
   for (unsigned int icut=0; icut<ignoredCut_.size() ; icut++) {
     cuts+="_No";
     cuts += jmt::fortranize(cutnames_.at(ignoredCut_.at(icut)));
@@ -889,6 +942,18 @@ bool basicLoop::isVersion04b() {
       || fn.Contains("/V00-00-05/")) return true;
   
   return false;
+  
+}
+
+void basicLoop::printState() {
+  cout<<"Cut scheme set to:    "<<CutSchemeNames_[theCutScheme_]<<endl;
+  cout<<"MET type set to:      "<<METTypeNames_[theMETType_]<<endl;
+  cout<<"MET range set to:     "<<METRangeNames_[theMETRange_]<<endl;
+  cout<<"DeltaPhi type set to: "<<dpTypeNames_[theDPType_]<<endl;
+  cout<<"Requiring at least    "<<nBcut_<<" b tags"<<endl;
+  for (unsigned int i = 0; i< ignoredCut_.size() ; i++) {
+    cout<<"Will ignore cut:    "<<cutnames_.at(i)<<endl;
+  }
   
 }
 

@@ -46,12 +46,18 @@ void run_cutflow()
 
     cout<<"About to start on files: "<<samplefiles<<endl;
 
+    if (samplefiles.Contains("DATA")) continue; //skip data (use run_basicLoop_data.C)
+
     if (samplefiles.Contains("LM") || samplefiles.Contains("MSSM")) continue; //hack to skip some samples
     
     TChain ch("BasicTreeMaker/tree");
     ch.Add(samplefiles);
     basicLoop looper(&ch);
-    looper.setCutScheme(basicLoop::kRA2METminDP); //this is a critical line! defines the cuts to use!
+    looper.setCutScheme(basicLoop::kRA2); //this is now the only scheme!
+    //    looper.setMETType(basicLoop::kMET);
+    looper.setMETType(basicLoop::kMHT);
+    looper.setDPType(basicLoop::kDeltaPhi);
+
     looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
     looper.cutflow();
   }

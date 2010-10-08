@@ -46,20 +46,27 @@ void run_basicLoop()
 
     cout<<"About to start on files: "<<samplefiles<<endl;
 
-    //    if (samplefiles.Contains("MoreMSSM")) continue; //hack to skip some samples
-    //if (!samplefiles.Contains("LM")) continue; //hack to skip some samples
+    if (samplefiles.Contains("DATA")) continue; //skip data (use run_basicLoop_data.C)
+
+    //if (!samplefiles.Contains("TTbarJets")) continue; //hack to skip some samples
+    //    if (!samplefiles.Contains("LM13")) continue; //hack to skip some samples
 
     TChain ch("BasicTreeMaker/tree");
     ch.Add(samplefiles);
     basicLoop looper(&ch);
     //important! this is where cuts are defined
-    looper.setCutScheme(basicLoop::kRA2MET);
+    looper.setCutScheme(basicLoop::kRA2); //this is now the only scheme!
+    looper.setMETType(basicLoop::kMET);
+    looper.setDPType(basicLoop::kminDP);
     //no b tagging cut so that plots can apply it selectively
+
+    //    looper.setCutScheme(basicLoop::kRA2minDP);
+
     //careful what is set here!
     //looper.setIgnoredCut(basicLoop::cutTrigger);
     //    looper.setIgnoredCut(basicLoop::cutHT);
-    //    looper.setIgnoredCut(basicLoop::cutMET); //MET
-    //    looper.setIgnoredCut(basicLoop::cutDeltaPhi); //DeltaPhi
+    //looper.setIgnoredCut(basicLoop::cutMET); //MET
+    //looper.setIgnoredCut(basicLoop::cutDeltaPhi); //DeltaPhi
     
     looper.Loop();  //go!
   }

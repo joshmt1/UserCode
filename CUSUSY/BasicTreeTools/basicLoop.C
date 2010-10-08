@@ -31,6 +31,7 @@ lumi is set in basicLoop.h
 */
 void basicLoop::cutflow()
 {
+  printState();
 
   std::vector<int> npass;
   
@@ -63,11 +64,11 @@ void basicLoop::cutflow()
   }
 
   TString samplename=  getSampleName(findInputName());
-  TString filename="cutflow_"; 
-  filename+=CutSchemeNames_[theCutScheme_]; filename+=".";
-  filename+=samplename;
-  filename+=".dat";
-  ofstream file(filename.Data());
+  TString outfilename="cutflow."; 
+  outfilename+=getCutDescriptionString();
+  outfilename+=".";    outfilename+=samplename; 
+  outfilename+=".dat";
+  ofstream file(outfilename.Data());
   
   for (unsigned int i=0 ; i<npass.size(); i++) {
     
@@ -95,6 +96,8 @@ ABCD tree maker
 void basicLoop::ABCDtree(unsigned int dataindex)
 {
   if (fChain == 0) return;
+  printState();
+
   
   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
 
@@ -192,9 +195,11 @@ main plot-making loop
 void basicLoop::Loop(unsigned int dataindex)
 {
   const double pi=4*atan(1);
+
   //
  
    if (fChain == 0) return;
+   printState();
 
    Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
 

@@ -38,8 +38,7 @@ void cutflow_twiki()
 {
   //  gROOT->SetStyle("BABAR");
   //first we need to load each text file (one sample at a time)
-  const TString filestub ="cutflow_RA2METminDP";
-  //  const TString filestub ="cutflow_RA2METMPT";
+  const TString filestub ="RA2_MHThigh_DeltaPhi";
 
   const int mode = 1; //mode 1 is print cut flow table ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
   assert(mode==1 || mode==2 || mode ==3);
@@ -98,7 +97,8 @@ void cutflow_twiki()
 
   //lordy, this could really be more generic!
   for (int i=0 ; i<nqcd; i++) {
-    TString filename = filestub;
+    TString filename = "cutflow.";
+    filename+=filestub;
     filename+="."; filename+=qcd_list[i];
     filename += ".dat";
 
@@ -128,7 +128,8 @@ void cutflow_twiki()
   }
 
   for (int i=0 ; i<nbackground; i++) {
-    TString filename = filestub;
+    TString filename = "cutflow.";
+    filename+=filestub;
     filename+="."; filename+=background_list[i];
     filename += ".dat";
 
@@ -162,7 +163,8 @@ void cutflow_twiki()
   cout<<  background.size()<<"\t"<<  backgrounderr.size()<<endl;
 
   for (int i=0 ; i<nsignal; i++) {
-    TString filename = filestub;
+    TString filename = "cutflow.";
+    filename+=filestub;
     filename+="."; filename+=signal_list[i];
     filename += ".dat";
 
