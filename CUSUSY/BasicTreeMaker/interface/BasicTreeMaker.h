@@ -8,18 +8,20 @@
 
 /*
 to do list:
-probably for synchronization purposes, we need even more info in the trees
-so that cut flow can be customized:
 
-eg:
--- lepton ID info
--- PV info
+more lepton info (rel iso, for example)
+
+JPT and PF jets
+PF MET
+
+Flavor history stuff?
+
 */
 
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.1 2010/09/28 07:50:28 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.2 2010/09/28 13:55:47 joshmt Exp $
 //
 //
 
@@ -46,11 +48,15 @@ private:
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
   virtual void endJob() ;
 
-  void findHLTProcessName(const edm::Event & iEvent);
+  void resetTreeVariables() ;
 
-  //  bool passPV(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-  void fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-  void fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
+  void findHLTProcessName(const edm::Event & iEvent);
+  void fillShortNames();
+
+  void fillPVInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
+  void fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int jetIndex);
+  void fillMetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
+  void fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int il);
   void fillTrackInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
@@ -58,6 +64,8 @@ private:
 
   int  findSUSYMaternity( const reco::Candidate & cand );
   int  findTopDecayMode( const reco::Candidate & cand );
+
+  bool passJetId(const pat::Jet & jet);
 
   //a clever piece of code stolen from Freya
   template <class C>
@@ -98,17 +106,20 @@ private:
   PVSelector                           pvSelector_;
 
   //configuration strings (largely copied from don's and freya's code)
-  //  edm::InputTag triggerLabel_;
-  edm::InputTag jetLabel_;
-  edm::InputTag caloMetLabel_;
-  edm::InputTag tcMetLabel_;
+  edm::InputTag pvLabel_;
+  //  edm::InputTag jetLabel_;
 
-  edm::InputTag eleLabel_;
-  edm::InputTag muoLabel_;
+  std::vector<std::string> jetAlgorithmNames_; //the real collection names
+  std::vector<std::string> jetAlgorithmTags_; //id for the ntuple branches
 
-  std::string susyTrigger_;
+  std::vector<std::string> metAlgorithmNames_; //the real collection names
+  std::vector<std::string> metAlgorithmTags_; //id for the ntuple branches
+
+  std::vector<std::string> eleAlgorithmNames_; //the real collection names
+  std::vector<std::string> muonAlgorithmNames_; //the real collection names
 
   JetIDSelectionFunctor                jetIdLoose_;
+  PFJetIDSelectionFunctor              PFjetIdLoose_;
   MuonVPlusJetsIDSelectionFunctor      muonId_;
   ElectronVPlusJetsIDSelectionFunctor  electronId_;
 
@@ -132,47 +143,78 @@ private:
   double metMin_;
  
   //bookkeeping
-  bool jetInfoFilled_;
-  bool leptonInfoFilled_;
+  //  bool jetInfoFilled_;
+  //  bool leptonInfoFilled_;
   bool trackInfoFilled_;
 
   // ====== define variables for the tree ======
+  ULong64_t runNumber;
+  ULong64_t eventNumber;
+  ULong64_t lumiSection;
+
   std::vector<std::string> cutNames;
-  //  std::vector<bool> cutResultsDon;
   std::vector<bool> cutResults;
 
   std::vector<bool> passTrigger;
   std::vector<unsigned int> hltPrescale;
+  int SUSYtriggerIndex;
+
+  //primary vertex info
+  std::vector<bool> pv_isFake;
+  std::vector<float>  pv_z;
+  std::vector<float>  pv_ndof;
+  std::vector<float>  pv_chi2;
+  std::vector<float>  pv_rho;
+
+  std::map< std::string, int > nAllMuons; //raw number of pat::Muons
+  //muon info for all GlobalMuonPromptTight
+  std::map< std::string, std::vector<float> > muonPt;
+  std::map< std::string, std::vector<float> > muonEta;
+  std::map< std::string, std::vector<float> > muonTrackIso;
+  std::map< std::string, std::vector<float> > muonEcalIso;
+  std::map< std::string, std::vector<float> > muonHcalIso;
+  std::map< std::string, int > nMuons; //good muons (passing pt and eta cuts)
+
+  //electron info
+  std::map< std::string, int > nAllElectrons;
+  //electron info for all that pass eidLoose
+  std::map< std::string, std::vector<float> > eleEt;
+  std::map< std::string, std::vector<float> > eleEta;
+  std::map< std::string, std::vector<float> > eleTrackIso;
+  std::map< std::string, std::vector<float> > eleEcalIso;
+  std::map< std::string, std::vector<float> > eleHcalIso;
+  std::map< std::string, int > nElectrons; //good electrons
+
+  /*
+all jet quantities must because a map<string, whatever> where the
+string is the jetAlgorithmTag
+  */
 
   //tight jet info
-  std::vector<int> looseJetIndex; //map from tight jet list to loose jet list
-  std::vector<float> jetPt;
-  std::vector<float> jetEta;
-  std::vector<float> jetPhi;
-  std::vector<int> jetFlavor;
-  std::map < std::string, std::vector<float> > jetBTagDisc; 
-
-  //this structure duplicates info between the tight and loose lists
-  //i am starting to fix this using the looseJetIndex.
-  //for convenience I will keep some duplication for now
+  std::map< std::string,  std::vector<int> > tightJetIndex; //map from tight jet list to loose jet list
 
   //loose jet info
-  std::vector<int> verylooseJetIndex; //map from loose jet to very loose jet list
-  std::vector<float> loosejetPt;
-  std::vector<float> loosejetEt;
-  std::vector<float> loosejetEta;
-  std::vector<float> loosejetPhi;
-  std::vector<int> loosejetFlavor;
-  std::vector<int> loosejetGenParticlePDGId;
-  std::vector<float> loosejetInvisibleEnergy;
-  std::map < std::string, std::vector<float> > loosejetBTagDisc;
+  std::map< std::string,  std::vector<int> > looseJetIndex; //map from loose jet to very loose jet list
+  std::map< std::string,  std::vector<float> > loosejetPt;
+  std::map< std::string,  std::vector<float> > loosejetEt;
+  std::map< std::string,  std::vector<float> > loosejetEta;
+  std::map< std::string,  std::vector<float> > loosejetPhi;
+  std::map< std::string,  std::vector<int> > loosejetFlavor;
+  std::map< std::string,  std::vector<int> > loosejetGenParticlePDGId;
+  std::map< std::string,  std::vector<float> > loosejetInvisibleEnergy;
+  std::map< std::string,  std::map < std::string, std::vector<float> > > loosejetBTagDisc;
 
+  std::map< std::string,  std::vector<float> > badjetPt;
+  std::map< std::string,  std::vector<float> > badjetEta;
+  std::map< std::string,  std::vector<float> > badjetPhi;
+
+  //here we store just caloJets (uncorrected)
   //realized that I don't want even the 'loose' offline cuts for these jets
   std::vector<float> veryloosejetPtUncorr; //uncorrected jet info
   std::vector<float> veryloosejetEtaUncorr;
   std::vector<float> veryloosejetPhiUncorr;
 
-  int nbSSVM; //FIXME this is still in need of a more sophisticated approach (for now this works...)
+  int nbSSVM;
 
   float HT;
   float MHT;
@@ -181,10 +223,9 @@ private:
   float DeltaPhi_JetMHT2;
   float DeltaPhi_JetMHT3;
   //MET info
-  float MET;
-  float METphi;
-  float tcMET;
-  float tcMETphi;
+  std::map< std::string, float> MET;
+  std::map< std::string, float> METphi;
+  std::map< std::string, float> METsig; //met significance
 
   //track info
   std::vector<float> trackPt;
@@ -195,6 +236,7 @@ private:
   int SUSY_nb;
   float qScale;
   std::vector<int> topDecayCode;
+  int flavorHistory;
 
 };
 

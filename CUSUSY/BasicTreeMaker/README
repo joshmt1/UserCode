@@ -1,6 +1,15 @@
 Release notes
 --
 
+jmt101014a - lots of fundamental changes. Add handling of multiple jet types, etc.
+Will require substantial changes to analysis code.
+
+V00-00-05 - disable some things that did not work well with data
+
+V00-00-04b - loosen cut on uncorrected jets
+
+V00-00-04 - add uncorrected jets
+
 V00-00-03 - 
 Add info about 'loose' jets. Add true jet flavor.
 

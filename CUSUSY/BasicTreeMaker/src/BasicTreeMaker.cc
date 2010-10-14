@@ -14,13 +14,16 @@ using a class created with MakeClass.
 
 Developed and tested with CMSSW_3_6_2
 (Works fine in CMSSW_3_6_3 too)
+
+Have also used in in 384, running over data PATtuples
+
   Recipe is kept here:
 https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 */
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.8 2010/09/28 07:50:28 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.9 2010/09/28 13:55:47 joshmt Exp $
 //
 //
 
@@ -47,8 +50,8 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 #include "FWCore/Framework/interface/ESHandle.h"
 
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
-//#include "PhysicsTools/FWLite/interface/TFileService.h"
 #include "PhysicsTools/SelectorUtils/interface/JetIDSelectionFunctor.h"
+#include "PhysicsTools/SelectorUtils/interface/PFJetIDSelectionFunctor.h"
 
 //amazingly, this won't build if these two includes are not in this order!
 #include "PhysicsTools/SelectorUtils/interface/EventSelector.h"
@@ -73,6 +76,8 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 
 #include "DataFormats/PatCandidates/interface/MET.h"
 
+#include "DataFormats/VertexReco/interface/Vertex.h"
+
 #include "CUSUSY/BasicTreeMaker/interface/BasicTreeMaker.h"
 
 
@@ -86,25 +91,25 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   infotree_(0),
 
   isMC_(iConfig.getParameter<bool>("MCflag")),
-  doPrescale_(false),
+  doPrescale_(true),
 
   btagAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("btagAlgorithms")),
   triggersOfInterest_(iConfig.getParameter<std::vector<std::string> >("triggersOfInterest")),
 
   pvSelector_      (iConfig.getParameter<edm::ParameterSet>("pvSelector") ),
 
-  //  triggerLabel_    (iConfig.getParameter<edm::InputTag>("triggerTag")),
-  jetLabel_        (iConfig.getParameter<edm::InputTag>("jetTag")),
+  pvLabel_         (iConfig.getParameter<edm::InputTag>("pvTag")),
+
+  jetAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("jetAlgorithms")),
+  jetAlgorithmTags_(iConfig.getParameter<std::vector<std::string> >("jetNames")),
   
-  caloMetLabel_    (iConfig.getParameter<edm::InputTag>("caloMetTag")),
-  tcMetLabel_      (iConfig.getParameter<edm::InputTag>("tcMetTag")),
+  metAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("metAlgorithms")),
 
-  eleLabel_        (iConfig.getParameter<edm::InputTag>("eleTag")),
-  muoLabel_        (iConfig.getParameter<edm::InputTag>("muoTag")),
-
-  //  susyTrigger_     (iConfig.getParameter<std::string>("susyTrigger")),
+  eleAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("eleAlgorithms")),
+  muonAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("muonAlgorithms")),
 
   jetIdLoose_      (iConfig.getParameter<edm::ParameterSet>("jetIdLoose") ),
+  PFjetIdLoose_    (iConfig.getParameter<edm::ParameterSet>("pfjetIdLoose") ),
   muonId_          (iConfig.getParameter<edm::ParameterSet>("muonId") ),
   electronId_      (iConfig.getParameter<edm::ParameterSet>("electronId") ),
 
@@ -126,10 +131,17 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   mhtMin_          (iConfig.getParameter<double>("mhtMin")),
   metMin_          (iConfig.getParameter<double>("metMin")),
 
-  jetInfoFilled_(false),
-  leptonInfoFilled_(false),
+  //  jetInfoFilled_(false),
+  //  leptonInfoFilled_(false),
   trackInfoFilled_(false)
 {
+
+  assert(  jetAlgorithmNames_.size() == jetAlgorithmTags_.size());
+
+  //the fill lepton info method is not very flexible!
+  assert(  eleAlgorithmNames_.size() == muonAlgorithmNames_.size() );
+
+  fillShortNames(); //must be called only once per job
 
   edm::Service<TFileService> fs;
   Heventcount_ = fs->make<TH1D>( "Heventcount"  , "events processed", 1,  0, 1 );
@@ -142,17 +154,62 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
 
 BasicTreeMaker::~BasicTreeMaker()
 {
-
-   // do anything here that needs to be done at desctruction time
-   // (e.g. close files, deallocate resources etc.)
   delete thetimer_;
- 
 }
 
 
 //
 // member functions
 //
+void
+BasicTreeMaker::fillShortNames() {
+
+  /*
+this code is quite 'fragile'
+It depends on the collection name for PF MET always having PF in it and similarly for TC MET
+It also depends on CaloMET being the only type that does *not* have PF or TC in the name
+  */
+
+  assert( metAlgorithmTags_.size() == 0); //run this only once
+
+  for (unsigned int ii = 0; ii < metAlgorithmNames_.size(); ii++) {
+  
+    if ( metAlgorithmNames_[ii].find("PF") != std::string::npos) {
+      metAlgorithmTags_.push_back("pf");
+      std::cout<<"Mapping "<<metAlgorithmNames_[ii]<<" to PF MET"<<std::endl;
+    }
+    else if ( metAlgorithmNames_[ii].find("TC") != std::string::npos) {
+      metAlgorithmTags_.push_back("tc");
+      std::cout<<"Mapping "<<metAlgorithmNames_[ii]<<" to TC MET"<<std::endl;
+    }
+    else {
+      metAlgorithmTags_.push_back("calo");
+      std::cout<<"Mapping "<<metAlgorithmNames_[ii]<<" to CaloMET"<<std::endl;
+    }
+  }
+
+  assert( metAlgorithmTags_.size() <= 3);
+
+}
+
+void BasicTreeMaker::fillPVInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+
+  edm::Handle<std::vector<reco::Vertex> > vtxs;
+  iEvent.getByLabel(pvLabel_, vtxs);
+
+  for ( unsigned int ipv = 0; ipv<vtxs->size() ; ipv++) {
+    reco::Vertex const & pv = vtxs->at(ipv);
+
+    pv_isFake.push_back(pv.isFake());
+    
+    pv_z.push_back( pv.z());
+    pv_ndof.push_back(pv.ndof());
+    pv_chi2.push_back(pv.chi2());
+    pv_rho.push_back( pv.position().Rho());
+    
+  }
+  
+}
 
 //
 void
@@ -188,6 +245,7 @@ BasicTreeMaker::fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup&
 	  //	  std::cout<<"Will store in cutflow the results for: "<<triggersOfInterest_.at(itrig)<<std::endl; //debug
 	  foundAGoodTrigger=true;
 	  passTrig = passed;
+	  SUSYtriggerIndex=(int) itrig;
 	}
 
         if (!isMC_ && doPrescale_) { //in data, get the prescale
@@ -339,6 +397,13 @@ BasicTreeMaker::fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSet
   }
 
 
+  // === fill flavor history info ===
+  edm::Handle<unsigned int> path;
+  iEvent.getByLabel("flavorHistoryFilter", path);
+  
+  flavorHistory=(int) *path;
+  //std::cout<<"flavorHistory = "<<flavorHistory<<std::endl;
+  
 }
 
 void
@@ -363,56 +428,119 @@ BasicTreeMaker::fillTrackInfo(const edm::Event& iEvent, const edm::EventSetup& i
 }
 
 void
-BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int il) {
 
-  if (leptonInfoFilled_) return;
+  std::string muTag=muonAlgorithmNames_[il];
+  std::string eTag=eleAlgorithmNames_[il];
+
+  //  std::cout<<muTag<<"\t"<<eTag <<std::endl;
 
   //to get the cut flow in the right (arbitrary) order, need to do muons first
-
-  int nmuon=0;
-
   edm::Handle<edm::View<pat::Muon> > muonHandle;
-  iEvent.getByLabel(muoLabel_,muonHandle);
+  iEvent.getByLabel(muTag,muonHandle);
   const edm::View<pat::Muon> & muons = *muonHandle;
   for (edm::View<pat::Muon>::const_iterator imuon = muons.begin(); imuon!=muons.end(); ++imuon) {
-    
-    if ( !imuon->muonID("GlobalMuonPromptTight")) continue;
-    // Muon veto
-    bool passMuon = muonId_(*imuon,iEvent);
-    if (  imuon->pt() > muPtMin_ && fabs(imuon->eta()) < muEtaMax_ && passMuon )       nmuon++;
-  }
-  cutResults.push_back( nmuon == 0 );
 
+    //the way this is written, it is perfectly expected for
+    // nAllMuons > muonPt.size() > nMuons
+    
+    nAllMuons[muTag]++;
+
+    if ( !imuon->muonID("GlobalMuonPromptTight")) continue;
+
+    //record pT and eta of all that pass 
+    muonPt[muTag].push_back( imuon->pt() );
+    muonEta[muTag].push_back( imuon->eta());
+    muonTrackIso[muTag].push_back( imuon->trackIso() );
+    muonEcalIso[muTag].push_back( imuon->ecalIso() );
+    muonHcalIso[muTag].push_back( imuon->hcalIso() );
+
+    // Muon veto
+    bool passMuon = muonId_(*imuon,iEvent); //this includes isolation cut (and other things)
+    if ( pv_z.size()>0 &&  (fabs( imuon->vertex().z() - pv_z.at(0)) >= 1)) passMuon=false; //new cut from Don
+    if (!passMuon) continue;
+
+    if (  imuon->pt() > muPtMin_ && fabs(imuon->eta()) < muEtaMax_  )       nMuons[muTag]++;
+  } //end of loop over muons
+  if (eTag.find("PF") == std::string::npos) cutResults.push_back( nMuons[eTag] == 0 );
+
+  // it is really stupid that I am using a different style of logic for muons and electrons
+  //But I can't decide which I like better
 
   edm::Handle<edm::View<pat::Electron> > electronHandle;
-  iEvent.getByLabel(eleLabel_,electronHandle);
+  iEvent.getByLabel(eTag,electronHandle);
   const edm::View<pat::Electron> & electrons = *electronHandle;
 
-  int nelectron=0;
   for (edm::View<pat::Electron>::const_iterator ielectron = electrons.begin(); ielectron!=electrons.end(); ++ielectron) {
-    if ( ielectron->et() > eleEtMin_ && fabs(ielectron->eta()) < eleEtaMax_ && 
-	 electronId_(*ielectron) &&
-	 ielectron->electronID( "eidLoose" ) > 0  ) {
-      nelectron++;
+
+    nAllElectrons[eTag]++;
+
+    if (ielectron->electronID( "eidLoose" ) > 0 ) {
+
+      eleEt[eTag].push_back( ielectron->et() );
+      eleEta[eTag].push_back( ielectron->eta());
+      eleTrackIso[eTag].push_back( ielectron->dr03TkSumPt() );
+      eleEcalIso[eTag].push_back( ielectron->dr03EcalRecHitSumEt() );
+      eleHcalIso[eTag].push_back( ielectron->dr03HcalTowerSumEt() );
+      
+      if ( electronId_(*ielectron) //iso cut is in here
+	   && (pv_z.size()>0 && (fabs( ielectron->vertex().z() - pv_z.at(0)) < 1 )) ) {
+	
+	if ( ielectron->et() > eleEtMin_ && fabs(ielectron->eta()) < eleEtaMax_ ) nElectrons[eTag]++;
+      }
     }
-    
-  }
-  cutResults.push_back( nelectron == 0 );
+  } //end of loop over electrons
+  if (eTag.find("PF") == std::string::npos) cutResults.push_back( nElectrons[eTag] == 0 );
   
-  leptonInfoFilled_=true;
+  //  leptonInfoFilled_=true;
+}
+
+
+//this function is not actually used! stick with the JetIDSelectionFunctor
+//...and it would probably give the wrong output, since it operates on the corrected jets
+bool
+BasicTreeMaker::passJetId(const pat::Jet & jet) {
+
+  //  if (jet.isCaloJet() ) std::cout<<"This is a calo jet"<<std::endl;
+  //  if (jet.isJPTJet() ) std::cout<<"This is a JPT jet"<<std::endl;
+  if ( !jet.isPFJet() ) {//std::cout<<"This is a PF jet"<<std::endl;
+    
+    reco::JetID myjetid = jet.jetID();
+        
+    std::cout<<"isJPT="<<jet.isJPTJet()<<"\t"<<jet.jetID().n90Hits<<"\t"<<jet.jetID().hitsInN90<<std::endl;
+    float jet_n90Hits = jet.jetID().n90Hits;
+    float jet_fHPD = jet.jetID().fHPD;
+    float jet_emf = jet.emEnergyFraction();
+    
+    //std::cout<<jet_n90Hits<<"\t"<<jet_fHPD<<"\t"<<jet_emf<<std::endl;
+    
+    bool pass_n90Hits = jet_n90Hits > 1;
+    bool pass_fHPD = jet_fHPD < 0.98;
+    bool pass_emf = true;
+    if ( fabs(jet.eta()) <2.6 ) {
+      if (jet_emf <= 0.01) pass_emf=false;
+    }
+    else {                // HF
+      if( jet_emf <= -0.9 ) pass_emf = false;
+      if( jet.pt() > 80 && jet_emf >= 1 ) pass_emf = false;
+    }
+        
+    return (pass_n90Hits && pass_fHPD && pass_emf);
+  }
+
+  return true;
+
 }
 
 void
-BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int jetIndex)
 {
-  //  std::cout<<" == fillJetInfo =="<<std::endl; //debug
-
-  //we're gonna do MET in here too
-
-  if (jetInfoFilled_) return;
+  //    std::cout<<" == fillJetInfo "<<jetAlgorithmNames_[jetIndex]<<" =="<<std::endl; //debug
+ 
+  //  if (jetInfoFilled_) return;
 
   edm::Handle<edm::View<pat::Jet> > jetHandle;
-  iEvent.getByLabel(jetLabel_,jetHandle);
+  iEvent.getByLabel(jetAlgorithmNames_[jetIndex],jetHandle);
   const edm::View<pat::Jet> & jets = *jetHandle;
 
   //freya sort using et. don sorts with pt. stick with pt
@@ -423,9 +551,10 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
   }
 
   std::vector<int> sortedJetIndices = IndexSorter< std::vector<float> >(jetPtVector,true)();
-  
+
   //variables for use in the jet loop
   pat::strbitset ret1 = jetIdLoose_.getBitTemplate();
+  pat::strbitset retpf = PFjetIdLoose_.getBitTemplate();
   double MHTx = 0, MHTy = 0;
   //now loop over sorted jets
   for (size_t ii = 0 ; ii< sortedJetIndices.size(); ++ii) {
@@ -435,19 +564,26 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     const pat::Jet & jet = jets[jj];
     
     //fill the 'very loose' vectors with uncorrected jet info
-    pat::Jet uncorrectedJet = jet.correctedJet("raw"); //get the uncorrected jet (i hope)
-    if (uncorrectedJet.pt() >= 10) { //can apply tighter cuts offline
-      veryloosejetPtUncorr.push_back(uncorrectedJet.pt());
-      veryloosejetEtaUncorr.push_back(uncorrectedJet.eta());
-      veryloosejetPhiUncorr.push_back(uncorrectedJet.phi());
+    if ( jet.isCaloJet() ) {
+      pat::Jet uncorrectedJet = jet.correctedJet("raw"); //get the uncorrected jet (i hope)
+      if (uncorrectedJet.pt() >= 10) { //can apply tighter cuts offline
+	veryloosejetPtUncorr.push_back(uncorrectedJet.pt());
+	veryloosejetEtaUncorr.push_back(uncorrectedJet.eta());
+	veryloosejetPhiUncorr.push_back(uncorrectedJet.phi());
+      }
     }
     
     //MHT is calculated using loose jet cuts
     //HT is calculated using regular jet cuts
     bool passJetID = false;
-    if ( jet.isCaloJet() ) passJetID = jetIdLoose_(jet, ret1);
-    
-    
+    if ( jet.isPFJet() ) {
+      passJetID = PFjetIdLoose_(jet,retpf);
+    }
+    else if (jet.isJPTJet() || jet.isCaloJet() ) {
+      passJetID = jetIdLoose_(jet, ret1);
+    }
+    else {std::cout<<"Unknown jet type!"<<std::endl;}
+
     // === make cuts ===
     bool passLooseCuts = (jet.pt() > loosejetPtMin_) && (fabs(jet.eta())<loosejetEtaMax_) && passJetID;
     bool passTightCuts = (jet.pt() > jetPtMin_) && (fabs(jet.eta())<jetEtaMax_) && passJetID;
@@ -456,21 +592,29 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     if (passTightCuts && !passLooseCuts) assert(0);
     
     //now fill ntuple!
+
+    //failed the jet id for some reason but still at moderate pt and eta
+    if (!passJetID && jet.pt() > 20 && (fabs(jet.eta())<loosejetEtaMax_)) { 
+      badjetPt[jetAlgorithmTags_[jetIndex]].push_back( jet.pt() );
+      badjetEta[jetAlgorithmTags_[jetIndex]].push_back(jet.eta());
+      badjetPhi[jetAlgorithmTags_[jetIndex]].push_back(jet.phi());
+    }
+
     if (passLooseCuts) {
-      verylooseJetIndex.push_back( veryloosejetPtUncorr.size() - 1);
+      looseJetIndex[jetAlgorithmTags_[jetIndex]].push_back( veryloosejetPtUncorr.size() - 1);
 
       MHTx -= jet.px();
       MHTy -= jet.py();
-      loosejetPt.push_back( jet.pt() );
-      loosejetEt.push_back( jet.et() );
-      loosejetEta.push_back(jet.eta());
-      loosejetPhi.push_back(jet.phi());
-      loosejetFlavor.push_back( jet.partonFlavour() );
+      loosejetPt[jetAlgorithmTags_[jetIndex]].push_back( jet.pt() );
+      loosejetEt[jetAlgorithmTags_[jetIndex]].push_back( jet.et() );
+      loosejetEta[jetAlgorithmTags_[jetIndex]].push_back(jet.eta());
+      loosejetPhi[jetAlgorithmTags_[jetIndex]].push_back(jet.phi());
+      loosejetFlavor[jetAlgorithmTags_[jetIndex]].push_back( jet.partonFlavour() );
 
       if ( jet.genJet() != 0 && jet.genParticle() != 0) {
 	
-	loosejetGenParticlePDGId.push_back( jet.genParticle()->pdgId() );
-	loosejetInvisibleEnergy.push_back( jet.genJet()->invisibleEnergy());
+	loosejetGenParticlePDGId[jetAlgorithmTags_[jetIndex]].push_back( jet.genParticle()->pdgId() );
+	loosejetInvisibleEnergy[jetAlgorithmTags_[jetIndex]].push_back( jet.genJet()->invisibleEnergy());
 	//	std::cout<<jet.partonFlavour()<<"\t"<<jet.genParticle()->pdgId()<<"\t"<<jet.genJet()->invisibleEnergy()<<std::endl;
 	//std::cout<<"\t\t"<<jet.genJet()->getGenConstituents().size()<<std::endl;
 	
@@ -486,30 +630,25 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       }
       else {
 	//	std::cout<<jet.partonFlavour()<<"\tNo gen match!"<<std::endl;
-	loosejetGenParticlePDGId.push_back( -99 );
-	loosejetInvisibleEnergy.push_back( -99 );
+	loosejetGenParticlePDGId[jetAlgorithmTags_[jetIndex]].push_back( -99 );
+	loosejetInvisibleEnergy[jetAlgorithmTags_[jetIndex]].push_back( -99 );
       }
       
       
       for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
-	loosejetBTagDisc[btagAlgorithmNames_[ib]].push_back( jet.bDiscriminator(btagAlgorithmNames_[ib]) );
+	loosejetBTagDisc[jetAlgorithmTags_[jetIndex]][btagAlgorithmNames_[ib]].push_back( jet.bDiscriminator(btagAlgorithmNames_[ib]) );
       }
     }
     if (passTightCuts) {
       //allow us to reference things only stored for loose jets
-      looseJetIndex.push_back( loosejetPt.size() - 1);
+      tightJetIndex[jetAlgorithmTags_[jetIndex]].push_back( loosejetPt[jetAlgorithmTags_[jetIndex]].size() - 1);
       
       HT += jet.pt();
-      jetPt.push_back( jet.pt() );
-      jetEta.push_back(jet.eta());
-      jetPhi.push_back(jet.phi());
-      jetFlavor.push_back( jet.partonFlavour() );
       
       float bdisc = 0;
       bool foundSSVM=false;
       for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
 	bdisc = jet.bDiscriminator(btagAlgorithmNames_[ib]);
-	jetBTagDisc[btagAlgorithmNames_[ib]].push_back( bdisc );
 	//look especially for SSV
 	//when the tagger doesn't exist, it seems to return -1000. So this 'if' should fire only once per jet
 	//but to be safe we'll use this foundSSVM variable
@@ -524,44 +663,60 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     } //end of tight cuts block
   } //end of loop over jets
 
-  MHT = sqrt( MHTx*MHTx + MHTy*MHTy);
-  MHTphi = atan2(MHTy,MHTx);
-  int nloosejets = (int) loosejetPhi.size();
-  if (nloosejets >0)  DeltaPhi_JetMHT1 = fabs(reco::deltaPhi( MHTphi, loosejetPhi.at(0)));
-  if (nloosejets >1)  DeltaPhi_JetMHT2 = fabs(reco::deltaPhi( MHTphi, loosejetPhi.at(1)));
-  if (nloosejets >2)  DeltaPhi_JetMHT3 = fabs(reco::deltaPhi( MHTphi, loosejetPhi.at(2)));
 
-  //fill cut flow info
-  // == are there at least 3 good jets?
-  int ngoodjets = (int) jetPt.size();
-  cutResults.push_back( ngoodjets >= minJets_ );
-  // == check pt of lead 3 jets
-  if (ngoodjets >0)  cutResults.push_back( jetPt.at(0) >= 50); else cutResults.push_back(false); //FIXME ... 50 should come from python
-  if (ngoodjets >1)  cutResults.push_back( jetPt.at(1) >= 50); else cutResults.push_back(false); //FIXME ... 50 should come from python
-  if (ngoodjets >2)  cutResults.push_back( jetPt.at(2) >= 50); else cutResults.push_back(false); //FIXME ... 50 should come from python
+  if (jetAlgorithmTags_[jetIndex] =="calo") { //FIXME
+    MHT = sqrt( MHTx*MHTx + MHTy*MHTy);
+    MHTphi = atan2(MHTy,MHTx);
+    int nloosejets = (int) loosejetPhi[jetAlgorithmTags_[jetIndex]].size();
+    if (nloosejets >0)  DeltaPhi_JetMHT1 = fabs(reco::deltaPhi( MHTphi, loosejetPhi[jetAlgorithmTags_[jetIndex]].at(0)));
+    if (nloosejets >1)  DeltaPhi_JetMHT2 = fabs(reco::deltaPhi( MHTphi, loosejetPhi[jetAlgorithmTags_[jetIndex]].at(1)));
+    if (nloosejets >2)  DeltaPhi_JetMHT3 = fabs(reco::deltaPhi( MHTphi, loosejetPhi[jetAlgorithmTags_[jetIndex]].at(2)));
 
-  //next is the HT cut //FIXME hardcoded to RA2 value
-  cutResults.push_back(HT >= 300);
-
-  //next step in cut flow is MET
-  edm::Handle<edm::View<pat::MET> > metHandle;
-  iEvent.getByLabel(caloMetLabel_,metHandle);
-  MET = metHandle->front().et();
-  METphi = metHandle->front().phi();
-
-  if (tcMetLabel_.encode() != "") {
-    edm::Handle<edm::View<pat::MET> > tcmetHandle; //i dunno if I really need a new one of these; can't hurt
-    iEvent.getByLabel(tcMetLabel_,tcmetHandle);
-    tcMET = tcmetHandle->front().et();
-    tcMETphi = tcmetHandle->front().phi();
+    //fill cut flow info
+    // == are there at least 3 good jets?
+    int ngoodjets = (int) tightJetIndex[jetAlgorithmTags_[jetIndex]].size();
+    cutResults.push_back( ngoodjets >= minJets_ );
+    // == check pt of lead 3 jets
+    if (ngoodjets >0)  {
+      cutResults.push_back( loosejetPt[jetAlgorithmTags_[jetIndex]].at( tightJetIndex[jetAlgorithmTags_[jetIndex]].at(0) ) >= 50); 
+    }
+    else {cutResults.push_back(false);}
+    if (ngoodjets >1)  {
+      cutResults.push_back( loosejetPt[jetAlgorithmTags_[jetIndex]].at( tightJetIndex[jetAlgorithmTags_[jetIndex]].at(1) ) >= 50); 
+    }
+    else {cutResults.push_back(false);}
+    if (ngoodjets >2)  {
+      cutResults.push_back( loosejetPt[jetAlgorithmTags_[jetIndex]].at( tightJetIndex[jetAlgorithmTags_[jetIndex]].at(2) ) >= 50); 
+    }
+    else {cutResults.push_back(false);}
+    
+    //next is the HT cut //hardcoded to RA2 value
+    cutResults.push_back(HT >= 300);
   }
+  //  jetInfoFilled_=true;
 
-  cutResults.push_back(MET >= metMin_); //note that we are cutting on caloMET
-  //the cut will have to be redone in order to use tcMET
+  //  std::cout<<" == done with fillJetInfo "<<jetAlgorithmNames_[jetIndex]<<" =="<<std::endl; //debug
+}
+		     
 
+void
+BasicTreeMaker::fillMetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+
+
+  for (unsigned int imettype = 0; imettype < metAlgorithmNames_.size(); imettype++) {
+    edm::Handle<edm::View<pat::MET> > metHandle; 
+    iEvent.getByLabel( metAlgorithmNames_[imettype], metHandle); //hopefully getbylabel takes  a string
+    MET[ metAlgorithmTags_[imettype] ] = metHandle->front().et() ;
+    METphi[ metAlgorithmTags_[imettype] ] = metHandle->front().phi() ;
+    METsig [ metAlgorithmTags_[imettype]]= metHandle->front().mEtSig();
+  }
+    
+  cutResults.push_back(MET["calo"] >= metMin_); //note that we are cutting on caloMET
+
+  //cut flow goes MET then MHT
+  //MHT should already be filled
   cutResults.push_back(MHT >= mhtMin_);
 
-  jetInfoFilled_=true;
 }
 
 //this is more or less working.
@@ -571,7 +726,7 @@ void
 BasicTreeMaker::fillBTagDBInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
 
-  if (!jetInfoFilled_) assert(0);
+  //  if (!jetInfoFilled_) assert(0);
 
   //stealing generously from Freya et al.
   //for now just hard-code stuff
@@ -610,6 +765,9 @@ BasicTreeMaker::fillBTagDBInfo(const edm::Event& iEvent, const edm::EventSetup& 
   btaggingparamtype_["MUFAKE"]=PerformanceResult::MUFAKE; 
   btaggingparamtype_["MUEFAKE"]=PerformanceResult::MUEFAKE;
 
+  /*
+FIXME for now i'm going to hardcode the "calo" here
+  */
 
   edm::ESHandle<BtagPerformance> perfH;
   BinningPointByMap p;
@@ -622,14 +780,14 @@ BasicTreeMaker::fillBTagDBInfo(const edm::Event& iEvent, const edm::EventSetup& 
      //std::cout << " Beff cut value is : " << bidParamsDiscCut_[btaggingparamnames_[ii]] << std::endl; //debug
      // now loop over the jets:
      std::string lookupname=btaggingparamnames_[ii]+"-"+btaggingparaminputtypes_[ii];
-     for (size_t ijet=0; ijet< loosejetEt.size(); ijet++) {
+     for (size_t ijet=0; ijet< loosejetEt["calo"].size(); ijet++) {
        p.reset();
-       p.insert(BinningVariables::JetAbsEta,std::abs( loosejetEta[ijet] ));
-       p.insert(BinningVariables::JetEt,loosejetEt[ijet]);
+       p.insert(BinningVariables::JetAbsEta,std::abs( loosejetEta["calo"][ijet] ));
+       p.insert(BinningVariables::JetEt,loosejetEt["calo"][ijet]);
        float eff=0;
        //	 if(pbeff.isResultOk(btaggingparamtype_[jj].second,p))
        eff=pbeff.getResult(btaggingparamtype_[btaggingparaminputtypes_[ii]],p);
-       std::cout << "value " << lookupname << " (PerformanceResult:" << btaggingparamtype_[btaggingparaminputtypes_[ii]] <<  ") for jet " << ijet << "(et,eta):("<<loosejetEt[ijet]<< "," << loosejetEta[ijet]<< ")  is " << eff << std::endl;
+       std::cout << "value " << lookupname << " (PerformanceResult:" << btaggingparamtype_[btaggingparaminputtypes_[ii]] <<  ") for jet " << ijet << "(et,eta):("<<loosejetEt["calo"][ijet]<< "," << loosejetEta["calo"][ijet]<< ")  is " << eff << std::endl;
        //       jetSortedBIDParams_[lookupname + ID][ijet]=eff;
 
      }
@@ -637,54 +795,78 @@ BasicTreeMaker::fillBTagDBInfo(const edm::Event& iEvent, const edm::EventSetup& 
 
 }
 
-// ------------ method called to for each event  ------------
 void
-BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
-{
-  using namespace std;
-  
-  //  cout<<" ==== "<<endl;
-  Heventcount_->Fill(0.5);
-  
+BasicTreeMaker::resetTreeVariables() {
   //reset tree variables
   cutResults.clear();
   passTrigger.clear();
+  SUSYtriggerIndex=-1;
   hltPrescale.clear();
-  jetInfoFilled_=false;
-  leptonInfoFilled_=false;
+  //  jetInfoFilled_=false;
+  //  leptonInfoFilled_=false;
   trackInfoFilled_=false;
-  looseJetIndex.clear();
-  verylooseJetIndex.clear();
-  jetPt.clear();
-  jetEta.clear();
-  jetPhi.clear();
-  jetFlavor.clear();
 
-  loosejetPt.clear();
-  loosejetEt.clear();
-  loosejetEta.clear();
-  loosejetPhi.clear();
-  loosejetFlavor.clear();
-  loosejetGenParticlePDGId.clear();
-  loosejetInvisibleEnergy.clear();
+  for (std::vector<std::string>::const_iterator ij=jetAlgorithmTags_.begin() ; ij!=jetAlgorithmTags_.end() ; ++ij) {
+    tightJetIndex[*ij].clear();
+    looseJetIndex[*ij].clear();
+    //   jetPt.clear();
+    //   jetEta.clear();
+    //   jetPhi.clear();
+    //   jetFlavor.clear();
+    loosejetPt[*ij].clear();
+    loosejetEt[*ij].clear();
+    loosejetEta[*ij].clear();
+    loosejetPhi[*ij].clear();
+    loosejetFlavor[*ij].clear();
+    loosejetGenParticlePDGId[*ij].clear();
+    loosejetInvisibleEnergy[*ij].clear();
+
+    badjetPt[*ij].clear();
+    badjetEta[*ij].clear();
+    badjetPhi[*ij].clear();
+
+    for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
+      loosejetBTagDisc[*ij][btagAlgorithmNames_[ib]].clear();
+    }
+  }
 
   veryloosejetPtUncorr.clear();
   veryloosejetEtaUncorr.clear();
   veryloosejetPhiUncorr.clear();
 
-  for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
-    jetBTagDisc[btagAlgorithmNames_[ib]].clear();
-    loosejetBTagDisc[btagAlgorithmNames_[ib]].clear();
+  for (unsigned int il=0; il<eleAlgorithmNames_.size(); il++) {
+    nAllMuons[muonAlgorithmNames_[il]]=0;
+    nMuons[muonAlgorithmNames_[il]]=0;
+    muonPt[muonAlgorithmNames_[il]].clear();
+    muonEta[muonAlgorithmNames_[il]].clear();
+    muonTrackIso[muonAlgorithmNames_[il]].clear();
+    muonEcalIso[muonAlgorithmNames_[il]].clear();
+    muonHcalIso[muonAlgorithmNames_[il]].clear();
+
+    nAllElectrons[eleAlgorithmNames_[il]]=0;
+    nElectrons[eleAlgorithmNames_[il]]=0;
+    eleEt[eleAlgorithmNames_[il]].clear();
+    eleEta[eleAlgorithmNames_[il]].clear();
+    eleTrackIso[eleAlgorithmNames_[il]].clear();
+    eleEcalIso[eleAlgorithmNames_[il]].clear();
+    eleHcalIso[eleAlgorithmNames_[il]].clear();
   }
+
+  pv_isFake.clear();
+  pv_z.clear();
+  pv_ndof.clear();
+  pv_chi2.clear();
+  pv_rho.clear();
 
   nbSSVM=0;
   HT=0;
   MHT=0;
-  MET=0;
-  METphi=0;
   MHTphi=0;
-  tcMET=0;
-  tcMETphi=0;
+  for (unsigned int im=0; im<metAlgorithmTags_.size() ; im++) {
+    MET[metAlgorithmTags_[im]]=-99;
+    METphi[metAlgorithmTags_[im]]=-99;
+    METsig[metAlgorithmTags_[im]]=-99;
+  }
   DeltaPhi_JetMHT1 = -99;
   DeltaPhi_JetMHT2 = -99;
   DeltaPhi_JetMHT3 = -99;
@@ -694,39 +876,57 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   SUSY_nb=0;
   qScale=0;
   topDecayCode.clear();
+  flavorHistory=-99;
+
+  runNumber=0;
+  eventNumber=0;
+  lumiSection=0;
+
+}
+
+// ------------ method called to for each event  ------------
+void
+BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+{
+  using namespace std;
+  
+  resetTreeVariables();
+
+  //  cout<<" ==== "<<endl;
+  Heventcount_->Fill(0.5);
+  
+
   //start analyzin'
-
-  //run don's selector and copy to tree
-  //  (*susyCutFlow_)(iEvent, ret);
-//   for (vector<string>::const_iterator iname = cutNames.begin(); iname!=cutNames.end() ; ++iname) {
-//     cutResultsDon.push_back( ret[*iname]);
-
-//     //i'm not taking the trigger info from here anymore either....this code is rather silly now
-//     if (*iname == string("Inclusive") ) {
-//       cutResults.push_back( ret[*iname]);
-//       //cout<<"Found cut name = "<<*iname<<endl;
-//     }
-//   }
   cutResults.push_back(true); //"Inclusive" step
+
+  //event info
+  runNumber   = iEvent.run();
+  eventNumber = iEvent.eventAuxiliary().event() ;
+  lumiSection = iEvent.getLuminosityBlock().luminosityBlock();
 
   //trigger
   fillTriggerInfo(iEvent,iSetup);
 
   //primary vertex
   cutResults.push_back( pvSelector_( iEvent ) );
+  fillPVInfo(iEvent,iSetup);
 
   //fills jets cuts, as well as MET, and the values of DeltaPhi
-  fillJetInfo( iEvent,iSetup);
+  for (unsigned int i=0; i<jetAlgorithmNames_.size(); i++) {
+    fillJetInfo( iEvent,iSetup, i);
+  }
+  fillMetInfo( iEvent,iSetup);
 
   /* for now we don't bother to do this */
   //fill b efficiency info (must be done after jets are filled)
   //fillBTagDBInfo(iEvent,iSetup);
 
   //fill muon, electron
-  fillLeptonInfo(iEvent,iSetup);
+  for (unsigned int i=0; i<eleAlgorithmNames_.size(); i++) {
+    fillLeptonInfo(iEvent,iSetup, i);
+  }
 
   //the next step in the cut flow is DeltaPhi
-  //FIXME remove hard-coding
   bool dphi1cut = DeltaPhi_JetMHT1 > 0.3;//dphi1Min_;
   bool dphi2cut = DeltaPhi_JetMHT2 > 0.5;//dphi2Min_;
   bool dphi3cut = DeltaPhi_JetMHT3 > 0.3;//dphi3Min_;
@@ -740,8 +940,7 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 
   fillTrackInfo(iEvent,iSetup);
-  if (isMC_)  fillMCInfo(iEvent,iSetup);
-
+  if (isMC_)    fillMCInfo(iEvent,iSetup);
   tree_->Fill();
 
 // #ifdef THIS_IS_AN_EVENT_EXAMPLE
@@ -794,6 +993,7 @@ void BasicTreeMaker::findHLTProcessName(const edm::Event& iEvent) {
 void 
 BasicTreeMaker::beginJob()
 {
+  using namespace std;
   //nfail_=0;
 
   //== create tree branches ==
@@ -804,44 +1004,57 @@ BasicTreeMaker::beginJob()
   infotree_->Branch("triggerList",&triggersOfInterest_);
 
   //tree that is filled for each event
+  tree_->Branch("runNumber",&runNumber,"runNumber/l");
+  tree_->Branch("lumiSection",&lumiSection,"lumiSection/l");
+  tree_->Branch("eventNumber",&eventNumber,"eventNumber/l");
+
   tree_->Branch("cutResults",&cutResults);
   tree_->Branch("passTrigger",&passTrigger); //stores results for triggers listed in triggerList
   tree_->Branch("hltPrescale",&hltPrescale);
-  //jet branches
-  tree_->Branch("looseJetIndex",&looseJetIndex);
-  tree_->Branch("verylooseJetIndex",&verylooseJetIndex);
-  tree_->Branch("jetPt",&jetPt);
-  tree_->Branch("jetEta",&jetEta);
-  tree_->Branch("jetPhi",&jetPhi);
-  tree_->Branch("jetFlavor",&jetFlavor);
-  //ROOT does not allow us to put a map of vectors into a tree
-  //so we have to go with this approach
-  for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
-    std::string bname = "jetBTagDisc_";
-    bname += btagAlgorithmNames_[ib];
-    tree_->Branch(bname.c_str(),&jetBTagDisc[btagAlgorithmNames_[ib]]);
-  }
+  tree_->Branch("SUSYtriggerIndex",&SUSYtriggerIndex,"SUSYtriggerIndex/I");
+  //primary vertex branches
+  tree_->Branch("pv_isFake",&pv_isFake);
+  tree_->Branch("pv_z",&pv_z);
+  tree_->Branch("pv_rho",&pv_rho);
+  tree_->Branch("pv_chi2",&pv_chi2);
+  tree_->Branch("pv_ndof",&pv_ndof);
 
-  //loose jet branches
-  tree_->Branch("loosejetPt",&loosejetPt);
-  tree_->Branch("loosejetEt",&loosejetEt);
-  tree_->Branch("loosejetEta",&loosejetEta);
-  tree_->Branch("loosejetPhi",&loosejetPhi);
-  tree_->Branch("loosejetFlavor",&loosejetFlavor);
+  //jet branches
+  for (vector<string>::const_iterator ij=jetAlgorithmTags_.begin() ; ij!=jetAlgorithmTags_.end() ; ++ij) {
+
+    string tail="_";
+    tail += (*ij);
+
+    tree_->Branch( (string("tightJetIndex")+tail).c_str(),&tightJetIndex[*ij]);
+    tree_->Branch( (string("looseJetIndex")+tail).c_str(),&looseJetIndex[*ij]);
+
+    //loose jet branches
+    tree_->Branch( (string("loosejetPt")+tail).c_str(),&loosejetPt[*ij]);
+    tree_->Branch( (string("loosejetEt")+tail).c_str(),&loosejetEt[*ij]);
+    tree_->Branch( (string("loosejetEta")+tail).c_str(),&loosejetEta[*ij]);
+    tree_->Branch( (string("loosejetPhi")+tail).c_str(),&loosejetPhi[*ij]);
+    tree_->Branch( (string("loosejetFlavor")+tail).c_str(),&loosejetFlavor[*ij]);
+    
+    tree_->Branch( (string("loosejetGenParticlePDGId")+tail).c_str(),&loosejetGenParticlePDGId[*ij]);
+    tree_->Branch( (string("loosejetInvisibleEnergy")+tail).c_str(),&loosejetInvisibleEnergy[*ij]);
+    //ROOT does not allow us to put a map of vectors into a tree
+    //so we have to go with this approach
+    for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
+      string bname = "loosejetBTagDisc_";
+      bname += btagAlgorithmNames_[ib];
+      bname += tail;
+      tree_->Branch(bname.c_str(),&loosejetBTagDisc[*ij][btagAlgorithmNames_[ib]]);
+    }
+   
+    tree_->Branch( (string("badjetPt")+tail).c_str(),&badjetPt[*ij]);
+    tree_->Branch( (string("badjetEta")+tail).c_str(),&badjetEta[*ij]);
+    tree_->Branch( (string("badjetPhi")+tail).c_str(),&badjetPhi[*ij]);
+
+  }
 
   tree_->Branch("veryloosejetPtUncorr",&veryloosejetPtUncorr);
   tree_->Branch("veryloosejetEtaUncorr",&veryloosejetEtaUncorr);
   tree_->Branch("veryloosejetPhiUncorr",&veryloosejetPhiUncorr);
-
-  tree_->Branch("loosejetGenParticlePDGId",&loosejetGenParticlePDGId);
-  tree_->Branch("loosejetInvisibleEnergy",&loosejetInvisibleEnergy);
-  //ROOT does not allow us to put a map of vectors into a tree
-  //so we have to go with this approach
-  for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
-    std::string bname = "loosejetBTagDisc_";
-    bname += btagAlgorithmNames_[ib];
-    tree_->Branch(bname.c_str(),&loosejetBTagDisc[btagAlgorithmNames_[ib]]);
-  }
 
   tree_->Branch("nbSSVM",&nbSSVM,"nbSSVM/I");
   tree_->Branch("HT",&HT,"HT/F");
@@ -850,17 +1063,63 @@ BasicTreeMaker::beginJob()
   tree_->Branch("DeltaPhi_JetMHT1",&DeltaPhi_JetMHT1,"DeltaPhi_JetMHT1/F");
   tree_->Branch("DeltaPhi_JetMHT2",&DeltaPhi_JetMHT2,"DeltaPhi_JetMHT2/F");
   tree_->Branch("DeltaPhi_JetMHT3",&DeltaPhi_JetMHT3,"DeltaPhi_JetMHT3/F");
-  tree_->Branch("MET",&MET,"MET/F");
-  tree_->Branch("METphi",&METphi,"METphi/F");
-  tree_->Branch("tcMET",&tcMET,"tcMET/F");
-  tree_->Branch("tcMETphi",&tcMETphi,"tcMETphi/F");
+  for (unsigned int im=0; im<metAlgorithmTags_.size(); im++) {
+    string metname=metAlgorithmTags_[im];
+    metname += "MET";
+    string thirdarg=metname;
+    thirdarg += "/F";
+    tree_->Branch(metname.c_str(),&MET[metAlgorithmTags_[im]],thirdarg.c_str());
+
+    metname=metAlgorithmTags_[im];
+    metname += "METphi";
+    thirdarg=metname;
+    thirdarg += "/F";
+    tree_->Branch(metname.c_str(),&METphi[metAlgorithmTags_[im]],thirdarg.c_str());
+
+    metname=metAlgorithmTags_[im];
+    metname += "METsig";
+    thirdarg=metname;
+    thirdarg += "/F";
+    tree_->Branch(metname.c_str(),&METsig[metAlgorithmTags_[im]],thirdarg.c_str());
+  }
+
   tree_->Branch("trackPt",&trackPt);
   tree_->Branch("trackEta",&trackEta);
   tree_->Branch("trackPhi",&trackPhi);
 
+  for (unsigned int il=0; il<muonAlgorithmNames_.size(); il++) {
+    string tail="_";
+    string itail="_";
+    if (muonAlgorithmNames_[il].find( "PF")!=string::npos) {
+      tail+="PF";
+      itail+="PF/I";
+    }
+    else {
+      tail="";
+      itail="/I";
+    }
+
+    tree_->Branch( (string("nAllMuons")+tail).c_str(), &nAllMuons[muonAlgorithmNames_[il]], (string("nAllMuons")+itail).c_str());
+    tree_->Branch( (string("muonPt")+tail).c_str(),&muonPt[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonEta")+tail).c_str(),&muonEta[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonTrackIso")+tail).c_str(),&muonTrackIso[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonEcalIso")+tail).c_str(),&muonEcalIso[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonHcalIso")+tail).c_str(),&muonHcalIso[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("nMuons")+tail).c_str(),&nMuons[muonAlgorithmNames_[il]],(string("nMuons")+itail).c_str());
+
+    tree_->Branch((string("nAllElectrons")+tail).c_str(),&nAllElectrons[eleAlgorithmNames_[il]],(string("nAllElectrons")+itail).c_str());
+    tree_->Branch((string("eleEt")+tail).c_str(),&eleEt[eleAlgorithmNames_[il]]);
+    tree_->Branch((string("eleEta")+tail).c_str(),&eleEta[eleAlgorithmNames_[il]]);
+    tree_->Branch((string("eleTrackIso")+tail).c_str(),&eleTrackIso[eleAlgorithmNames_[il]]);
+    tree_->Branch((string("eleEcalIso")+tail).c_str(),&eleEcalIso[eleAlgorithmNames_[il]]);
+    tree_->Branch((string("eleHcalIso")+tail).c_str(),&eleHcalIso[eleAlgorithmNames_[il]]);
+    tree_->Branch((string("nElectrons")+tail).c_str(),&nElectrons[eleAlgorithmNames_[il]],(string("nElectrons")+itail).c_str());
+  }
+
   tree_->Branch("SUSY_nb",&SUSY_nb,"SUSY_nb/I");
   tree_->Branch("qScale",&qScale,"qScale/F");
   tree_->Branch("topDecayCode",&topDecayCode);
+  tree_->Branch("flavorHistory",&flavorHistory,"flavorHistory/I");
 
   //copied from Don's code
   //someday i need to find a better way to do it
@@ -892,10 +1151,6 @@ BasicTreeMaker::endJob() {
   thetimer_->stop();
 
   infotree_->Fill();
-
-  //  susyCutFlow_->print(std::cout);
-
-  //  cout<<"nfail = "<<nfail_<<endl;
 
   cout<<"Job took [CPU/Wall] seconds: "<<thetimer_->cpuTime()<<" / "<<thetimer_->realTime()<<endl;
   cout<<"events/sec = "<<Heventcount_->GetEntries()<<" / "<<thetimer_->realTime()<<" = "<<Heventcount_->GetEntries() /thetimer_->realTime()<<endl;  
