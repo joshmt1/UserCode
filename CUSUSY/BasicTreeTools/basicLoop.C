@@ -25,6 +25,44 @@ void basicLoop::exampleLoop()
    }
 }
 
+
+void basicLoop::testLoop(const Long64_t maxEvents)
+{
+  /*
+the result of this test seems to be that there is no need for the tight jet list.
+the looseJetIndex works as designed to point to the tight jets
+  */
+
+  const TString sp=" ";
+   if (fChain == 0) return;
+
+   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+
+   if (maxEvents>0 && maxEvents<nentries) nentries=maxEvents;
+
+   Long64_t nbytes = 0, nb = 0;
+   for (Long64_t jentry=0; jentry<nentries;jentry++) {
+      Long64_t ientry = LoadTree(jentry);
+      if (ientry < 0) break;
+      nb = fChain->GetEntry(jentry);   nbytes += nb;
+
+      //      if (Cut(ientry) < 0) continue; //jmt use cut
+      //if (jentry != 92) continue;
+
+      //      cout<<jetPt->size()<<sp<<looseJetIndex->size()<<endl;
+      cout<<jentry<<" ----------------"<<endl;
+      for (unsigned int i=0;i<looseJetIndex->size(); i++) {
+	cout<< looseJetIndex->at(i)<<sp<<jetPt->at(i)<<sp<<loosejetPt->at( looseJetIndex->at(i) )<<endl;
+      }
+
+      for (unsigned int i=0; i< loosejetPt->size(); i++) {
+	cout<< loosejetPt->at(i) <<sp<<loosejetEta->at(i)<<endl;
+      }
+
+   }
+}
+
+
 /*
 print a cut flow table
 lumi is set in basicLoop.h

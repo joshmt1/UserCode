@@ -177,6 +177,7 @@ public :
    virtual void     exampleLoop();
    virtual void     nbLoop();
    virtual void     ABCDtree(unsigned int dataindex=0);
+   virtual void testLoop(const Long64_t maxEvents=0);
 
    bool isVersion04b();
    void printState();
