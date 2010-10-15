@@ -19,46 +19,9 @@ void basicLoop::exampleLoop()
    for (Long64_t jentry=0; jentry<nentries;jentry++) {
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) break;
-      nb = fChain->GetEntry(jentry);   nbytes += nb;
+      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
       if (Cut(ientry) < 0) continue; //jmt use cut
-   }
-}
-
-
-void basicLoop::testLoop(const Long64_t maxEvents)
-{
-  /*
-the result of this test seems to be that there is no need for the tight jet list.
-the looseJetIndex works as designed to point to the tight jets
-  */
-
-  const TString sp=" ";
-   if (fChain == 0) return;
-
-   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
-
-   if (maxEvents>0 && maxEvents<nentries) nentries=maxEvents;
-
-   Long64_t nbytes = 0, nb = 0;
-   for (Long64_t jentry=0; jentry<nentries;jentry++) {
-      Long64_t ientry = LoadTree(jentry);
-      if (ientry < 0) break;
-      nb = fChain->GetEntry(jentry);   nbytes += nb;
-
-      //      if (Cut(ientry) < 0) continue; //jmt use cut
-      //if (jentry != 92) continue;
-
-      //      cout<<jetPt->size()<<sp<<looseJetIndex->size()<<endl;
-      cout<<jentry<<" ----------------"<<endl;
-      for (unsigned int i=0;i<looseJetIndex->size(); i++) {
-	cout<< looseJetIndex->at(i)<<sp<<jetPt->at(i)<<sp<<loosejetPt->at( looseJetIndex->at(i) )<<endl;
-      }
-
-      for (unsigned int i=0; i< loosejetPt->size(); i++) {
-	cout<< loosejetPt->at(i) <<sp<<loosejetEta->at(i)<<endl;
-      }
-
    }
 }
 
@@ -84,7 +47,8 @@ void basicLoop::cutflow()
   Long64_t nbytes = 0, nb = 0;
   
   LoadTree(0);
-  nb = fChain->GetEntry(0);   nbytes += nb;
+  nb = GetEntry(0);   nbytes += nb; //use member function GetEntry instead of fChain->
+  //FIXME this will need modification if we want to change the cut flow structure
   for (unsigned int i=0 ; i<cutResults->size(); i++) {
     npass.push_back(0);
   }
@@ -92,9 +56,12 @@ void basicLoop::cutflow()
   for (Long64_t jentry=0; jentry<nentries;jentry++) {
     Long64_t ientry = LoadTree(jentry);
     if (ientry < 0) break;
-    nb = fChain->GetEntry(jentry);   nbytes += nb;
-    
+    nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+
+    //cout<<"== "<<jentry<<endl;
+
     for (unsigned int i=0 ; i<cutResults->size(); i++) {
+      //cout<<i<<endl;
       if (cutRequired(i) && passCut(i) )   npass.at(i) = npass.at(i) +1;
       else if (cutRequired(i) && !passCut(i) ) break;
     }
@@ -180,44 +147,21 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   ABCDtree.Branch("minDeltaPhiMHT",&minDeltaPhiMHT,"minDeltaPhiMHT/D");
   ABCDtree.Branch("minDeltaRbj",&minDeltaRbj,"minDeltaRbj/D");
   ABCDtree.Branch("DeltaPhiMPTMET",&DeltaPhiMPTMET,"DeltaPhiMPTMET/D");
-  //some additional variables, not really for ABCD....
-  int ntightjets;
-  int ntightMCbjets;
-  int nloosejets;
-  int nlooseMCbjets;
-  const bool doExtra=false;
-  if (doExtra) {
-    ABCDtree.Branch("ntightjets",&ntightjets,"ntightjets/I");
-    ABCDtree.Branch("ntightMCbjets",&ntightMCbjets,"ntightMCbjets/I");
-    ABCDtree.Branch("nloosejets",&nloosejets,"nloosejets/I");
-    ABCDtree.Branch("nlooseMCbjets",&nlooseMCbjets,"nlooseMCbjets/I");
-  }
-  //
+
   
   Long64_t nbytes = 0, nb = 0;
   for (Long64_t jentry=0; jentry<nentries;jentry++) {
     Long64_t ientry = LoadTree(jentry);
     if (ientry < 0) break;
-    nb = fChain->GetEntry(jentry);   nbytes += nb;
-    
+    nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+
     if (Cut(ientry) < 0) continue; //jmt use cut
-    myMET = MET; //could and should modify to use tcMET or caloMET
+    myMET = caloMET; //could and should modify to use tcMET or caloMET
     myMHT = MHT;
     minDeltaPhiMET = getMinDeltaPhiMET(3);
     minDeltaPhiMHT = getMinDeltaPhiMHT(3);
     minDeltaRbj = getOverallMinDeltaR_bj();
     DeltaPhiMPTMET = getDeltaPhiMPTMET();
-
-    if (doExtra) {
-      ntightjets=jetPt->size();
-      nloosejets=loosejetPt->size();
-      ntightMCbjets=0;
-      nlooseMCbjets=0;
-      for (unsigned int ijet=0; ijet<jetFlavor->size(); ijet++)
-	if (abs(jetFlavor->at(ijet))==5) ntightMCbjets++;
-      for (unsigned int ijet=0; ijet<loosejetFlavor->size(); ijet++)
-	if (abs(loosejetFlavor->at(ijet))==5) nlooseMCbjets++;
-    }
 
     ABCDtree.Fill(); 
   }
@@ -331,9 +275,9 @@ void basicLoop::Loop(unsigned int dataindex)
    TH1D H_MHT_ge3b("H_MHT_ge3b","MHT (RA2 && >=3b)",nbins, met_min , met_max);
    TH1D H_MET_ge3b("H_MET_ge3b","MET (RA2 && >=3b)",nbins, met_min , met_max);
 
-   TH2D HpassMET45("HpassMET45","pass MET45 versus MET (RA2)",nbins,met_min,met_max,2,0,2);
-   TH2D HpassMET45_ge1b("HpassMET45_ge1b","pass MET45 versus MET (RA2 && >=1b)",nbins,met_min,met_max,2,0,2);
-   TH2D HpassMET45_ge2b("HpassMET45_ge2b","pass MET45 versus MET (RA2 && >=2b)",nbins,met_min,met_max,2,0,2);
+//    TH2D HpassMET45("HpassMET45","pass MET45 versus MET (RA2)",nbins,met_min,met_max,2,0,2);
+//    TH2D HpassMET45_ge1b("HpassMET45_ge1b","pass MET45 versus MET (RA2 && >=1b)",nbins,met_min,met_max,2,0,2);
+//    TH2D HpassMET45_ge2b("HpassMET45_ge2b","pass MET45 versus MET (RA2 && >=2b)",nbins,met_min,met_max,2,0,2);
 
    TH2D HdeltaPhib1b2_MET("HdeltaPhib1b2_MET","DeltaPhi(b1,b2) v MET (>=2b)",nbins,met_min,met_max,nbins,0,pi);
    TH2D HminDeltaPhiMETb_MET_ge2b("HminDeltaPhiMETb_MET_ge2b","minDeltaPhi(b,MET) v MET (>=2b)",nbins,met_min,met_max,nbins,0,pi);
@@ -368,9 +312,9 @@ void basicLoop::Loop(unsigned int dataindex)
 
    double ht_min=0,ht_max=900;
    int ht_nbins=300;
-   TH2D HpassHT100U("HpassHT100U","pass HT100U versus HT (RA2)",ht_nbins,ht_min,ht_max,2,0,2);
-   TH2D HpassHT100U_ge1b("HpassHT100U_ge1b","pass HT100U versus HT (RA2 && >=1b)",ht_nbins,ht_min,ht_max,2,0,2);
-   TH2D HpassHT100U_ge2b("HpassHT100U_ge2b","pass HT100U versus HT (RA2 && >=2b)",ht_nbins,ht_min,ht_max,2,0,2);
+//    TH2D HpassHT100U("HpassHT100U","pass HT100U versus HT (RA2)",ht_nbins,ht_min,ht_max,2,0,2);
+//    TH2D HpassHT100U_ge1b("HpassHT100U_ge1b","pass HT100U versus HT (RA2 && >=1b)",ht_nbins,ht_min,ht_max,2,0,2);
+//    TH2D HpassHT100U_ge2b("HpassHT100U_ge2b","pass HT100U versus HT (RA2 && >=2b)",ht_nbins,ht_min,ht_max,2,0,2);
 
    TH1D H_HT("H_HT","HT",ht_nbins,ht_min,ht_max);
    TH1D H_HT_ge1b("H_HT_ge1b","HT (>=1b)",ht_nbins,ht_min,ht_max);
@@ -447,13 +391,13 @@ void basicLoop::Loop(unsigned int dataindex)
    HminDeltaR_bj_vMET_ABCD_ge1b.Sumw2();
    HminDeltaR_bj_vMET_ABCD_ge2b.Sumw2();
 
-   HpassHT100U.Sumw2();
-   HpassHT100U_ge1b.Sumw2();
-   HpassHT100U_ge2b.Sumw2();
+//    HpassHT100U.Sumw2();
+//    HpassHT100U_ge1b.Sumw2();
+//    HpassHT100U_ge2b.Sumw2();
 
-   HpassMET45.Sumw2();
-   HpassMET45_ge1b.Sumw2();
-   HpassMET45_ge2b.Sumw2();
+//    HpassMET45.Sumw2();
+//    HpassMET45_ge1b.Sumw2();
+//    HpassMET45_ge2b.Sumw2();
 
    //keep track of performance
    TDatime starttime; //default ctor is for current time
@@ -463,28 +407,28 @@ void basicLoop::Loop(unsigned int dataindex)
    for (Long64_t jentry=0; jentry<nentries ;jentry++) {
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) {assert(0);}
-      nb = fChain->GetEntry(jentry);   nbytes += nb;
+      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
-      Hnjets_nocuts.Fill( jetPt->size(), weight );
+      Hnjets_nocuts.Fill( tightJetIndex_calo->size(), weight );
       if (Cut(ientry) < 0) continue; //jmt use cut
 
       //calculate things
       double dp_MPTMET = getDeltaPhiMPTMET();
 
-      Hnjets.Fill( jetPt->size(), weight );
+      Hnjets.Fill( tightJetIndex_calo->size(), weight );
       HdeltaPhiMPTMET.Fill( dp_MPTMET,weight);
       H_MHT.Fill(MHT ,weight);
-      H_MET.Fill(MET ,weight);
+      H_MET.Fill(caloMET ,weight);
 
-      Hjetpt1.Fill(jetPt->at(0),weight);
+      Hjetpt1.Fill(jetPt_calo.at(0),weight);
 
       H_HT.Fill(HT,weight);
 
       //FIXME -- this will not work in general
-      int passHTtrig = passTrigger->at(0) ? 1:0; //index 0 is HLT_HT100U
-      int passMETtrig = passTrigger->at(2) ? 1:0; //index 2 is HLT_MET45
-      HpassHT100U.Fill(HT,passHTtrig); //note -- NOT using weight here!
-      HpassMET45.Fill(MET,passMETtrig);
+//       int passHTtrig = passTrigger->at(0) ? 1:0; //index 0 is HLT_HT100U
+//       int passMETtrig = passTrigger->at(2) ? 1:0; //index 2 is HLT_MET45
+//       HpassHT100U.Fill(HT,passHTtrig); //note -- NOT using weight here!
+//       HpassMET45.Fill(MET,passMETtrig);
 
       double minDeltaPhi_j_MET= getMinDeltaPhiMET(3);
       double minDeltaPhi_j_MHT= getMinDeltaPhiMHT(3);
@@ -495,16 +439,16 @@ void basicLoop::Loop(unsigned int dataindex)
       HV2minDeltaPhiMETj.Fill(minDeltaPhi_j_MET,weight);
 
       if ( nbSSVM < 1) continue; //cut on the number of b tags
-      Hnjets_ge1b.Fill( jetPt->size(), weight );
+      Hnjets_ge1b.Fill( tightJetIndex_calo->size(), weight );
       H_MHT_ge1b.Fill(MHT ,weight);
-      H_MET_ge1b.Fill(MET ,weight);
+      H_MET_ge1b.Fill(caloMET ,weight);
 
-      Hjetpt1_ge1b.Fill(jetPt->at(0),weight);
+      Hjetpt1_ge1b.Fill(jetPt_calo.at(0),weight);
 
       HdeltaPhiMPTMET_ge1b.Fill( dp_MPTMET,weight);
 
-      HpassHT100U_ge1b.Fill(HT,passHTtrig); //note -- NOT using weight here!
-      HpassMET45_ge1b.Fill(MET,passMETtrig);
+//       HpassHT100U_ge1b.Fill(HT,passHTtrig); //note -- NOT using weight here!
+//       HpassMET45_ge1b.Fill(MET,passMETtrig);
       H_HT_ge1b.Fill(HT,weight);
 
       double minDeltaPhi_b_MET= getMinDeltaPhibMET();
@@ -520,10 +464,10 @@ void basicLoop::Loop(unsigned int dataindex)
       int nbjetsfound=0;
       double bjetpt1=0;
       //note that all tight jet vectors should have the same size
-      for (unsigned int ib = 0; ib< jetPhi->size(); ib++) {
+      for (unsigned int ib = 0; ib< jetPhi_calo.size(); ib++) {
 	if ( passBCut(ib)) { //refind the b jets
 	  nbjetsfound++;
-	  if (nbjetsfound==1) bjetpt1=jetPt->at(ib); //if this is the *lead* b jet
+	  if (nbjetsfound==1) bjetpt1=jetPt_calo.at(ib); //if this is the *lead* b jet
 
 	  double deltaPhi_bj=getMinDeltaPhi_bj(ib);
 	  if ( nbSSVM < 2) {	  HdeltaPhi_bj_ge2b.Fill(deltaPhi_bj,weight);}
@@ -538,21 +482,21 @@ void basicLoop::Loop(unsigned int dataindex)
       }
       Hbjetpt1_ge1b.Fill(bjetpt1,weight);
 
-      HminDeltaR_bj_vMET_ge1b.Fill(MET, minDeltaR_bj,weight);
-      HminDeltaR_bj_vMET_ABCD_ge1b.Fill(MET, minDeltaR_bj,weight);
+      HminDeltaR_bj_vMET_ge1b.Fill(caloMET, minDeltaR_bj,weight);
+      HminDeltaR_bj_vMET_ABCD_ge1b.Fill(caloMET, minDeltaR_bj,weight);
 
       if ( nbSSVM < 2) continue; //cut on the number of b tags
       Hbjetpt1_ge2b.Fill(bjetpt1,weight);
 
-      Hnjets_ge2b.Fill( jetPt->size(), weight );
+      Hnjets_ge2b.Fill( tightJetIndex_calo->size(), weight );
       H_MHT_ge2b.Fill(MHT ,weight);
-      H_MET_ge2b.Fill(MET ,weight);
+      H_MET_ge2b.Fill(caloMET ,weight);
       HdeltaPhiMPTMET_ge2b.Fill( dp_MPTMET,weight);
 
-      Hjetpt1_ge2b.Fill(jetPt->at(0),weight);
+      Hjetpt1_ge2b.Fill(jetPt_calo.at(0),weight);
 
-      HpassHT100U_ge2b.Fill(HT,passHTtrig);
-      HpassMET45_ge2b.Fill(MET,passMETtrig);
+//       HpassHT100U_ge2b.Fill(HT,passHTtrig);
+//       HpassMET45_ge2b.Fill(MET,passMETtrig);
       H_HT_ge2b.Fill(HT,weight);
 
       HminDeltaPhiMETb_ge2b.Fill(minDeltaPhi_b_MET,weight);
@@ -564,13 +508,13 @@ void basicLoop::Loop(unsigned int dataindex)
       double deltaPhi_b1b2 = getDeltaPhib1b2();
       HdeltaPhib1b2_minDeltaPhiMETb.Fill(minDeltaPhi_b_MET,deltaPhi_b1b2,weight);
 
-      HdeltaPhib1b2_MET.Fill(MET,deltaPhi_b1b2,weight);
-      HminDeltaPhiMETb_MET_ge2b.Fill(MET,minDeltaPhi_b_MET,weight);
-      HminDeltaPhiMETj_MET_ge2b.Fill(MET,minDeltaPhi_j_MET,weight);
+      HdeltaPhib1b2_MET.Fill(caloMET,deltaPhi_b1b2,weight);
+      HminDeltaPhiMETb_MET_ge2b.Fill(caloMET,minDeltaPhi_b_MET,weight);
+      HminDeltaPhiMETj_MET_ge2b.Fill(caloMET,minDeltaPhi_j_MET,weight);
 
       HminDeltaPhiMETb_HminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,minDeltaPhi_b_MET,weight);
 
-      HdeltaPhiMPTMET_MET_ge2b.Fill(MET,dp_MPTMET,weight);
+      HdeltaPhiMPTMET_MET_ge2b.Fill(caloMET,dp_MPTMET,weight);
 
       HtopDecayCategory_ge2b.Fill(topcat,weight);
 
@@ -578,13 +522,13 @@ void basicLoop::Loop(unsigned int dataindex)
       HminDeltaR_bj_ge2b.Fill(minDeltaR_bj,weight);
       HminDeltaR_bj_vTopCat_ge2b.Fill(topcat,minDeltaR_bj,weight);
 
-      HminDeltaR_bj_vMET_ge2b.Fill(MET, minDeltaR_bj,weight);
-      HminDeltaR_bj_vMET_ABCD_ge2b.Fill(MET, minDeltaR_bj,weight);
+      HminDeltaR_bj_vMET_ge2b.Fill(caloMET, minDeltaR_bj,weight);
+      HminDeltaR_bj_vMET_ABCD_ge2b.Fill(caloMET, minDeltaR_bj,weight);
 
       if ( nbSSVM < 3) continue; //cut on the number of b tags
-      Hnjets_ge3b.Fill( jetPt->size(), weight );
+      Hnjets_ge3b.Fill( tightJetIndex_calo->size(), weight );
       H_MHT_ge3b.Fill(MHT ,weight);
-      H_MET_ge3b.Fill(MET ,weight);
+      H_MET_ge3b.Fill(caloMET ,weight);
    }
    TDatime stoptime; //default ctor is for current time
    UInt_t elapsed= stoptime.Convert() - starttime.Convert();
@@ -598,29 +542,7 @@ void basicLoop::Loop(unsigned int dataindex)
 
 void basicLoop::nbLoop()
 {
-//   In a ROOT session, you can do:
-//      Root > .L basicLoop.C
-//      Root > basicLoop t
-//      Root > t.GetEntry(12); // Fill t data members with entry number 12
-//      Root > t.Show();       // Show values of entry 12
-//      Root > t.Show(16);     // Read and show values of entry 16
-//      Root > t.Loop();       // Loop on all entries
-//
 
-//     This is the loop skeleton where:
-//    jentry is the global entry number in the chain
-//    ientry is the entry number in the current Tree
-//  Note that the argument to GetEntry must be:
-//    jentry for TChain::GetEntry
-//    ientry for TTree::GetEntry and TBranch::GetEntry
-//
-//       To read only selected branches, Insert statements like:
-// METHOD1:
-//    fChain->SetBranchStatus("*",0);  // disable all branches
-//    fChain->SetBranchStatus("branchname",1);  // activate branchname
-// METHOD2: replace line
-//    fChain->GetEntry(jentry);       //read all branches
-//by  b_branchname->GetEntry(ientry); //read only this branch
    if (fChain == 0) return;
 
    TFile fout("SUSYbjets.MMSSM.root","RECREATE");
@@ -635,7 +557,7 @@ void basicLoop::nbLoop()
    for (Long64_t jentry=0; jentry<nentries;jentry++) {
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) break;
-      nb = fChain->GetEntry(jentry);   nbytes += nb;
+      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
       //fill before cut histograms
       HSUSY_nb.Fill(SUSY_nb);
