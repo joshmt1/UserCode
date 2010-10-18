@@ -21,11 +21,11 @@
 #include <vector>
 
 //avoid spaces and funny characters!
-const char *CutSchemeNames_[]={"RA2"};
-const char *METTypeNames_[]={"MHT", "MET",  "tcMET"};
+const char *CutSchemeNames_[]={"RA2", "Sync1"};
+const char *METTypeNames_[]={"MHT", "MET",  "tcMET", "pfMET"};
 const char *METRangeNames_[]={"med",  "high", "wide"}; //'no cut' is not given, because the cut can always be skipped!
 
-const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT"};
+const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1"};
 
 //for sync exercise, use 100 pb^-1
 const double lumi=50;
@@ -34,21 +34,22 @@ const double lumi=50;
 class basicLoop {
 public :
   // ========================================== begin
-  enum CutScheme {kRA2=0, nCutSchemes}; //after introducing these other enums, there is only one cut scheme!
+  enum CutScheme {kRA2=0, kSync1, nCutSchemes}; //cut schemes must be implemented in setCutScheme,etc and in the list above
   CutScheme theCutScheme_;
-  enum METType {kMHT=0, kMET, ktcMET};
+  enum METType {kMHT=0, kMET, ktcMET, kpfMET};
   METType theMETType_;
   enum METRange {kMedium=0, kHigh, kWide};
   METRange theMETRange_;
-  enum dpType {kDeltaPhi=0, kminDP, kMPT};
+  enum dpType {kDeltaPhi=0, kminDP, kMPT, kDPSync1};
   dpType theDPType_;
   unsigned int nBcut_;
 
-  enum theCutFlow {cutInclusive=0,cutTrigger=1,cutPV=2,cut3Jets=3,cutJetPt1=4,cutJetPt2=5,cutJetPt3=6,cutHT=7,cutMET=8,cutMHT=9,
-		   cutMuVeto=10,cutEleVeto=11,cutDeltaPhi=12,cut1B=13,cut2B=14,cut3B=15};
-  std::vector<int> ignoredCut_; //allow more than 1 ignored cut!
+  std::vector<TString> cutTags_;
+  std::vector<TString> cutNames_;
+  std::map<TString, int> cutMap_;
+  std::vector<TString> ignoredCut_; //allow more than 1 ignored cut!
   //if theCutFlow changes, be sure to change cutnames_ as well
-  std::vector<TString> cutnames_;
+  //  std::vector<TString> cutnames_;
 
   enum TopDecayCategory {kTTbarUnknown=0,kAllLeptons=1,kAllHadronic=2,kOneElectron=3,kOneMuon=4,kOneTauE=5,kOneTauMu=6,kOneTauHadronic=7,kAllTau=8,kTauPlusLepton=9, nTopCategories=10};
 
@@ -352,25 +353,37 @@ public :
 
    void printState();
 
+   //   int getCutFlow(TString cut);
    bool setCutScheme(CutScheme cutscheme);
    void setMETType(METType mettype);
    void setMETRange(METRange metrange);
    void setDPType(dpType dptype);
-   void setIgnoredCut(const int cutIndex); //use to make N-1 plots! (and other things)
+   //   void setIgnoredCut(const int cutIndex); //use to make N-1 plots! (and other things)
+   void setIgnoredCut(const TString cutTag);
    void resetIgnoredCut() ;
    void setBCut(unsigned int nb);
    TString getCutDescriptionString();
    TString getBCutDescriptionString();
    
    void cutflow();
-   bool cutRequired(unsigned int cutIndex) ;
-   bool passCut(unsigned int cutIndex) ;
+   //   bool cutRequired(unsigned int cutIndex) ;
+   bool cutRequired(TString cutTag) ;
+   //   bool passCut(unsigned int cutIndex) ;
+   bool passCut(TString cutTag) ;
    TString getSampleName(const TString inname) ;
    double getCrossSection(const TString inname) ;
    TString findInputName() ;
 
    bool passMuVetoRA2() ;
    bool passEleVetoRA2() ;
+   bool passMuVetoSync1() ;
+   bool passEleVetoSync1() ;
+
+   bool isGoodJet_Sync1(unsigned int ijet);
+   unsigned int nGoodCaloJets_Sync1();
+   float jetPtOfN(unsigned int n);
+   int countBJets_Sync1();
+   bool passDeltaPhi_Sync1() ;
 
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
@@ -413,28 +426,12 @@ basicLoop::basicLoop(TTree *tree)
 
    }
    Init(tree);
+
    // ========================================== begin
-   //this is now in the infotree
-   //not sure how to get that unless the user passes it in as an argument
-   //update -- still not using the infotree, now changing these so they can easily be used in file names
-   cutnames_.push_back("Inclusive");
-   cutnames_.push_back("Trigger");
-   cutnames_.push_back("PV");
-   cutnames_.push_back(">=3Jets");
-   cutnames_.push_back("JetPt1");
-   cutnames_.push_back("JetPt2");
-   cutnames_.push_back("JetPt3");
-   cutnames_.push_back("HT");
-   cutnames_.push_back("MET");
-   cutnames_.push_back("MHT");
-   cutnames_.push_back("MuVeto");
-   cutnames_.push_back("EleVeto");
-   cutnames_.push_back("DeltaPhi");
-   cutnames_.push_back(">=1b");
-   cutnames_.push_back(">=2b");
-   cutnames_.push_back(">=3b");
+   //this routine initializes the various cutNames_ etc vectors
+   setCutScheme(kRA2);   
    // ========================================== end
-   
+
 }
 
 basicLoop::~basicLoop()
@@ -743,117 +740,193 @@ void basicLoop::Show(Long64_t entry)
 
 // ========================================== begin
 
-void basicLoop::setBCut(unsigned int nb) {
-  nBcut_=nb;
-}
+bool basicLoop::setCutScheme(CutScheme cutscheme) {
 
-void basicLoop::setIgnoredCut(const int cutIndex) {
+  if (cutscheme == nCutSchemes) return false;
+  theCutScheme_ = cutscheme;
 
-  //could do this via exception handling....but no, i won't
-  if ( cutIndex>= int(cutnames_.size())) {cout<<"Invalid cutIndex"<<endl; return;}
+  cutNames_.clear();
+  cutTags_.clear();
+  cutMap_.clear();
 
-  ignoredCut_.push_back(cutIndex);
+  //cutNames and cutTags are required to 'line up' with each other.
+  //one is for printability, the other is for unambiguous typing
 
-}
+  //this is for the kRA2 cut scheme
+  //we want to run this no matter what in order to fill the cutMap correctly
+  //the cutMap is invariant because the ntuple is always filled the same way
 
-void basicLoop::resetIgnoredCut() {
-  ignoredCut_.clear();
-}
+  cutNames_.push_back("Inclusive");
+  cutNames_.push_back("Trigger");
+  cutNames_.push_back("PV");
+  cutNames_.push_back(">=3Jets");
+  cutNames_.push_back("JetPt1");
+  cutNames_.push_back("JetPt2");
+  cutNames_.push_back("JetPt3");
+  cutNames_.push_back("HT");
+  cutNames_.push_back("MET");
+  cutNames_.push_back("MHT");
+  cutNames_.push_back("MuVeto");
+  cutNames_.push_back("EleVeto");
+  cutNames_.push_back("DeltaPhi");
+  cutNames_.push_back(">=1b");
+  cutNames_.push_back(">=2b");
+  cutNames_.push_back(">=3b");
+  
+  cutTags_.push_back("cutInclusive");
+  cutTags_.push_back("cutTrigger");
+  cutTags_.push_back("cutPV");
+  cutTags_.push_back("cut3Jets");
+  cutTags_.push_back("cutJetPt1");
+  cutTags_.push_back("cutJetPt2");
+  cutTags_.push_back("cutJetPt3");
+  cutTags_.push_back("cutHT");
+  cutTags_.push_back("cutMET");
+  cutTags_.push_back("cutMHT");
+  cutTags_.push_back("cutMuVeto");
+  cutTags_.push_back("cutEleVeto");
+  cutTags_.push_back("cutDeltaPhi");
+  cutTags_.push_back("cut1b");
+  cutTags_.push_back("cut2b");
+  cutTags_.push_back("cut3b");
+  
+  for (unsigned int i=0;i<cutTags_.size(); i++) {
+    cutMap_[cutTags_[i]] = i;
+  }
+  
+  if (theCutScheme_==kSync1) {
+    cutNames_.clear();
+    cutTags_.clear();
 
-void basicLoop::fillTightJetInfo() {
+    cutNames_.push_back("Inclusive");
+    cutNames_.push_back("Trigger");
+    cutNames_.push_back("PV");
+    cutNames_.push_back(">=3Jets");
+    cutNames_.push_back("JetPt1");
+    cutNames_.push_back("JetPt2");
+    cutNames_.push_back("JetPt3");
+    cutNames_.push_back("HT");
 
-  //first clear old values
-  jetPt_calo.clear();
-  jetEta_calo.clear();
-  jetPhi_calo.clear();
-  jetFlavor_calo.clear();
-  jetBTagDisc_trackCountingHighPurBJetTags_calo.clear();
-  jetBTagDisc_trackCountingHighEffBJetTags_calo.clear();
-  jetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo.clear();
-  jetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo.clear();
-  jetBTagDisc_simpleSecondaryVertexBJetTags_calo.clear();
+    cutNames_.push_back("MuVeto");
+    cutNames_.push_back("EleVeto");
 
-  //now fill with new values
-  for (unsigned int i=0; i<tightJetIndex_calo->size(); i++) {
-    int j = tightJetIndex_calo->at(i);
+    cutNames_.push_back("MET");
+    cutNames_.push_back("MHT");
 
-    jetPt_calo.push_back( loosejetPt_calo->at( j ) );
-    jetEta_calo.push_back( loosejetEta_calo->at( j ) );
-    jetPhi_calo.push_back( loosejetPhi_calo->at( j ) );
-    jetFlavor_calo.push_back( loosejetFlavor_calo->at( j ) );
+    cutNames_.push_back("DeltaPhi");
+    cutNames_.push_back(">=1b");
+    cutNames_.push_back(">=2b");
+    cutNames_.push_back(">=3b");
+    //now the tags
+    cutTags_.push_back("cutInclusive");
+    cutTags_.push_back("cutTrigger");
+    cutTags_.push_back("cutPV");
+    cutTags_.push_back("cut3Jets");
+    cutTags_.push_back("cutJetPt1");
+    cutTags_.push_back("cutJetPt2");
+    cutTags_.push_back("cutJetPt3");
+    cutTags_.push_back("cutHT");
 
-    jetBTagDisc_trackCountingHighPurBJetTags_calo.push_back( loosejetBTagDisc_trackCountingHighPurBJetTags_calo->at( j ) );
-    jetBTagDisc_trackCountingHighEffBJetTags_calo.push_back( loosejetBTagDisc_trackCountingHighEffBJetTags_calo->at( j ) );
+    cutTags_.push_back("cutMuVeto");
+    cutTags_.push_back("cutEleVeto");
 
-    jetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo.push_back( loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo->at( j ) );
-    jetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo.push_back( loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo->at( j ) );
+    cutTags_.push_back("cutMET");
+    cutTags_.push_back("cutMHT");
 
-    jetBTagDisc_simpleSecondaryVertexBJetTags_calo.push_back( loosejetBTagDisc_simpleSecondaryVertexBJetTags_calo->at( j ) );
+    cutTags_.push_back("cutDeltaPhi");
+    cutTags_.push_back("cut1b");
+    cutTags_.push_back("cut2b");
+    cutTags_.push_back("cut3b");
   }
 
-  //recover the nbSSVM variable (filled incorrectly in the ntuple)
-  //  cout<<nbSSVM<<" ";
-  nbSSVM=0;
-  for ( unsigned int i=0; i<jetPt_calo.size(); i++) {
-    if (passBCut(i)) nbSSVM++;
-  }
-  //  cout<<nbSSVM<<endl;
-
+  return true;
 }
 
-
-bool basicLoop::cutRequired(const unsigned int cutIndex) {
-  //this is now implemented as an enum!
-  // *        0 *        0 * Inclusive *
-  // *        0 *        1 *   Trigger *
-  // *        0 *        2 *        PV *
-  // *        0 *        3 *  >=3 Jets *
-  // *        0 *        4 * First Jet *
-  // *        0 *        5 * Second Je *
-  // *        0 *        6 * Third Jet *
-  // *        0 *        7 *    HT Cut *
-  // *        0 *        8 *   MET Cut *
-  // *        0 *        9 *   MHT Cut *
-  // *        0 *       10 * Muon Veto *
-  // *        0 *       11 * Electron  *
-  // *        0 *       12 * DeltaPhi  *
-  // *        0 *       13 * >=1 B-Tag *
-  // *        0 *       14 * >=2 B-Tag *
-  // *        0 *       15 * >=3 B-Tag *
+//bool basicLoop::cutRequired(const unsigned int cutIndex) {
+bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to improve performance
 
 
   //check if we are *ignoring* this cut (for N-1 studies, etc)
   for (unsigned int i = 0; i< ignoredCut_.size() ; i++) {
-    if ( int(cutIndex) == ignoredCut_.at(i) ) return false;
+    if ( cutTag == ignoredCut_.at(i) ) return false;
   }
 
   bool cutIsRequired=false;
 
   //RA2
   if (theCutScheme_ == kRA2 ) {
-    if      (cutIndex == cutInclusive)  cutIsRequired =  true;
-    else if (cutIndex == cutTrigger)  cutIsRequired =  true;
-    else if (cutIndex == cutPV)  cutIsRequired =  true;
-    else if (cutIndex == cut3Jets)  cutIsRequired =  true;
-    else if (cutIndex == cutJetPt1)  cutIsRequired =  false;
-    else if (cutIndex == cutJetPt2)  cutIsRequired =  false;
-    else if (cutIndex == cutJetPt3)  cutIsRequired =  false;
-    else if (cutIndex == cutHT)  cutIsRequired =  true;
+    if      (cutTag == "cutInclusive")  cutIsRequired =  true;
+    else if (cutTag == "cutTrigger")  cutIsRequired =  true;
+    else if (cutTag == "cutPV")  cutIsRequired =  true;
+    else if (cutTag == "cut3Jets")  cutIsRequired =  true;
+    else if (cutTag == "cutJetPt1")  cutIsRequired =  false;
+    else if (cutTag == "cutJetPt2")  cutIsRequired =  false;
+    else if (cutTag == "cutJetPt3")  cutIsRequired =  false;
+    else if (cutTag == "cutHT")  cutIsRequired =  true;
     //MET
-    else if (cutIndex == cutMET)  cutIsRequired =  (theMETType_== kMET || theMETType_==ktcMET);
+    else if (cutTag == "cutMET")  cutIsRequired =  (theMETType_== kMET || theMETType_==ktcMET || theMETType_==kpfMET);
     //MHT
-    else if (cutIndex == cutMHT)  cutIsRequired =  (theMETType_==kMHT);
-    else if (cutIndex == cutMuVeto) cutIsRequired =  true;
-    else if (cutIndex == cutEleVeto) cutIsRequired =  true;
-    else if (cutIndex == cutDeltaPhi) cutIsRequired =  true;
-    else if (cutIndex == cut1B) cutIsRequired =  nBcut_ >=1;
-    else if (cutIndex == cut2B) cutIsRequired =  nBcut_ >=2;
-    else if (cutIndex == cut3B) cutIsRequired =  nBcut_ >=3;
+    else if (cutTag == "cutMHT")  cutIsRequired =  (theMETType_==kMHT);
+    else if (cutTag == "cutMuVeto") cutIsRequired =  true;
+    else if (cutTag == "cutEleVeto") cutIsRequired =  true;
+    else if (cutTag == "cutDeltaPhi") cutIsRequired =  true;
+    else if (cutTag == "cut1b") cutIsRequired =  nBcut_ >=1;
+    else if (cutTag == "cut2b") cutIsRequired =  nBcut_ >=2;
+    else if (cutTag == "cut3b") cutIsRequired =  nBcut_ >=3;
+    else assert(0);
+  }
+  else if (theCutScheme_==kSync1) {
+    if      (cutTag == "cutInclusive")  cutIsRequired =  true;
+    else if (cutTag == "cutTrigger")  cutIsRequired =  false;
+    else if (cutTag == "cutPV")  cutIsRequired =  true;
+    else if (cutTag == "cut3Jets")  cutIsRequired =  true;
+    else if (cutTag == "cutJetPt1")  cutIsRequired =  true;
+    else if (cutTag == "cutJetPt2")  cutIsRequired =  true;
+    else if (cutTag == "cutJetPt3")  cutIsRequired =  true;
+    else if (cutTag == "cutHT")  cutIsRequired =  false;
+    //MET
+    else if (cutTag == "cutMET")  cutIsRequired =  (theMETType_== kMET || theMETType_==ktcMET ||theMETType_==kpfMET);
+    //MHT
+    else if (cutTag == "cutMHT")  cutIsRequired =  (theMETType_==kMHT);
+    else if (cutTag == "cutMuVeto") cutIsRequired =  true;
+    else if (cutTag == "cutEleVeto") cutIsRequired =  true;
+    else if (cutTag == "cutDeltaPhi") cutIsRequired =  true;
+    else if (cutTag == "cut1b") cutIsRequired =  nBcut_ >=1;
+    else if (cutTag == "cut2b") cutIsRequired =  nBcut_ >=2;
+    else if (cutTag == "cut3b") cutIsRequired =  nBcut_ >=3;
     else assert(0);
   }
   else assert(0);
 
   return cutIsRequired;
+}
+
+bool basicLoop::passMuVetoSync1() {
+
+  //need to be AllGlobalMuons
+  //this is all I stored in the ntuple
+  for ( unsigned int i = 0; i< muonPt->size(); i++) {
+    if ( muonPt->at(i) <= 10 ) continue;
+    if ( fabs(muonEta->at(i)) > 2.5 ) continue;
+    if ( (muonTrackIso->at(i) + muonHcalIso->at(i) + muonEcalIso->at(i))/muonPt->at(i) > 0.2) continue;
+    return false;
+  }
+  return true;
+}
+
+bool basicLoop::passEleVetoSync1() {
+
+  for (unsigned int i=0; i< eleEt->size(); i++) {
+
+    if ( eleEt->at(i) < 15 ) continue;
+    if ( fabs(eleEta->at(i)) > 2.5 ) continue;
+
+    if ( (eleTrackIso->at(i) + eleHcalIso->at(i) + eleEcalIso->at(i))/eleEt->at(i) > 0.2) continue;
+    //if any electron passes all of these cuts, then veto
+    return false;
+  }
+  return true;
+
 }
 
 bool basicLoop::passMuVetoRA2() {
@@ -928,21 +1001,59 @@ bool basicLoop::passEleVetoRA2() {
   return true;
 }
 
-bool basicLoop::passCut(const unsigned int cutIndex) {
+bool basicLoop::passDeltaPhi_Sync1() {
+
+  //hard-coded to use PF MET!!!!!
+  //and calo jets!
+
+  int njet=0;
+
+  bool pass=true;
+
+  for (unsigned int i=0; i<loosejetPt_calo->size(); i++) {
+
+    if (isGoodJet_Sync1(i)) {
+      njet++;
+
+      if (njet == 1) {
+	if ( getDeltaPhi(loosejetPhi_calo->at(i),pfMETphi) <=0.3) pass=false;
+      }
+      else if (njet == 2) {
+	if ( getDeltaPhi(loosejetPhi_calo->at(i),pfMETphi) <=0.35) pass=false;
+      }
+
+    }
+  }
+  return pass;
+}
+
+//bool basicLoop::passCut(const unsigned int cutIndex) {
+bool basicLoop::passCut(const TString cutTag) {
   //implement special exceptions here
 
   //lepton vetoes
-  if (cutIndex==cutMuVeto && theCutScheme_==kRA2) return passMuVetoRA2();
-  if (cutIndex==cutEleVeto && theCutScheme_==kRA2) return passEleVetoRA2();
+  if (cutTag=="cutMuVeto" && theCutScheme_==kRA2) return passMuVetoRA2();
+  else if (cutTag=="cutMuVeto" && theCutScheme_==kSync1) return passMuVetoSync1();
 
+  if (cutTag=="cutEleVeto" && theCutScheme_==kRA2) return passEleVetoRA2();
+  else if (cutTag=="cutEleVeto" && theCutScheme_==kSync1) return passEleVetoSync1();
+
+  if (cutTag=="cut3Jets" && theCutScheme_==kSync1) return (nGoodCaloJets_Sync1() >= 3);
+
+  if (theCutScheme_==kSync1 ) {
+    if (cutTag=="cutJetPt1") return jetPtOfN(1)>100;
+    if (cutTag=="cutJetPt2") return jetPtOfN(2)>50;
+    if (cutTag=="cutJetPt3") return jetPtOfN(3)>50;;
+  }
 
   //MET
   //it is now an anachronism that we treat MET and MHT as different cut flow steps
   //this block of code should now evaluate *the same* for both steps
-  if (cutIndex == cutMET || cutIndex==cutMHT) {
+  if (cutTag == "cutMET" || cutTag=="cutMHT") {
     float mymet = 0;
     if      ( theMETType_ == kMET )   mymet=caloMET;
     else if ( theMETType_ == ktcMET ) mymet=tcMET;
+    else if ( theMETType_ == kpfMET ) mymet=pfMET;
     //FIXME...loose jet def'n has changed, so MHT stored in ntuple is probably not ok
     else if ( theMETType_ == kMHT)    mymet=MHT;
     else {assert(0);}
@@ -955,7 +1066,7 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
   }
   
   // -- in case we are using MET instead of MHT, we need to alter the DeltaPhi cuts --
-  if (cutIndex == cutDeltaPhi && 
+  if (cutTag == "cutDeltaPhi" && 
       (theDPType_ == kDeltaPhi && theMETType_!=kMHT)) {
     //      ( theCutScheme_ == kRA2MET ||theCutScheme_ == kRA2tcMET ) ) {
     
@@ -972,7 +1083,7 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
     //here is the implementation of the DeltaPhi cuts
     if ( dp0 >0.3 && dp1 >0.5 && dp2 >0.3 ) { return true; } else {return false;}
   }
-  else if (cutIndex == cutDeltaPhi && //replace normal DeltaPhi cut with minDeltaPhi cut
+  else if (cutTag == "cutDeltaPhi" && //replace normal DeltaPhi cut with minDeltaPhi cut
 	   ( theDPType_ == kminDP ) ) {
     
     if (theMETType_ == kMHT)     return ( getMinDeltaPhiMHT(3) >= 0.3 );
@@ -980,26 +1091,54 @@ bool basicLoop::passCut(const unsigned int cutIndex) {
     else if (theMETType_ ==ktcMET) return ( getMinDeltaPhitcMET(3) >= 0.3 );
     else {assert(0);}
   }
-  else if (cutIndex == cutDeltaPhi && //replace normal DeltaPhi cut with DeltaPhi(MPT,MET) cut
+  else if (cutTag == "cutDeltaPhi" && //replace normal DeltaPhi cut with DeltaPhi(MPT,MET) cut
 	   ( theDPType_ == kMPT ) ) {
     if (theMETType_ == kMET)    return ( getDeltaPhiMPTMET() < 2.0 );
     else {cout<<"DeltaPhiMPTMET not implemented for that MET type!"<<endl; assert(0);}
   }
+  else if (cutTag == "cutDeltaPhi" && (theDPType_==kDPSync1)) return passDeltaPhi_Sync1();
 
   //compensate for bugs in nbSSVM variable (fixed in this code)
-  if (cutIndex == cut1B) return nbSSVM >=1;
-  if (cutIndex == cut2B) return nbSSVM >=2;
-  if (cutIndex == cut3B) return nbSSVM >=3;
+  if (theCutScheme_==kRA2) {
+    if (cutTag == "cut1b") return nbSSVM >=1;
+    if (cutTag == "cut2b") return nbSSVM >=2;
+    if (cutTag == "cut3b") return nbSSVM >=3;
+  }
+  else if (theCutScheme_==kSync1) {
+    if (cutTag == "cut1b" || cutTag == "cut2b" || cutTag == "cut3b") {
+      int nb = countBJets_Sync1();
+      if (cutTag == "cut1b") return nb >=1;
+      if (cutTag == "cut2b") return nb >=2;
+      if (cutTag == "cut3b") return nb >=3;
+    }
+  }
+
 
   //in case this is not an exception, return the cut result stored in the ntuple
+  int cutIndex = cutMap_[cutTag];
   return cutResults->at(cutIndex);
+}
+
+int basicLoop::countBJets_Sync1() {
+
+  int nb=0;
+
+  for (unsigned int i=0; i<loosejetBTagDisc_trackCountingHighPurBJetTags_calo->size(); i++) {
+
+    if (loosejetPt_calo->at(i) <30) continue;
+    if (fabs(loosejetEta_calo->at(i)) >2.4) continue;
+
+    if ( loosejetBTagDisc_trackCountingHighPurBJetTags_calo->at(i) >3) nb++;
+
+  }
+  return nb;
 }
 
 Int_t basicLoop::Cut(Long64_t entry)
 {
   
-  for (unsigned int i=0; i< cutResults->size(); i++) {
-    if (cutRequired(i) && !passCut(i) ) return -1;
+  for (unsigned int i=0; i< cutTags_.size(); i++) {
+    if (cutRequired( cutTags_[i] ) && !passCut( cutTags_[i]) ) return -1;
   }
   
   return 1;
@@ -1216,6 +1355,43 @@ double basicLoop::getMinDeltaR_bj(unsigned int bindex) {
   return minDeltaR;
 }
 
+bool basicLoop::isGoodJet_Sync1(unsigned int ijet) {
+  
+  if ( loosejetPt_calo->at(ijet) <50) return false;
+  
+  if ( fabs(loosejetEta_calo->at(ijet)) > 2.4) return false;
+  
+  if (loosejetEnergyFracHadronic_calo->at(ijet) <0.1) return false;
+
+  return true;
+}
+
+float basicLoop::jetPtOfN(unsigned int n) {
+  //for now, use Sync1 jet cuts only
+
+  unsigned int ngood=0;
+  for (unsigned int i=0; i<loosejetPt_calo->size(); i++) {
+
+    if (isGoodJet_Sync1(i) ) {
+      ngood++;
+      if (ngood==n) return  loosejetPt_calo->at(i);
+    }
+  }
+  return 0;
+}
+
+unsigned int basicLoop::nGoodCaloJets_Sync1() {
+  
+  unsigned int njets=0;
+
+  for (unsigned int i=0; i<loosejetPt_calo->size(); i++) {
+    
+    if (isGoodJet_Sync1(i) )   njets++;
+  }
+  return njets;
+}
+
+
 int basicLoop::getTopDecayCategory() {
   /*
     this is a kludge on top of a kludge, I suppose.
@@ -1267,6 +1443,48 @@ int basicLoop::getTopDecayCategory() {
 
   return code;
 }
+
+void basicLoop::fillTightJetInfo() {
+
+  //first clear old values
+  jetPt_calo.clear();
+  jetEta_calo.clear();
+  jetPhi_calo.clear();
+  jetFlavor_calo.clear();
+  jetBTagDisc_trackCountingHighPurBJetTags_calo.clear();
+  jetBTagDisc_trackCountingHighEffBJetTags_calo.clear();
+  jetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo.clear();
+  jetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo.clear();
+  jetBTagDisc_simpleSecondaryVertexBJetTags_calo.clear();
+
+  //now fill with new values
+  for (unsigned int i=0; i<tightJetIndex_calo->size(); i++) {
+    int j = tightJetIndex_calo->at(i);
+
+    jetPt_calo.push_back( loosejetPt_calo->at( j ) );
+    jetEta_calo.push_back( loosejetEta_calo->at( j ) );
+    jetPhi_calo.push_back( loosejetPhi_calo->at( j ) );
+    jetFlavor_calo.push_back( loosejetFlavor_calo->at( j ) );
+
+    jetBTagDisc_trackCountingHighPurBJetTags_calo.push_back( loosejetBTagDisc_trackCountingHighPurBJetTags_calo->at( j ) );
+    jetBTagDisc_trackCountingHighEffBJetTags_calo.push_back( loosejetBTagDisc_trackCountingHighEffBJetTags_calo->at( j ) );
+
+    jetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo.push_back( loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo->at( j ) );
+    jetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo.push_back( loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo->at( j ) );
+
+    jetBTagDisc_simpleSecondaryVertexBJetTags_calo.push_back( loosejetBTagDisc_simpleSecondaryVertexBJetTags_calo->at( j ) );
+  }
+
+  //recover the nbSSVM variable (filled incorrectly in the ntuple)
+  //  cout<<nbSSVM<<" ";
+  nbSSVM=0;
+  for ( unsigned int i=0; i<jetPt_calo.size(); i++) {
+    if (passBCut(i)) nbSSVM++;
+  }
+  //  cout<<nbSSVM<<endl;
+
+}
+
 
 TString basicLoop::getSampleName(const TString inname) {
  
@@ -1366,13 +1584,6 @@ TString basicLoop::findInputName() {
    return inname;
 }
 
-bool basicLoop::setCutScheme(CutScheme cutscheme) {
-
-  if (cutscheme == nCutSchemes) return false;
-  theCutScheme_ = cutscheme;
-  return true;
-}
-
 void basicLoop::setMETType(METType mettype) {
 
   theMETType_ = mettype;
@@ -1388,6 +1599,29 @@ void basicLoop::setDPType(dpType dptype) {
   theDPType_ = dptype;
 
 }
+
+void basicLoop::setBCut(unsigned int nb) {
+  nBcut_=nb;
+}
+
+//void basicLoop::setIgnoredCut(const int cutIndex) {
+void basicLoop::setIgnoredCut(const TString cutTag) {
+
+  bool ok=false;
+  for (unsigned int i=0; i<cutTags_.size() ; i++) {
+    if (cutTags_[i] == cutTag) {ok=true; break;}
+  }
+  if (!ok) {cout<<"Invalid cutIndex"<<endl; return;}
+
+  ignoredCut_.push_back(cutTag);
+
+}
+
+void basicLoop::resetIgnoredCut() {
+  ignoredCut_.clear();
+}
+
+
 TString basicLoop::getCutDescriptionString() {
 
   TString cuts = CutSchemeNames_[theCutScheme_];
@@ -1398,7 +1632,7 @@ TString basicLoop::getCutDescriptionString() {
   cuts+= dpTypeNames_[theDPType_];
   for (unsigned int icut=0; icut<ignoredCut_.size() ; icut++) {
     cuts+="_No";
-    cuts += jmt::fortranize(cutnames_.at(ignoredCut_.at(icut)));
+    cuts += jmt::fortranize(cutNames_.at(icut));
   }
   return cuts; 
 }
@@ -1420,7 +1654,7 @@ void basicLoop::printState() {
   cout<<"DeltaPhi type set to: "<<dpTypeNames_[theDPType_]<<endl;
   cout<<"Requiring at least    "<<nBcut_<<" b tags"<<endl;
   for (unsigned int i = 0; i< ignoredCut_.size() ; i++) {
-    cout<<"Will ignore cut:    "<<cutnames_.at(i)<<endl;
+    cout<<"Will ignore cut:    "<<cutNames_.at(i)<<endl;
   }
   
 }

@@ -53,10 +53,11 @@ void run_cutflow()
     TChain ch("BasicTreeMaker/tree");
     ch.Add(samplefiles);
     basicLoop looper(&ch);
-    looper.setCutScheme(basicLoop::kRA2); //this is now the only scheme!
-    looper.setMETType(basicLoop::kMET);
+    //    looper.setCutScheme(basicLoop::kRA2);
+    looper.setCutScheme(basicLoop::kSync1); //this is now the only scheme!
+    looper.setMETType(basicLoop::kpfMET);
     //looper.setMETType(basicLoop::kMHT);
-    looper.setDPType(basicLoop::kminDP);
+    looper.setDPType(basicLoop::kDPSync1);
 
     looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
     looper.cutflow();

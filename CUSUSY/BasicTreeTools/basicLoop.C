@@ -48,8 +48,8 @@ void basicLoop::cutflow()
   
   LoadTree(0);
   nb = GetEntry(0);   nbytes += nb; //use member function GetEntry instead of fChain->
-  //FIXME this will need modification if we want to change the cut flow structure
-  for (unsigned int i=0 ; i<cutResults->size(); i++) {
+
+  for (unsigned int i=0 ; i<cutTags_.size(); i++) {
     npass.push_back(0);
   }
   
@@ -60,10 +60,10 @@ void basicLoop::cutflow()
 
     //cout<<"== "<<jentry<<endl;
 
-    for (unsigned int i=0 ; i<cutResults->size(); i++) {
+    for (unsigned int i=0 ; i<cutTags_.size(); i++) {
       //cout<<i<<endl;
-      if (cutRequired(i) && passCut(i) )   npass.at(i) = npass.at(i) +1;
-      else if (cutRequired(i) && !passCut(i) ) break;
+      if (cutRequired(cutTags_[i]) && passCut(cutTags_[i]) )   npass.at(i) = npass.at(i) +1;
+      else if (cutRequired(cutTags_[i]) && !passCut(cutTags_[i]) ) break;
     }
     
   }
@@ -77,7 +77,7 @@ void basicLoop::cutflow()
   
   for (unsigned int i=0 ; i<npass.size(); i++) {
     
-    if (cutRequired(i)) {
+    if (cutRequired(cutTags_[i])) {
       
       //error on n is sqrt n
       double error = sqrt(npass.at(i));
@@ -85,7 +85,7 @@ void basicLoop::cutflow()
       double weighted_error = error*weight;
       
       char ccc[150];
-      sprintf(ccc,"%20s %15d | Weighted = %f +/- %f",cutnames_.at(i).Data(),npass.at(i),weighted,weighted_error);
+      sprintf(ccc,"%20s %15d | %.2f | Weighted = %f +/- %f",cutNames_.at(i).Data(),npass.at(i),100*double(npass.at(i))/double(npass.at(0)),weighted,weighted_error);
       cout<<ccc<<endl;
 
       file <<  weighted<<"\t" << weighted_error<<endl;
