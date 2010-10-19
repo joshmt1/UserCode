@@ -28,7 +28,7 @@ const char *METRangeNames_[]={"med",  "high", "wide"}; //'no cut' is not given, 
 const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1"};
 
 //for sync exercise, use 100 pb^-1
-const double lumi=50;
+const double lumi=100;
 // ========================================== end
 
 class basicLoop {
@@ -903,6 +903,7 @@ bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to
 
 bool basicLoop::passMuVetoSync1() {
 
+  /*
   //need to be AllGlobalMuons
   //this is all I stored in the ntuple
   for ( unsigned int i = 0; i< muonPt->size(); i++) {
@@ -911,11 +912,22 @@ bool basicLoop::passMuVetoSync1() {
     if ( (muonTrackIso->at(i) + muonHcalIso->at(i) + muonEcalIso->at(i))/muonPt->at(i) > 0.2) continue;
     return false;
   }
+  */
+
+  //need to be AllGlobalMuons
+  //this is all I stored in the ntuple
+  for ( unsigned int i = 0; i< muonPt_PF->size(); i++) {
+    if ( muonPt_PF->at(i) <= 10 ) continue;
+    if ( fabs(muonEta_PF->at(i)) > 2.5 ) continue;
+    if ( (muonTrackIso_PF->at(i) + muonHcalIso_PF->at(i) + muonEcalIso_PF->at(i))/muonPt_PF->at(i) > 0.2) continue;
+    return false;
+  }
   return true;
 }
 
 bool basicLoop::passEleVetoSync1() {
 
+  /*
   for (unsigned int i=0; i< eleEt->size(); i++) {
 
     if ( eleEt->at(i) < 15 ) continue;
@@ -925,6 +937,18 @@ bool basicLoop::passEleVetoSync1() {
     //if any electron passes all of these cuts, then veto
     return false;
   }
+  */
+
+  for (unsigned int i=0; i< eleEt_PF->size(); i++) {
+
+    if ( eleEt_PF->at(i) < 15 ) continue;
+    if ( fabs(eleEta_PF->at(i)) > 2.5 ) continue;
+
+    if ( (eleTrackIso_PF->at(i) + eleHcalIso_PF->at(i) + eleEcalIso_PF->at(i))/eleEt_PF->at(i) > 0.2) continue;
+    //if any electron passes all of these cuts, then veto
+    return false;
+  }
+
   return true;
 
 }
@@ -1530,7 +1554,9 @@ double basicLoop::getCrossSection(const TString inname) {
   //may need to update these
 
   //  https://twiki.cern.ch/twiki/bin/view/CMS/ProductionReProcessingSpring10
-  if (inname.Contains("/TTbarJets/") )                     return 165;
+  //  if (inname.Contains("/TTbarJets/") )                     return 165;
+  if (inname.Contains("/TTbarJets/") )                     return 157.5;
+  /*
   else if (inname.Contains("/LM0/"))                       return 38.93;
   else if (inname.Contains("/LM1/"))                       return 4.888;
   else if (inname.Contains("/LM2/"))                       return 0.6027;
@@ -1547,6 +1573,29 @@ double basicLoop::getCrossSection(const TString inname) {
   else if (inname.Contains("/LM11/"))                      return 0.8236;
   else if (inname.Contains("/LM12/"))                      return 4.414;
   else if (inname.Contains("/LM13/"))                      return 6.899;
+  */
+
+  //not updated from tom
+  else if (inname.Contains("/LM9t175/"))                   return 4.241;
+  else if (inname.Contains("/LM9p/"))                      return 1.653;
+
+  ///these are from Tom
+  else if (inname.Contains("/LM0/"))                       return 54.89;
+  else if (inname.Contains("/LM1/"))                       return 6.550;
+  else if (inname.Contains("/LM2/"))                       return 0.8015;
+  else if (inname.Contains("/LM3/"))                       return 4.813;
+  else if (inname.Contains("/LM4/"))                       return 2.537;
+  else if (inname.Contains("/LM5/"))                       return 0.634;
+  else if (inname.Contains("/LM6/"))                       return 0.4035;
+  else if (inname.Contains("/LM7/"))                       return 1.342;
+  else if (inname.Contains("/LM8/"))                       return 1.0293;
+  else if (inname.Contains("/LM9/"))                       return 10.558;
+  else if (inname.Contains("/LM10/"))                      return 0.04778;
+  else if (inname.Contains("/LM11/"))                      return 1.1119;
+  else if (inname.Contains("/LM12/"))                      return 5.915;
+  else if (inname.Contains("/LM13/"))                      return 9.797;
+
+  //this block is not updated from tom (so maybe wrong)
   else if (inname.Contains("/MoreMSSM/"))                  return 1.73;
   else if (inname.Contains("/MoreMSSMv2/"))                return 2.1;
   else if (inname.Contains("/MoreMSSMv3/"))                return 2.6;
@@ -1556,9 +1605,10 @@ double basicLoop::getCrossSection(const TString inname) {
   else if (inname.Contains("/QCD-Pt100to250-madgraph/"))   return 7000000;
   else if (inname.Contains("/QCD-Pt250to500-madgraph/"))   return 171000;
   else if (inname.Contains("/QCD-Pt500to1000-madgraph/"))  return 5200;
-  else if (inname.Contains("/WJets/"))                     return 28049;
-  else if (inname.Contains("/ZJets/"))                     return 2907;
-  else if (inname.Contains("/Zinvisible/"))                return 4500;
+
+  else if (inname.Contains("/WJets/"))                     return 31314; //from tom
+  else if (inname.Contains("/ZJets/"))                     return 3048; //from tom
+  else if (inname.Contains("/Zinvisible/"))                return 4900; //from tom
   
   else if (inname.Contains("/DATA/"))                return -2;
 
