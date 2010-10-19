@@ -23,7 +23,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.9 2010/09/28 13:55:47 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.10 2010/10/14 19:23:09 joshmt Exp $
 //
 //
 
@@ -70,7 +70,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //pulled in from Don's code
 #include "DataFormats/Common/interface/TriggerResults.h"
 #include "FWCore/Common/interface/TriggerNames.h"
-
+#include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "PhysicsTools/SelectorUtils/interface/ElectronVPlusJetsIDSelectionFunctor.h"
 #include "PhysicsTools/SelectorUtils/interface/MuonVPlusJetsIDSelectionFunctor.h"
 
@@ -430,23 +430,27 @@ BasicTreeMaker::fillTrackInfo(const edm::Event& iEvent, const edm::EventSetup& i
 void
 BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int il) {
 
+  const bool debug=false;
+
   std::string muTag=muonAlgorithmNames_[il];
   std::string eTag=eleAlgorithmNames_[il];
-
-  //  std::cout<<muTag<<"\t"<<eTag <<std::endl;
-
+  
+  if (debug)  std::cout<<muTag<<"\t"<<eTag <<std::endl;
+  
   //to get the cut flow in the right (arbitrary) order, need to do muons first
   edm::Handle<edm::View<pat::Muon> > muonHandle;
   iEvent.getByLabel(muTag,muonHandle);
   const edm::View<pat::Muon> & muons = *muonHandle;
   for (edm::View<pat::Muon>::const_iterator imuon = muons.begin(); imuon!=muons.end(); ++imuon) {
-
-    //the way this is written, it is perfectly expected for
-    // nAllMuons > muonPt.size() > nMuons
     
-    nAllMuons[muTag]++;
-
-    if ( !imuon->muonID("GlobalMuonPromptTight")) continue;
+    if (debug)     std::cout<<"--mu id-- "<<muTag <<std::endl;
+    
+    muonIsGlobalMuonPromptTight[muTag].push_back(imuon->muonID("GlobalMuonPromptTight"));
+    muonIsAllGlobalMuons[muTag].push_back(imuon->muonID("AllGlobalMuons"));
+    
+    //all hell breaks loose if we don't require the muons to be global...
+    //i'm sure this could be fixed but i don't care
+    if ( !imuon->muonID("AllGlobalMuons") ) continue;
 
     //record pT and eta of all that pass 
     muonPt[muTag].push_back( imuon->pt() );
@@ -455,8 +459,39 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
     muonEcalIso[muTag].push_back( imuon->ecalIso() );
     muonHcalIso[muTag].push_back( imuon->hcalIso() );
 
+    if (debug)     std::cout<<"--mu combined-- "<<muTag <<std::endl;
+    if (!imuon->combinedMuon().isNull()) {
+      muonChi2[muTag].push_back(imuon->combinedMuon()->chi2());
+      muonNdof[muTag].push_back(imuon->combinedMuon()->ndof());
+    }
+    else {
+      muonChi2[muTag].push_back(0);
+      muonNdof[muTag].push_back(0);
+    }
+
+    if (debug)     std::cout<<"--mu track-- "<<muTag <<std::endl;
+    muonTrackd0[muTag].push_back(imuon->track()->d0() );
+    muonTrackPhi[muTag].push_back(imuon->track()->phi() );
+
+    muonNhits[muTag].push_back(imuon->numberOfValidHits());
+    
+    if (debug)     std::cout<<"--mu veto-- "<<muTag <<std::endl;
+    //   std::cout<<imuon->hcalIsoDeposit()<<"\t"<<imuon->ecalIsoDeposit()<<std::endl;
+    //      muonHcalVeto[muTag].push_back(imuon->hcalIsoDeposit()->candEnergy());
+    //      muonEcalVeto[muTag].push_back(imuon->ecalIsoDeposit()->candEnergy());
+    if (imuon->isIsolationValid() ) {
+      muonEcalVeto[muTag].push_back(imuon->isolationR03().emVetoEt);
+      muonHcalVeto[muTag].push_back(imuon->isolationR03().hadVetoEt);
+    }
+    else {
+      muonEcalVeto[muTag].push_back(0);
+      muonHcalVeto[muTag].push_back(0);
+    }
+
     // Muon veto
     bool passMuon = muonId_(*imuon,iEvent); //this includes isolation cut (and other things)
+    muonPassID[muTag].push_back(passMuon);
+
     if ( pv_z.size()>0 &&  (fabs( imuon->vertex().z() - pv_z.at(0)) >= 1)) passMuon=false; //new cut from Don
     if (!passMuon) continue;
 
@@ -467,31 +502,37 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
   // it is really stupid that I am using a different style of logic for muons and electrons
   //But I can't decide which I like better
 
+  if (debug)   std::cout<<"--elec--"<<std::endl;
+
   edm::Handle<edm::View<pat::Electron> > electronHandle;
   iEvent.getByLabel(eTag,electronHandle);
+  if (!electronHandle.isValid()) {std::cout<<"electrons are not valid!"<<std::endl;}
   const edm::View<pat::Electron> & electrons = *electronHandle;
 
   for (edm::View<pat::Electron>::const_iterator ielectron = electrons.begin(); ielectron!=electrons.end(); ++ielectron) {
 
-    nAllElectrons[eTag]++;
+    eleIDLoose[eTag].push_back(ielectron->electronID( "eidLoose" ) );
+    eleIDRobustTight[eTag].push_back(ielectron->electronID( "eidRobustTight" ) );
 
-    if (ielectron->electronID( "eidLoose" ) > 0 ) {
-
-      eleEt[eTag].push_back( ielectron->et() );
-      eleEta[eTag].push_back( ielectron->eta());
-      eleTrackIso[eTag].push_back( ielectron->dr03TkSumPt() );
-      eleEcalIso[eTag].push_back( ielectron->dr03EcalRecHitSumEt() );
-      eleHcalIso[eTag].push_back( ielectron->dr03HcalTowerSumEt() );
-      
-      if ( electronId_(*ielectron) //iso cut is in here
-	   && (pv_z.size()>0 && (fabs( ielectron->vertex().z() - pv_z.at(0)) < 1 )) ) {
+    eleEt[eTag].push_back( ielectron->et() );
+    eleEta[eTag].push_back( ielectron->eta());
+    //std::cout<<"--elec 3--"<<std::endl;
+    eleTrackIso[eTag].push_back( ielectron->dr03TkSumPt() );
+    eleEcalIso[eTag].push_back( ielectron->dr03EcalRecHitSumEt() );
+    eleHcalIso[eTag].push_back( ielectron->dr03HcalTowerSumEt() );
+    //std::cout<<"--elec 4--"<<std::endl;
+    bool passid = electronId_(*ielectron); //iso and d0
+    elePassID[eTag].push_back(passid);
+    if ( passid && ielectron->electronID( "eidLoose" )>0 //iso cut is in here
+	 && (pv_z.size()>0 && (fabs( ielectron->vertex().z() - pv_z.at(0)) < 1 )) ) {
 	
-	if ( ielectron->et() > eleEtMin_ && fabs(ielectron->eta()) < eleEtaMax_ ) nElectrons[eTag]++;
-      }
+      if ( ielectron->et() > eleEtMin_ && fabs(ielectron->eta()) < eleEtaMax_ ) nElectrons[eTag]++;
     }
+    
   } //end of loop over electrons
   if (eTag.find("PF") == std::string::npos) cutResults.push_back( nElectrons[eTag] == 0 );
-  
+  if (debug)   std::cout<<"--leptons done--"<<std::endl;
+
   //  leptonInfoFilled_=true;
 }
 
@@ -585,7 +626,7 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     else {std::cout<<"Unknown jet type!"<<std::endl;}
 
     // === make cuts ===
-    bool passLooseCuts = (jet.pt() > loosejetPtMin_) && (fabs(jet.eta())<loosejetEtaMax_) && passJetID;
+    bool passLooseCuts = (jet.pt() > loosejetPtMin_) && (fabs(jet.eta())<loosejetEtaMax_);
     bool passTightCuts = (jet.pt() > jetPtMin_) && (fabs(jet.eta())<jetEtaMax_) && passJetID;
     
     //let's enforce that the tight cuts are always a subset of the loose cuts
@@ -610,6 +651,10 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       loosejetEta[jetAlgorithmTags_[jetIndex]].push_back(jet.eta());
       loosejetPhi[jetAlgorithmTags_[jetIndex]].push_back(jet.phi());
       loosejetFlavor[jetAlgorithmTags_[jetIndex]].push_back( jet.partonFlavour() );
+
+      loosejetPassLooseID[jetAlgorithmTags_[jetIndex]].push_back( passJetID);
+      float hfrac = jet.isCaloJet() ? jet.energyFractionHadronic(): jet.chargedHadronEnergyFraction()+jet.neutralHadronEnergyFraction();
+      loosejetEnergyFracHadronic[jetAlgorithmTags_[jetIndex]].push_back(hfrac );
 
       if ( jet.genJet() != 0 && jet.genParticle() != 0) {
 	
@@ -806,6 +851,8 @@ BasicTreeMaker::resetTreeVariables() {
   //  leptonInfoFilled_=false;
   trackInfoFilled_=false;
 
+  bsx=bsy=bsz=0;
+
   for (std::vector<std::string>::const_iterator ij=jetAlgorithmTags_.begin() ; ij!=jetAlgorithmTags_.end() ; ++ij) {
     tightJetIndex[*ij].clear();
     looseJetIndex[*ij].clear();
@@ -817,6 +864,8 @@ BasicTreeMaker::resetTreeVariables() {
     loosejetEt[*ij].clear();
     loosejetEta[*ij].clear();
     loosejetPhi[*ij].clear();
+    loosejetPassLooseID[*ij].clear();
+    loosejetEnergyFracHadronic[*ij].clear();
     loosejetFlavor[*ij].clear();
     loosejetGenParticlePDGId[*ij].clear();
     loosejetInvisibleEnergy[*ij].clear();
@@ -835,7 +884,8 @@ BasicTreeMaker::resetTreeVariables() {
   veryloosejetPhiUncorr.clear();
 
   for (unsigned int il=0; il<eleAlgorithmNames_.size(); il++) {
-    nAllMuons[muonAlgorithmNames_[il]]=0;
+    muonIsGlobalMuonPromptTight[muonAlgorithmNames_[il]].clear();
+    muonIsAllGlobalMuons[muonAlgorithmNames_[il]].clear();
     nMuons[muonAlgorithmNames_[il]]=0;
     muonPt[muonAlgorithmNames_[il]].clear();
     muonEta[muonAlgorithmNames_[il]].clear();
@@ -843,13 +893,28 @@ BasicTreeMaker::resetTreeVariables() {
     muonEcalIso[muonAlgorithmNames_[il]].clear();
     muonHcalIso[muonAlgorithmNames_[il]].clear();
 
-    nAllElectrons[eleAlgorithmNames_[il]]=0;
+    muonChi2[muonAlgorithmNames_[il]].clear();
+    muonNdof[muonAlgorithmNames_[il]].clear();
+    muonNhits[muonAlgorithmNames_[il]].clear();
+
+    muonTrackd0[muonAlgorithmNames_[il]].clear();
+    muonTrackPhi[muonAlgorithmNames_[il]].clear();
+
+    muonPassID[muonAlgorithmNames_[il]].clear();
+
+    muonEcalVeto[muonAlgorithmNames_[il]].clear();
+    muonHcalVeto[muonAlgorithmNames_[il]].clear();
+
     nElectrons[eleAlgorithmNames_[il]]=0;
     eleEt[eleAlgorithmNames_[il]].clear();
     eleEta[eleAlgorithmNames_[il]].clear();
     eleTrackIso[eleAlgorithmNames_[il]].clear();
     eleEcalIso[eleAlgorithmNames_[il]].clear();
     eleHcalIso[eleAlgorithmNames_[il]].clear();
+
+    eleIDLoose[eleAlgorithmNames_[il]].clear();
+    eleIDRobustTight[eleAlgorithmNames_[il]].clear();
+    elePassID[eleAlgorithmNames_[il]].clear();
   }
 
   pv_isFake.clear();
@@ -903,6 +968,15 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   runNumber   = iEvent.run();
   eventNumber = iEvent.eventAuxiliary().event() ;
   lumiSection = iEvent.getLuminosityBlock().luminosityBlock();
+
+  // todo -- should put this in its own method, and check out sal's code -- much fancier!
+  //Get the beam spot
+  edm::Handle<reco::BeamSpot> beamSpotHandle;
+  iEvent.getByLabel("offlineBeamSpot", beamSpotHandle);
+  reco::BeamSpot beamSpot = *beamSpotHandle;
+  bsx = beamSpot.x0();
+  bsy = beamSpot.y0();
+  bsz = beamSpot.z0();
 
   //trigger
   fillTriggerInfo(iEvent,iSetup);
@@ -1008,6 +1082,10 @@ BasicTreeMaker::beginJob()
   tree_->Branch("lumiSection",&lumiSection,"lumiSection/l");
   tree_->Branch("eventNumber",&eventNumber,"eventNumber/l");
 
+  tree_->Branch("bsx",&bsx,"bsx/F");
+  tree_->Branch("bsy",&bsy,"bsy/F");
+  tree_->Branch("bsz",&bsz,"bsz/F");
+
   tree_->Branch("cutResults",&cutResults);
   tree_->Branch("passTrigger",&passTrigger); //stores results for triggers listed in triggerList
   tree_->Branch("hltPrescale",&hltPrescale);
@@ -1033,6 +1111,9 @@ BasicTreeMaker::beginJob()
     tree_->Branch( (string("loosejetEt")+tail).c_str(),&loosejetEt[*ij]);
     tree_->Branch( (string("loosejetEta")+tail).c_str(),&loosejetEta[*ij]);
     tree_->Branch( (string("loosejetPhi")+tail).c_str(),&loosejetPhi[*ij]);
+    tree_->Branch( (string("loosejetPassLooseID")+tail).c_str(),&loosejetPassLooseID[*ij]);
+    tree_->Branch( (string("loosejetEnergyFracHadronic")+tail).c_str(),&loosejetEnergyFracHadronic[*ij]);
+
     tree_->Branch( (string("loosejetFlavor")+tail).c_str(),&loosejetFlavor[*ij]);
     
     tree_->Branch( (string("loosejetGenParticlePDGId")+tail).c_str(),&loosejetGenParticlePDGId[*ij]);
@@ -1099,20 +1180,36 @@ BasicTreeMaker::beginJob()
       itail="/I";
     }
 
-    tree_->Branch( (string("nAllMuons")+tail).c_str(), &nAllMuons[muonAlgorithmNames_[il]], (string("nAllMuons")+itail).c_str());
+    tree_->Branch( (string("muonIsGlobalMuonPromptTight")+tail).c_str(),&muonIsGlobalMuonPromptTight[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonIsAllGlobalMuons")+tail).c_str(),&muonIsAllGlobalMuons[muonAlgorithmNames_[il]]);
+
     tree_->Branch( (string("muonPt")+tail).c_str(),&muonPt[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonEta")+tail).c_str(),&muonEta[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonTrackIso")+tail).c_str(),&muonTrackIso[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonEcalIso")+tail).c_str(),&muonEcalIso[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonHcalIso")+tail).c_str(),&muonHcalIso[muonAlgorithmNames_[il]]);
+
+    tree_->Branch( (string("muonChi2")+tail).c_str(),&muonChi2[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonNdof")+tail).c_str(),&muonNdof[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonNhits")+tail).c_str(),&muonNhits[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonTrackd0")+tail).c_str(),&muonTrackd0[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonTrackPhi")+tail).c_str(),&muonTrackPhi[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonPassID")+tail).c_str(),&muonPassID[muonAlgorithmNames_[il]]);
+
+    tree_->Branch( (string("muonEcalVeto")+tail).c_str(),&muonEcalVeto[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonHcalVeto")+tail).c_str(),&muonHcalVeto[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("nMuons")+tail).c_str(),&nMuons[muonAlgorithmNames_[il]],(string("nMuons")+itail).c_str());
 
-    tree_->Branch((string("nAllElectrons")+tail).c_str(),&nAllElectrons[eleAlgorithmNames_[il]],(string("nAllElectrons")+itail).c_str());
     tree_->Branch((string("eleEt")+tail).c_str(),&eleEt[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleEta")+tail).c_str(),&eleEta[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleTrackIso")+tail).c_str(),&eleTrackIso[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleEcalIso")+tail).c_str(),&eleEcalIso[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleHcalIso")+tail).c_str(),&eleHcalIso[eleAlgorithmNames_[il]]);
+
+    tree_->Branch((string("eleIDLoose")+tail).c_str(),&eleIDLoose[eleAlgorithmNames_[il]]);
+    tree_->Branch((string("eleIDRobustTight")+tail).c_str(),&eleIDRobustTight[eleAlgorithmNames_[il]]);
+    tree_->Branch((string("elePassID")+tail).c_str(),&elePassID[eleAlgorithmNames_[il]]);
+
     tree_->Branch((string("nElectrons")+tail).c_str(),&nElectrons[eleAlgorithmNames_[il]],(string("nElectrons")+itail).c_str());
   }
 

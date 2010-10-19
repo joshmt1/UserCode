@@ -21,7 +21,7 @@ Flavor history stuff?
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.2 2010/09/28 13:55:47 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.3 2010/10/14 19:23:09 joshmt Exp $
 //
 //
 
@@ -166,23 +166,43 @@ private:
   std::vector<float>  pv_chi2;
   std::vector<float>  pv_rho;
 
-  std::map< std::string, int > nAllMuons; //raw number of pat::Muons
-  //muon info for all GlobalMuonPromptTight
+  //beamspot info
+  float bsx;
+  float bsy;
+  float bsz;
+
+  std::map< std::string, std::vector<bool> > muonIsGlobalMuonPromptTight;
+  std::map< std::string, std::vector<bool> > muonIsAllGlobalMuons;
+  //muon info for all *AllGlobalMuons*
   std::map< std::string, std::vector<float> > muonPt;
   std::map< std::string, std::vector<float> > muonEta;
   std::map< std::string, std::vector<float> > muonTrackIso;
   std::map< std::string, std::vector<float> > muonEcalIso;
   std::map< std::string, std::vector<float> > muonHcalIso;
+
+  std::map< std::string, std::vector<float> > muonChi2;
+  std::map< std::string, std::vector<float> > muonNdof;
+  std::map< std::string, std::vector<float> > muonNhits;
+  std::map< std::string, std::vector<float> > muonTrackd0;
+  std::map< std::string, std::vector<float> > muonTrackPhi;
+  std::map< std::string, std::vector<bool> > muonPassID;
+
+  std::map< std::string, std::vector<float> > muonHcalVeto;
+  std::map< std::string, std::vector<float> > muonEcalVeto;
+
   std::map< std::string, int > nMuons; //good muons (passing pt and eta cuts)
 
-  //electron info
-  std::map< std::string, int > nAllElectrons;
-  //electron info for all that pass eidLoose
+  //electron info for *all* electrons (!)
   std::map< std::string, std::vector<float> > eleEt;
   std::map< std::string, std::vector<float> > eleEta;
   std::map< std::string, std::vector<float> > eleTrackIso;
   std::map< std::string, std::vector<float> > eleEcalIso;
   std::map< std::string, std::vector<float> > eleHcalIso;
+
+  std::map< std::string, std::vector<float> > eleIDLoose;
+  std::map< std::string, std::vector<float> > eleIDRobustTight;
+  std::map< std::string, std::vector<bool> > elePassID;
+
   std::map< std::string, int > nElectrons; //good electrons
 
   /*
@@ -193,12 +213,15 @@ string is the jetAlgorithmTag
   //tight jet info
   std::map< std::string,  std::vector<int> > tightJetIndex; //map from tight jet list to loose jet list
 
-  //loose jet info
+  //loose jet info (no long appying any jet id here!)
   std::map< std::string,  std::vector<int> > looseJetIndex; //map from loose jet to very loose jet list
   std::map< std::string,  std::vector<float> > loosejetPt;
   std::map< std::string,  std::vector<float> > loosejetEt;
   std::map< std::string,  std::vector<float> > loosejetEta;
   std::map< std::string,  std::vector<float> > loosejetPhi;
+  std::map< std::string,  std::vector<bool> > loosejetPassLooseID;
+  std::map< std::string,  std::vector<float> > loosejetEnergyFracHadronic;
+
   std::map< std::string,  std::vector<int> > loosejetFlavor;
   std::map< std::string,  std::vector<int> > loosejetGenParticlePDGId;
   std::map< std::string,  std::vector<float> > loosejetInvisibleEnergy;

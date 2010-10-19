@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-isMC = False
+isMC = True
 
 process = cms.Process("BasicTreeMaker")
 
@@ -100,10 +100,10 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                             HCalVeto = cms.double(6.0),
                                             RelIso = cms.double(0.1), #uses R=0.3 (at least in 384)
                                             cutsToIgnore = cms.vstring('ED0', 'SD0', 'ECalVeto', 'HCalVeto'),
-                                            RecalcFromBeamSpot = cms.bool(False),
+                                            RecalcFromBeamSpot = cms.bool(True),
                                             beamLineSrc = cms.InputTag("offlineBeamSpot")
                                             ),
-
+ 
                                         ## electrons
                                         electronId = cms.PSet(
                                             version = cms.string('FIRSTDATA'),
