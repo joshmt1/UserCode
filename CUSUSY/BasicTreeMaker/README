@@ -1,6 +1,10 @@
 Release notes
 --
 
+V00-01-00 - version used for first iteration of UCSB/UCR/CU sync exercise.
+Known problems  -- isGlobalMuonPromptTight is useless
+		-- should store more info on electrons in order to redo all ID cuts
+
 jmt101014a - lots of fundamental changes. Add handling of multiple jet types, etc.
 Will require substantial changes to analysis code.
 
