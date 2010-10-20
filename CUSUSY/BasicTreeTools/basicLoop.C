@@ -156,7 +156,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
     nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
     if (Cut(ientry) < 0) continue; //jmt use cut
-    myMET = caloMET; //could and should modify to use tcMET or caloMET
+    myMET = getMET();
     myMHT = MHT;
     minDeltaPhiMET = getMinDeltaPhiMET(3);
     minDeltaPhiMHT = getMinDeltaPhiMHT(3);
@@ -409,16 +409,16 @@ void basicLoop::Loop(unsigned int dataindex)
       if (ientry < 0) {assert(0);}
       nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
-      Hnjets_nocuts.Fill( tightJetIndex_calo->size(), weight );
+      Hnjets_nocuts.Fill( tightJetIndex->size(), weight );
       if (Cut(ientry) < 0) continue; //jmt use cut
 
       //calculate things
       double dp_MPTMET = getDeltaPhiMPTMET();
 
-      Hnjets.Fill( tightJetIndex_calo->size(), weight );
+      Hnjets.Fill( tightJetIndex->size(), weight );
       HdeltaPhiMPTMET.Fill( dp_MPTMET,weight);
       H_MHT.Fill(MHT ,weight);
-      H_MET.Fill(caloMET ,weight);
+      H_MET.Fill( getMET() ,weight);
 
       Hjetpt1.Fill(jetPt.at(0),weight); //FIXME
 
@@ -439,9 +439,9 @@ void basicLoop::Loop(unsigned int dataindex)
       HV2minDeltaPhiMETj.Fill(minDeltaPhi_j_MET,weight);
 
       if ( nbSSVM < 1) continue; //cut on the number of b tags
-      Hnjets_ge1b.Fill( tightJetIndex_calo->size(), weight );
+      Hnjets_ge1b.Fill( tightJetIndex->size(), weight );
       H_MHT_ge1b.Fill(MHT ,weight);
-      H_MET_ge1b.Fill(caloMET ,weight);
+      H_MET_ge1b.Fill(getMET() ,weight);
 
       Hjetpt1_ge1b.Fill(jetPt.at(0),weight);
 
@@ -482,15 +482,15 @@ void basicLoop::Loop(unsigned int dataindex)
       }
       Hbjetpt1_ge1b.Fill(bjetpt1,weight);
 
-      HminDeltaR_bj_vMET_ge1b.Fill(caloMET, minDeltaR_bj,weight);
-      HminDeltaR_bj_vMET_ABCD_ge1b.Fill(caloMET, minDeltaR_bj,weight);
+      HminDeltaR_bj_vMET_ge1b.Fill(getMET(), minDeltaR_bj,weight);
+      HminDeltaR_bj_vMET_ABCD_ge1b.Fill(getMET(), minDeltaR_bj,weight);
 
       if ( nbSSVM < 2) continue; //cut on the number of b tags
       Hbjetpt1_ge2b.Fill(bjetpt1,weight);
 
-      Hnjets_ge2b.Fill( tightJetIndex_calo->size(), weight );
+      Hnjets_ge2b.Fill( tightJetIndex->size(), weight );
       H_MHT_ge2b.Fill(MHT ,weight);
-      H_MET_ge2b.Fill(caloMET ,weight);
+      H_MET_ge2b.Fill(getMET() ,weight);
       HdeltaPhiMPTMET_ge2b.Fill( dp_MPTMET,weight);
 
       Hjetpt1_ge2b.Fill(jetPt.at(0),weight);
@@ -508,13 +508,13 @@ void basicLoop::Loop(unsigned int dataindex)
       double deltaPhi_b1b2 = getDeltaPhib1b2();
       HdeltaPhib1b2_minDeltaPhiMETb.Fill(minDeltaPhi_b_MET,deltaPhi_b1b2,weight);
 
-      HdeltaPhib1b2_MET.Fill(caloMET,deltaPhi_b1b2,weight);
-      HminDeltaPhiMETb_MET_ge2b.Fill(caloMET,minDeltaPhi_b_MET,weight);
-      HminDeltaPhiMETj_MET_ge2b.Fill(caloMET,minDeltaPhi_j_MET,weight);
+      HdeltaPhib1b2_MET.Fill(getMET(),deltaPhi_b1b2,weight);
+      HminDeltaPhiMETb_MET_ge2b.Fill(getMET(),minDeltaPhi_b_MET,weight);
+      HminDeltaPhiMETj_MET_ge2b.Fill(getMET(),minDeltaPhi_j_MET,weight);
 
       HminDeltaPhiMETb_HminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,minDeltaPhi_b_MET,weight);
 
-      HdeltaPhiMPTMET_MET_ge2b.Fill(caloMET,dp_MPTMET,weight);
+      HdeltaPhiMPTMET_MET_ge2b.Fill(getMET(),dp_MPTMET,weight);
 
       HtopDecayCategory_ge2b.Fill(topcat,weight);
 
@@ -522,13 +522,13 @@ void basicLoop::Loop(unsigned int dataindex)
       HminDeltaR_bj_ge2b.Fill(minDeltaR_bj,weight);
       HminDeltaR_bj_vTopCat_ge2b.Fill(topcat,minDeltaR_bj,weight);
 
-      HminDeltaR_bj_vMET_ge2b.Fill(caloMET, minDeltaR_bj,weight);
-      HminDeltaR_bj_vMET_ABCD_ge2b.Fill(caloMET, minDeltaR_bj,weight);
+      HminDeltaR_bj_vMET_ge2b.Fill(getMET(), minDeltaR_bj,weight);
+      HminDeltaR_bj_vMET_ABCD_ge2b.Fill(getMET(), minDeltaR_bj,weight);
 
       if ( nbSSVM < 3) continue; //cut on the number of b tags
-      Hnjets_ge3b.Fill( tightJetIndex_calo->size(), weight );
+      Hnjets_ge3b.Fill( tightJetIndex->size(), weight );
       H_MHT_ge3b.Fill(MHT ,weight);
-      H_MET_ge3b.Fill(caloMET ,weight);
+      H_MET_ge3b.Fill(getMET() ,weight);
    }
    TDatime stoptime; //default ctor is for current time
    UInt_t elapsed= stoptime.Convert() - starttime.Convert();

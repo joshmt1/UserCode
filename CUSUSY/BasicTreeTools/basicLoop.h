@@ -69,6 +69,27 @@ public :
   vector<float>   jetBTagDisc_simpleSecondaryVertexHighEffBJetTags;
   vector<float>   jetBTagDisc_simpleSecondaryVertexHighPurBJetTags;
   vector<float>   jetBTagDisc_simpleSecondaryVertexBJetTags;
+
+  //pointers to the jet info of the default jet type
+  vector<int>     *tightJetIndex;
+  vector<int>     *looseJetIndex;
+  vector<float>   *loosejetPt;
+  vector<float>   *loosejetEt;
+  vector<float>   *loosejetEta;
+  vector<float>   *loosejetPhi;
+  vector<bool>    *loosejetPassLooseID;
+  vector<float>   *loosejetEnergyFracHadronic;
+  vector<int>     *loosejetFlavor;
+  vector<int>     *loosejetGenParticlePDGId;
+  vector<float>   *loosejetInvisibleEnergy;
+  vector<float>   *loosejetBTagDisc_trackCountingHighPurBJetTags;
+  vector<float>   *loosejetBTagDisc_trackCountingHighEffBJetTags;
+  vector<float>   *loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags;
+  vector<float>   *loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags;
+  vector<float>   *loosejetBTagDisc_simpleSecondaryVertexBJetTags;
+  vector<float>   *badjetPt;
+  vector<float>   *badjetEta;
+  vector<float>   *badjetPhi;
   // ========================================== end
 
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
@@ -353,6 +374,7 @@ public :
    virtual void     ABCDtree(unsigned int dataindex=0);
 
    void fillTightJetInfo();
+   void InitJets();
 
    void printState();
 
@@ -372,9 +394,7 @@ public :
    float getMETphi(); //return MET determined by theMETType_
    
    void cutflow();
-   //   bool cutRequired(unsigned int cutIndex) ;
    bool cutRequired(TString cutTag) ;
-   //   bool passCut(unsigned int cutIndex) ;
    bool passCut(TString cutTag) ;
    TString getSampleName(const TString inname) ;
    double getCrossSection(const TString inname) ;
@@ -394,7 +414,6 @@ public :
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
    double getMinDeltaPhiMET(unsigned int maxjets) ;
-   double getMinDeltaPhitcMET(unsigned int maxjets) ;
    double getMinDeltaPhiMHT(unsigned int maxjets) ;
    double getDeltaPhib1b2();
    double getUncorrectedHT(const double threshold);
@@ -437,6 +456,7 @@ basicLoop::basicLoop(TTree *tree)
    // ========================================== begin
    //this routine initializes the various cutNames_ etc vectors
    setCutScheme(kRA2);   
+   setJetType(kCalo);
    // ========================================== end
 
 }
@@ -457,6 +477,8 @@ Int_t basicLoop::GetEntry(Long64_t entry)
 // ========================================== begin
    Int_t n=fChain->GetEntry(entry);
 
+   //this order is critical!
+   InitJets();
    fillTightJetInfo();
 
    return n;
@@ -1039,22 +1061,6 @@ bool basicLoop::passDeltaPhi_Sync1() {
 
   //MET and jet type will adjust with the global settings!
 
-  //adjust for calo versus pf
-  /* very possible that this can be done globally, but I want to do it the hard way first and make sure it works) */
-  vector<float> * loosejetPt = 0;
-  vector<float> * loosejetPhi = 0;
-  if (theJetType_==kCalo ) {
-    loosejetPt = loosejetPt_calo;
-    loosejetPhi = loosejetPhi_calo;
-  }
-  else if (theJetType_==kPF) {
-    loosejetPt = loosejetPt_PF;
-    loosejetPhi = loosejetPhi_PF;
-  }
-  else {assert(0);}
-
-  //done adjusting for calo/PF etc
-
   int njet=0;
 
   bool pass=true;
@@ -1079,6 +1085,8 @@ bool basicLoop::passDeltaPhi_Sync1() {
 //bool basicLoop::passCut(const unsigned int cutIndex) {
 bool basicLoop::passCut(const TString cutTag) {
   //implement special exceptions here
+
+  const bool debug=false;  if (debug) cout<<cutTag<<endl;
 
   //lepton vetoes
   if (cutTag=="cutMuVeto" && theCutScheme_==kRA2) return passMuVetoRA2();
@@ -1136,8 +1144,7 @@ bool basicLoop::passCut(const TString cutTag) {
 	   ( theDPType_ == kminDP ) ) {
     
     if (theMETType_ == kMHT)     return ( getMinDeltaPhiMHT(3) >= 0.3 );
-    else if (theMETType_ ==kMET) return ( getMinDeltaPhiMET(3) >= 0.3 );
-    else if (theMETType_ ==ktcMET) return ( getMinDeltaPhitcMET(3) >= 0.3 );
+    else if (theMETType_ ==kMET ||theMETType_==ktcMET) return ( getMinDeltaPhiMET(3) >= 0.3 );
     else {assert(0);}
   }
   else if (cutTag == "cutDeltaPhi" && //replace normal DeltaPhi cut with DeltaPhi(MPT,MET) cut
@@ -1169,26 +1176,6 @@ bool basicLoop::passCut(const TString cutTag) {
 }
 
 int basicLoop::countBJets_Sync1() {
-
-  //adjust for global jet type
-  vector<float> * loosejetPt = 0;
-  vector<float> * loosejetPhi = 0;
-  vector<float> * loosejetEta = 0;
-  vector<float> * loosejetBTagDisc_trackCountingHighPurBJetTags = 0;
-  if (theJetType_==kCalo ) {
-    loosejetPt = loosejetPt_calo;
-    loosejetPhi = loosejetPhi_calo;
-    loosejetEta = loosejetEta_calo;
-    loosejetBTagDisc_trackCountingHighPurBJetTags = loosejetBTagDisc_trackCountingHighPurBJetTags_calo;
-  }
-  else if (theJetType_==kPF) {
-    loosejetPt = loosejetPt_PF;
-    loosejetPhi = loosejetPhi_PF;
-    loosejetEta = loosejetEta_PF;
-    loosejetBTagDisc_trackCountingHighPurBJetTags = loosejetBTagDisc_trackCountingHighPurBJetTags_PF;
-  }
-  else {assert(0);}
-
 
   int nb=0;
 
@@ -1285,27 +1272,7 @@ double basicLoop::getMinDeltaPhiMET(unsigned int maxjets) {
   double mindp=99;
   for (unsigned int i=0; i< maxjets; i++) {
 
-    double dp =  getDeltaPhi( jetPhi.at(i) , caloMETphi);
-    if (dp<mindp) mindp=dp;
-
-  }
-  return mindp;
-}
-
-double basicLoop::getMinDeltaPhitcMET(unsigned int maxjets) {
-  /*
-    uses default tight jets and tcMET
-  */
-
-  unsigned int njets=  jetPhi.size();
-
-  if (njets < maxjets) maxjets = njets;
-
-  //get the minimum angle between the first n jets and MET
-  double mindp=99;
-  for (unsigned int i=0; i< maxjets; i++) {
-
-    double dp =  getDeltaPhi( jetPhi.at(i) , tcMETphi);
+    double dp =  getDeltaPhi( jetPhi.at(i) , getMETphi());
     if (dp<mindp) mindp=dp;
 
   }
@@ -1335,12 +1302,12 @@ double basicLoop::getMinDeltaPhiMHT(unsigned int maxjets) {
 
 double basicLoop::getMinDeltaPhibMET() {
   //get the minimum angle between a b jet and MET
-  /* uses default tight jets and caloMET */
+  /* uses default tight jets and default MET */
 
   double mindp=99;
   for (unsigned int i=0; i<jetPhi.size(); i++) {
     if (passBCut(i) ) {
-      double dp =  getDeltaPhi( jetPhi.at(i), caloMETphi);
+      double dp =  getDeltaPhi( jetPhi.at(i), getMETphi());
       if (dp<mindp) mindp=dp;
     }
   }
@@ -1366,7 +1333,7 @@ double basicLoop::getDeltaPhib1b2() {
 }
 
 double basicLoop::getDeltaPhiMPTMET() {
-  /* uses calo MET */
+  /* uses default MET */
 
    //find MPT
    double MPTx=0;
@@ -1380,7 +1347,7 @@ double basicLoop::getDeltaPhiMPTMET() {
 
    double MPTphi = atan2(MPTy,MPTx);
 
-   return getDeltaPhi(caloMETphi, MPTphi);
+   return getDeltaPhi(getMETphi(), MPTphi);
 }
 
 bool basicLoop::passBCut( unsigned int bindex) {
@@ -1410,7 +1377,7 @@ double basicLoop::getMinDeltaPhi_bj(unsigned int bindex) {
 this function assumes that bindex is of a b jet. it doesn't verify it
   */
 
-  //using tight calo jets
+  //using tight jets
 
   double bphi = jetPhi.at(bindex);
 
@@ -1460,24 +1427,6 @@ double basicLoop::getMinDeltaR_bj(unsigned int bindex) {
 }
 
 bool basicLoop::isGoodJet_Sync1(unsigned int ijet) {
-  //adjust for calo versus pf
-  /* very possible that this can be done globally, but I want to do it the hard way first and make sure it works) */
-  vector<float> * loosejetPt = 0;
-  vector<float> * loosejetEta = 0;
-  vector<float> * loosejetEnergyFracHadronic = 0;
-  if (theJetType_==kCalo ) {
-    loosejetPt = loosejetPt_calo;
-    loosejetEta = loosejetEta_calo;
-    loosejetEnergyFracHadronic = loosejetEnergyFracHadronic_calo;
-  }
-  else if (theJetType_==kPF) {
-    loosejetPt = loosejetPt_PF;
-    loosejetEta = loosejetEta_PF;
-    loosejetEnergyFracHadronic = loosejetEnergyFracHadronic_PF;
-  }
-  else {assert(0);}
-
-  //done adjusting for calo/PF etc
 
   if ( loosejetPt->at(ijet) <50) return false;
   
@@ -1490,15 +1439,6 @@ bool basicLoop::isGoodJet_Sync1(unsigned int ijet) {
 
 float basicLoop::jetPtOfN(unsigned int n) {
   //for now, use Sync1 jet cuts only
-
-  vector<float> * loosejetPt = 0;
-  if (theJetType_==kCalo ) {
-    loosejetPt = loosejetPt_calo;
-  }
-  else if (theJetType_==kPF) {
-    loosejetPt = loosejetPt_PF;
-  }
-  else {assert(0);}
 
   unsigned int ngood=0;
   for (unsigned int i=0; i<loosejetPt->size(); i++) {
@@ -1513,15 +1453,6 @@ float basicLoop::jetPtOfN(unsigned int n) {
 
 unsigned int basicLoop::nGoodJets_Sync1() {
   
-  vector<float> * loosejetPt = 0;
-  if (theJetType_==kCalo ) {
-    loosejetPt = loosejetPt_calo;
-  }
-  else if (theJetType_==kPF) {
-    loosejetPt = loosejetPt_PF;
-  }
-  else {assert(0);}
-
   unsigned int njets=0;
 
   for (unsigned int i=0; i<loosejetPt->size(); i++) {
@@ -1596,47 +1527,6 @@ void basicLoop::fillTightJetInfo() {
   jetBTagDisc_simpleSecondaryVertexHighEffBJetTags.clear();
   jetBTagDisc_simpleSecondaryVertexHighPurBJetTags.clear();
   jetBTagDisc_simpleSecondaryVertexBJetTags.clear();
-
-  vector<int> * tightJetIndex;
-
-  vector<float> *  loosejetPt;
-  vector<float> *  loosejetEta;
-  vector<float> *  loosejetPhi;
-  vector<int>   *  loosejetFlavor;
-  vector<float> *  loosejetBTagDisc_trackCountingHighPurBJetTags;
-  vector<float> *  loosejetBTagDisc_trackCountingHighEffBJetTags;
-  vector<float> *  loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags;
-  vector<float> *  loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags;
-  vector<float> *  loosejetBTagDisc_simpleSecondaryVertexBJetTags;
-
-  if (theJetType_ == kCalo) {
-    tightJetIndex = tightJetIndex_calo;
-    loosejetPt = loosejetPt_calo;
-    loosejetEta = loosejetEta_calo;
-    loosejetPhi = loosejetPhi_calo;
-    loosejetFlavor = loosejetFlavor_calo;
-
-    loosejetBTagDisc_trackCountingHighPurBJetTags = loosejetBTagDisc_trackCountingHighPurBJetTags_calo;
-    loosejetBTagDisc_trackCountingHighEffBJetTags = loosejetBTagDisc_trackCountingHighEffBJetTags_calo;
-    loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags = loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo;
-    loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags = loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo;
-    loosejetBTagDisc_simpleSecondaryVertexBJetTags = loosejetBTagDisc_simpleSecondaryVertexBJetTags_calo;
-  }
-  else if (theJetType_ ==kPF) {
-    tightJetIndex = tightJetIndex_PF;
-
-    loosejetPt = loosejetPt_PF;
-    loosejetEta = loosejetEta_PF;
-    loosejetPhi = loosejetPhi_PF;
-    loosejetFlavor = loosejetFlavor_PF;
-
-    loosejetBTagDisc_trackCountingHighPurBJetTags = loosejetBTagDisc_trackCountingHighPurBJetTags_PF;
-    loosejetBTagDisc_trackCountingHighEffBJetTags = loosejetBTagDisc_trackCountingHighEffBJetTags_PF;
-    loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags = loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_PF;
-    loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags = loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_PF;
-    loosejetBTagDisc_simpleSecondaryVertexBJetTags = loosejetBTagDisc_simpleSecondaryVertexBJetTags_PF;
-  }
-  else {assert(0);}
 
   //now fill with new values
   for (unsigned int i=0; i<tightJetIndex->size(); i++) {
@@ -1796,9 +1686,58 @@ void basicLoop::setMETType(METType mettype) {
   theMETType_ = mettype;
 }
 
+void basicLoop::InitJets() {
+
+  if (theJetType_==kCalo ) {
+    tightJetIndex = tightJetIndex_calo;
+    looseJetIndex = looseJetIndex_calo;
+    loosejetPt = loosejetPt_calo;
+    loosejetEt = loosejetEt_calo;
+    loosejetEta = loosejetEta_calo;
+    loosejetPhi = loosejetPhi_calo;
+    loosejetPassLooseID = loosejetPassLooseID_calo;
+    loosejetEnergyFracHadronic = loosejetEnergyFracHadronic_calo;
+    loosejetFlavor = loosejetFlavor_calo;
+    loosejetGenParticlePDGId = loosejetGenParticlePDGId_calo;
+    loosejetInvisibleEnergy = loosejetInvisibleEnergy_calo;
+    loosejetBTagDisc_trackCountingHighPurBJetTags = loosejetBTagDisc_trackCountingHighPurBJetTags_calo;
+    loosejetBTagDisc_trackCountingHighEffBJetTags = loosejetBTagDisc_trackCountingHighEffBJetTags_calo;
+    loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags = loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo;
+    loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags = loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo;
+    loosejetBTagDisc_simpleSecondaryVertexBJetTags = loosejetBTagDisc_simpleSecondaryVertexBJetTags_calo;
+    badjetPt = badjetPt_calo;
+    badjetEta = badjetEta_calo;
+    badjetPhi = badjetPhi_calo;
+  }
+  else if (theJetType_==kPF) {
+    tightJetIndex = tightJetIndex_PF;
+    looseJetIndex = looseJetIndex_PF;
+    loosejetPt = loosejetPt_PF;
+    loosejetEt = loosejetEt_PF;
+    loosejetEta = loosejetEta_PF;
+    loosejetPhi = loosejetPhi_PF;
+    loosejetPassLooseID = loosejetPassLooseID_PF;
+    loosejetEnergyFracHadronic = loosejetEnergyFracHadronic_PF;
+    loosejetFlavor = loosejetFlavor_PF;
+    loosejetGenParticlePDGId = loosejetGenParticlePDGId_PF;
+    loosejetInvisibleEnergy = loosejetInvisibleEnergy_PF;
+    loosejetBTagDisc_trackCountingHighPurBJetTags = loosejetBTagDisc_trackCountingHighPurBJetTags_PF;
+    loosejetBTagDisc_trackCountingHighEffBJetTags = loosejetBTagDisc_trackCountingHighEffBJetTags_PF;
+    loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags = loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_PF;
+    loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags = loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_PF;
+    loosejetBTagDisc_simpleSecondaryVertexBJetTags = loosejetBTagDisc_simpleSecondaryVertexBJetTags_PF;
+    badjetPt = badjetPt_PF;
+    badjetEta = badjetEta_PF;
+    badjetPhi = badjetPhi_PF;
+  }
+  else {assert(0);}
+
+}
+
 void basicLoop::setJetType(jetType jettype) {
 
   theJetType_ = jettype;
+
 }
 
 void basicLoop::setMETRange(METRange metrange) {
