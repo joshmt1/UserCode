@@ -420,7 +420,7 @@ void basicLoop::Loop(unsigned int dataindex)
       H_MHT.Fill(MHT ,weight);
       H_MET.Fill(caloMET ,weight);
 
-      Hjetpt1.Fill(jetPt_calo.at(0),weight);
+      Hjetpt1.Fill(jetPt.at(0),weight); //FIXME
 
       H_HT.Fill(HT,weight);
 
@@ -443,7 +443,7 @@ void basicLoop::Loop(unsigned int dataindex)
       H_MHT_ge1b.Fill(MHT ,weight);
       H_MET_ge1b.Fill(caloMET ,weight);
 
-      Hjetpt1_ge1b.Fill(jetPt_calo.at(0),weight);
+      Hjetpt1_ge1b.Fill(jetPt.at(0),weight);
 
       HdeltaPhiMPTMET_ge1b.Fill( dp_MPTMET,weight);
 
@@ -464,10 +464,10 @@ void basicLoop::Loop(unsigned int dataindex)
       int nbjetsfound=0;
       double bjetpt1=0;
       //note that all tight jet vectors should have the same size
-      for (unsigned int ib = 0; ib< jetPhi_calo.size(); ib++) {
+      for (unsigned int ib = 0; ib< jetPhi.size(); ib++) {
 	if ( passBCut(ib)) { //refind the b jets
 	  nbjetsfound++;
-	  if (nbjetsfound==1) bjetpt1=jetPt_calo.at(ib); //if this is the *lead* b jet
+	  if (nbjetsfound==1) bjetpt1=jetPt.at(ib); //if this is the *lead* b jet
 
 	  double deltaPhi_bj=getMinDeltaPhi_bj(ib);
 	  if ( nbSSVM < 2) {	  HdeltaPhi_bj_ge2b.Fill(deltaPhi_bj,weight);}
@@ -493,7 +493,7 @@ void basicLoop::Loop(unsigned int dataindex)
       H_MET_ge2b.Fill(caloMET ,weight);
       HdeltaPhiMPTMET_ge2b.Fill( dp_MPTMET,weight);
 
-      Hjetpt1_ge2b.Fill(jetPt_calo.at(0),weight);
+      Hjetpt1_ge2b.Fill(jetPt.at(0),weight);
 
 //       HpassHT100U_ge2b.Fill(HT,passHTtrig);
 //       HpassMET45_ge2b.Fill(MET,passMETtrig);
