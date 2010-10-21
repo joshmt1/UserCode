@@ -23,7 +23,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.10 2010/10/14 19:23:09 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.11 2010/10/19 07:50:34 joshmt Exp $
 //
 //
 
@@ -576,7 +576,7 @@ BasicTreeMaker::passJetId(const pat::Jet & jet) {
 void
 BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int jetIndex)
 {
-  //    std::cout<<" == fillJetInfo "<<jetAlgorithmNames_[jetIndex]<<" =="<<std::endl; //debug
+  //     std::cout<<" == fillJetInfo "<<jetAlgorithmNames_[jetIndex]<<" =="<<std::endl; //debug
  
   //  if (jetInfoFilled_) return;
 
@@ -653,7 +653,12 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       loosejetFlavor[jetAlgorithmTags_[jetIndex]].push_back( jet.partonFlavour() );
 
       loosejetPassLooseID[jetAlgorithmTags_[jetIndex]].push_back( passJetID);
-      float hfrac = jet.isCaloJet() ? jet.energyFractionHadronic(): jet.chargedHadronEnergyFraction()+jet.neutralHadronEnergyFraction();
+      float hfrac=0;
+      if ( jet.isCaloJet() || jet.isJPTJet()) hfrac= jet.energyFractionHadronic();
+      else if (jet.isPFJet()) {
+	hfrac= jet.chargedHadronEnergyFraction()+jet.neutralHadronEnergyFraction();
+      }
+      else {std::cout<<"Unknown jet type!"<<std::endl;}
       loosejetEnergyFracHadronic[jetAlgorithmTags_[jetIndex]].push_back(hfrac );
 
       if ( jet.genJet() != 0 && jet.genParticle() != 0) {

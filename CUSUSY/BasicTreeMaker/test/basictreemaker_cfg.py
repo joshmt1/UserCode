@@ -55,7 +55,7 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                                                      "simpleSecondaryVertexBJetTags"), #for older samples
 #first the names of various collections
                                         pvTag = cms.InputTag(pvString),
-#                                        jetTag = cms.InputTag('cleanPatJetsAK5Calo'), #selectedPatJets
+#i am still having problems with JPT jets, so leave them out
                                         jetAlgorithms = cms.vstring( "cleanPatJetsAK5Calo","selectedPatJetsPF" ), #real collection names
                                         jetNames      = cms.vstring( "calo","PF" ), #for TTree use
                                         metAlgorithms = cms.vstring( "patMETsAK5Calo", "patMETsTC","patMETsPF"),

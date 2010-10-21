@@ -21,7 +21,7 @@ Flavor history stuff?
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.3 2010/10/14 19:23:09 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.4 2010/10/19 07:50:34 joshmt Exp $
 //
 //
 
@@ -187,6 +187,8 @@ private:
   std::map< std::string, std::vector<float> > muonTrackPhi;
   std::map< std::string, std::vector<bool> > muonPassID;
 
+  std::map< std::string, std::vector<float> > muonVtx_z;
+
   std::map< std::string, std::vector<float> > muonHcalVeto;
   std::map< std::string, std::vector<float> > muonEcalVeto;
 
@@ -198,6 +200,10 @@ private:
   std::map< std::string, std::vector<float> > eleTrackIso;
   std::map< std::string, std::vector<float> > eleEcalIso;
   std::map< std::string, std::vector<float> > eleHcalIso;
+
+  std::map< std::string, std::vector<float> > eledB;
+
+  std::map< std::string, std::vector<float> > eleVtx_z;
 
   std::map< std::string, std::vector<float> > eleIDLoose;
   std::map< std::string, std::vector<float> > eleIDRobustTight;
