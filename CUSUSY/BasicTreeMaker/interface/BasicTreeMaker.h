@@ -6,22 +6,10 @@
 
 //see cc file for more description
 
-/*
-to do list:
-
-more lepton info (rel iso, for example)
-
-JPT and PF jets
-PF MET
-
-Flavor history stuff?
-
-*/
-
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.4 2010/10/19 07:50:34 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.5 2010/10/21 19:14:10 joshmt Exp $
 //
 //
 
@@ -172,7 +160,6 @@ private:
   float bsz;
 
   std::map< std::string, std::vector<bool> > muonIsGlobalMuonPromptTight;
-  std::map< std::string, std::vector<bool> > muonIsAllGlobalMuons;
   //muon info for all *AllGlobalMuons*
   std::map< std::string, std::vector<float> > muonPt;
   std::map< std::string, std::vector<float> > muonEta;
@@ -219,7 +206,7 @@ string is the jetAlgorithmTag
   //tight jet info
   std::map< std::string,  std::vector<int> > tightJetIndex; //map from tight jet list to loose jet list
 
-  //loose jet info (no long appying any jet id here!)
+  //loose jet info (no longer appying any jet id here!)
   std::map< std::string,  std::vector<int> > looseJetIndex; //map from loose jet to very loose jet list
   std::map< std::string,  std::vector<float> > loosejetPt;
   std::map< std::string,  std::vector<float> > loosejetEt;

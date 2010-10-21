@@ -3,6 +3,12 @@
 // Package:    BasicTreeMaker
 // Class:      BasicTreeMaker
 // 
+/*
+known bugs to be fixed:
+nbSSVM -- maybe I should just remove it from the ntuple?
+MHT    -- maybe I should just remove it from the ntuple?
+*/
+
 /**\class BasicTreeMaker BasicTreeMaker.cc CUSUSY/BasicTreeMaker/src/BasicTreeMaker.cc
 
  Description: The usual code for making a very simple tree from PATtuples
@@ -15,7 +21,7 @@ using a class created with MakeClass.
 Developed and tested with CMSSW_3_6_2
 (Works fine in CMSSW_3_6_3 too)
 
-Have also used in in 384, running over data PATtuples
+Have also used in in 384, running over PATtuples
 
   Recipe is kept here:
 https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
@@ -23,7 +29,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.11 2010/10/19 07:50:34 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.12 2010/10/21 19:14:10 joshmt Exp $
 //
 //
 
@@ -445,13 +451,12 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
     
     if (debug)     std::cout<<"--mu id-- "<<muTag <<std::endl;
     
-    muonIsGlobalMuonPromptTight[muTag].push_back(imuon->muonID("GlobalMuonPromptTight"));
-    muonIsAllGlobalMuons[muTag].push_back(imuon->muonID("AllGlobalMuons"));
-    
     //all hell breaks loose if we don't require the muons to be global...
     //i'm sure this could be fixed but i don't care
     if ( !imuon->muonID("AllGlobalMuons") ) continue;
 
+    muonIsGlobalMuonPromptTight[muTag].push_back(imuon->muonID("GlobalMuonPromptTight"));
+    
     //record pT and eta of all that pass 
     muonPt[muTag].push_back( imuon->pt() );
     muonEta[muTag].push_back( imuon->eta());
@@ -492,6 +497,10 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
     bool passMuon = muonId_(*imuon,iEvent); //this includes isolation cut (and other things)
     muonPassID[muTag].push_back(passMuon);
 
+    //store vtx z
+    //std::cout<<"[mu vtx z] = "<<imuon->vertex().z()<<std::endl;
+    muonVtx_z[muTag].push_back(  imuon->vertex().z());
+
     if ( pv_z.size()>0 &&  (fabs( imuon->vertex().z() - pv_z.at(0)) >= 1)) passMuon=false; //new cut from Don
     if (!passMuon) continue;
 
@@ -521,6 +530,11 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
     eleEcalIso[eTag].push_back( ielectron->dr03EcalRecHitSumEt() );
     eleHcalIso[eTag].push_back( ielectron->dr03HcalTowerSumEt() );
     //std::cout<<"--elec 4--"<<std::endl;
+
+    eledB[eTag].push_back( ielectron->dB());
+
+    eleVtx_z[eTag].push_back( ielectron->vertex().z() );
+
     bool passid = electronId_(*ielectron); //iso and d0
     elePassID[eTag].push_back(passid);
     if ( passid && ielectron->electronID( "eidLoose" )>0 //iso cut is in here
@@ -890,7 +904,7 @@ BasicTreeMaker::resetTreeVariables() {
 
   for (unsigned int il=0; il<eleAlgorithmNames_.size(); il++) {
     muonIsGlobalMuonPromptTight[muonAlgorithmNames_[il]].clear();
-    muonIsAllGlobalMuons[muonAlgorithmNames_[il]].clear();
+    //    muonIsAllGlobalMuons[muonAlgorithmNames_[il]].clear();
     nMuons[muonAlgorithmNames_[il]]=0;
     muonPt[muonAlgorithmNames_[il]].clear();
     muonEta[muonAlgorithmNames_[il]].clear();
@@ -910,12 +924,18 @@ BasicTreeMaker::resetTreeVariables() {
     muonEcalVeto[muonAlgorithmNames_[il]].clear();
     muonHcalVeto[muonAlgorithmNames_[il]].clear();
 
+    muonVtx_z[muonAlgorithmNames_[il]].clear();
+
     nElectrons[eleAlgorithmNames_[il]]=0;
     eleEt[eleAlgorithmNames_[il]].clear();
     eleEta[eleAlgorithmNames_[il]].clear();
     eleTrackIso[eleAlgorithmNames_[il]].clear();
     eleEcalIso[eleAlgorithmNames_[il]].clear();
     eleHcalIso[eleAlgorithmNames_[il]].clear();
+
+    eledB[eleAlgorithmNames_[il]].clear();
+
+    eleVtx_z[eleAlgorithmNames_[il]].clear();
 
     eleIDLoose[eleAlgorithmNames_[il]].clear();
     eleIDRobustTight[eleAlgorithmNames_[il]].clear();
@@ -1186,7 +1206,7 @@ BasicTreeMaker::beginJob()
     }
 
     tree_->Branch( (string("muonIsGlobalMuonPromptTight")+tail).c_str(),&muonIsGlobalMuonPromptTight[muonAlgorithmNames_[il]]);
-    tree_->Branch( (string("muonIsAllGlobalMuons")+tail).c_str(),&muonIsAllGlobalMuons[muonAlgorithmNames_[il]]);
+    //    tree_->Branch( (string("muonIsAllGlobalMuons")+tail).c_str(),&muonIsAllGlobalMuons[muonAlgorithmNames_[il]]);
 
     tree_->Branch( (string("muonPt")+tail).c_str(),&muonPt[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonEta")+tail).c_str(),&muonEta[muonAlgorithmNames_[il]]);
@@ -1201,6 +1221,8 @@ BasicTreeMaker::beginJob()
     tree_->Branch( (string("muonTrackPhi")+tail).c_str(),&muonTrackPhi[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonPassID")+tail).c_str(),&muonPassID[muonAlgorithmNames_[il]]);
 
+    tree_->Branch( (string("muonVtx_z")+tail).c_str(),&muonVtx_z[muonAlgorithmNames_[il]]);
+
     tree_->Branch( (string("muonEcalVeto")+tail).c_str(),&muonEcalVeto[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonHcalVeto")+tail).c_str(),&muonHcalVeto[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("nMuons")+tail).c_str(),&nMuons[muonAlgorithmNames_[il]],(string("nMuons")+itail).c_str());
@@ -1210,6 +1232,10 @@ BasicTreeMaker::beginJob()
     tree_->Branch((string("eleTrackIso")+tail).c_str(),&eleTrackIso[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleEcalIso")+tail).c_str(),&eleEcalIso[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleHcalIso")+tail).c_str(),&eleHcalIso[eleAlgorithmNames_[il]]);
+
+    tree_->Branch((string("eledB")+tail).c_str(),&eledB[eleAlgorithmNames_[il]]);
+
+    tree_->Branch((string("eleVtx_z")+tail).c_str(),&eleVtx_z[eleAlgorithmNames_[il]]);
 
     tree_->Branch((string("eleIDLoose")+tail).c_str(),&eleIDLoose[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleIDRobustTight")+tail).c_str(),&eleIDRobustTight[eleAlgorithmNames_[il]]);

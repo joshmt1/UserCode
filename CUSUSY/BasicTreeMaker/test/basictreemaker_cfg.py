@@ -7,15 +7,15 @@ process = cms.Process("BasicTreeMaker")
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
 
 process.source = cms.Source("PoolSource",
     # replace 'myfile.root' with the source file you want to use
     fileNames = cms.untracked.vstring(
-    'INPUT'
+#    'INPUT'
 #    'file:/cu1/joshmt/DonPAT/data/PAT_38X_jetmettau_sep17rereco_sep11_9_1_wJJ.root'
 #    'file:/cu1/joshmt/DonPAT/MoreMSSM_PAT_10_1_osg.root'
-#    'file:/cu1/joshmt/DonPAT/WJets-SUSYPAT-FEEFD640-9277-DF11-948C-001731EB1E20.root'
+    'file:/cu1/joshmt/DonPAT/WJets-SUSYPAT-FEEFD640-9277-DF11-948C-001731EB1E20.root'
 #    'file:/cu1/joshmt/DonPAT/TTbarJets_SPRING10_PAT_99_7.root'
 #    '/store/user/wteo/MinimumBias/commissioning_jetmettau_jun14thskim/c4203bae27064fcbcff856a81ef504ae/PAT_362_commissioningJune14th_jetmettau_49_3_MI6.root'
 #    'file:/cu1/joshmt/data/Run2010B/9E73F38F-ECC9-DF11-8BFD-00304879FC6C.root'
