@@ -17,6 +17,8 @@ TCanvas * Cabcd;
 TCanvas * Cfit;
 
 /*
+Prepare QCD sample by doing hadd to combine the different QCD samples.
+
 usage:
 
 .L doABCD.C++
@@ -29,7 +31,11 @@ const TString cutDescription_ = "RA2METminDP_NoMET_NoDeltaPhi.ge0b";
 //const TString cutDescription_ = "RA2METminDP_NoMET.ge0b";
 
 const bool isData=true;
-//dottbar and dosignal are buried lower in the code
+const TString dir="/cu1/joshmt/ABCDtrees/"; //must include trailing /
+
+const  bool dottbar=false;
+const  bool dosignal=false;
+//-----------------------------------------
 
 class ABCD {
 public :
@@ -239,12 +245,6 @@ void ABCD::doABCD() {
 
   //option to handle QCD tree plus 'background' trees
   //this option seems to work for the simple ABCD. Not tested for extended method (probably works?)
-
-  const TString dir="/cu1/joshmt/ABCDtrees/"; //must include trailing /
-
-  //-----------------------------------------
-  const  bool dottbar=false;
-  const  bool dosignal=false;
 
   TString myname=dir+"ABCDtree.";
   myname += cutDescription_;
