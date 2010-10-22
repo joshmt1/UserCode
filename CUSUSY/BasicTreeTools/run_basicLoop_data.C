@@ -8,7 +8,7 @@
 Usage:
 root -b -l -q run_basicLoop_data.C++
 */
-const TString version = "V00-00-05/DATA/38X";
+const TString version = "V00-01-01/DATA/38X";
 
 void run_basicLoop_data()
 {
@@ -43,14 +43,12 @@ void run_basicLoop_data()
     ch.Add(samplefiles);
     basicLoop looper(&ch);
     //important! this is where cuts are defined
-    looper.setCutScheme(basicLoop::kRA2METminDP);
-    //    looper.setCutScheme(basicLoop::kRA2minDP);
-    //no b tagging cut so that plots can apply it selectively
-    //careful what is set here!
-    //looper.setIgnoredCut(basicLoop::cutTrigger);
-    //    looper.setIgnoredCut(basicLoop::cutHT);
-    //looper.setIgnoredCut(basicLoop::cutMET); //MET
-    //    looper.setIgnoredCut(basicLoop::cutDeltaPhi); //DeltaPhi
+    looper.setCutScheme(basicLoop::kRA2); //this is now the only scheme!
+    looper.setMETType(basicLoop::kMET);
+    looper.setMETRange(basicLoop::kWide);
+    looper.setDPType(basicLoop::kminDP);
+
+    looper.setIgnoredCut("cutTrigger");
     
     looper.Loop(currentfileindex);  //go!
     currentfileindex++;
