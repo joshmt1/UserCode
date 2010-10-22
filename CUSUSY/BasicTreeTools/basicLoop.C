@@ -85,7 +85,7 @@ void basicLoop::cutflow()
       double weighted_error = error*weight;
       
       char ccc[150];
-      sprintf(ccc,"%20s %15d | %.2f | Weighted = %f +/- %f",cutNames_.at(i).Data(),npass.at(i),100*double(npass.at(i))/double(npass.at(0)),weighted,weighted_error);
+      sprintf(ccc,"%20s %15d | %.2f | Weighted = %f +/- %f",cutNames_[cutTags_[i]].Data(),npass.at(i),100*double(npass.at(i))/double(npass.at(0)),weighted,weighted_error);
       cout<<ccc<<endl;
 
       file <<  weighted<<"\t" << weighted_error<<endl;

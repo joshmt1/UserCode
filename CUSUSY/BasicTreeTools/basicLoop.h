@@ -49,11 +49,10 @@ public :
   unsigned int nBcut_;
 
   std::vector<TString> cutTags_;
-  std::vector<TString> cutNames_;
-  std::map<TString, int> cutMap_;
+  std::map<TString, TString> cutNames_; //key is a cutTag
+  std::map<TString, int> cutMap_; //key is a cutTag, value is the position in the ntuple CutResults
   std::vector<TString> ignoredCut_; //allow more than 1 ignored cut!
   //if theCutFlow changes, be sure to change cutnames_ as well
-  //  std::vector<TString> cutnames_;
 
   enum TopDecayCategory {kTTbarUnknown=0,kAllLeptons=1,kAllHadronic=2,kOneElectron=3,kOneMuon=4,kOneTauE=5,kOneTauMu=6,kOneTauHadronic=7,kAllTau=8,kTauPlusLepton=9, nTopCategories=10};
 
@@ -410,6 +409,7 @@ public :
    float jetPtOfN(unsigned int n);
    int countBJets_Sync1();
    bool passDeltaPhi_Sync1() ;
+   float getHT_Sync1();
 
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
@@ -785,40 +785,24 @@ bool basicLoop::setCutScheme(CutScheme cutscheme) {
   //we want to run this no matter what in order to fill the cutMap correctly
   //the cutMap is invariant because the ntuple is always filled the same way
 
-  cutNames_.push_back("Inclusive");
-  cutNames_.push_back("Trigger");
-  cutNames_.push_back("PV");
-  cutNames_.push_back(">=3Jets");
-  cutNames_.push_back("JetPt1");
-  cutNames_.push_back("JetPt2");
-  cutNames_.push_back("JetPt3");
-  cutNames_.push_back("HT");
-  cutNames_.push_back("MET");
-  cutNames_.push_back("MHT");
-  cutNames_.push_back("MuVeto");
-  cutNames_.push_back("EleVeto");
-  cutNames_.push_back("DeltaPhi");
-  cutNames_.push_back(">=1b");
-  cutNames_.push_back(">=2b");
-  cutNames_.push_back(">=3b");
-  
-  cutTags_.push_back("cutInclusive");
-  cutTags_.push_back("cutTrigger");
-  cutTags_.push_back("cutPV");
-  cutTags_.push_back("cut3Jets");
-  cutTags_.push_back("cutJetPt1");
-  cutTags_.push_back("cutJetPt2");
-  cutTags_.push_back("cutJetPt3");
-  cutTags_.push_back("cutHT");
-  cutTags_.push_back("cutMET");
-  cutTags_.push_back("cutMHT");
-  cutTags_.push_back("cutMuVeto");
-  cutTags_.push_back("cutEleVeto");
-  cutTags_.push_back("cutDeltaPhi");
-  cutTags_.push_back("cut1b");
-  cutTags_.push_back("cut2b");
-  cutTags_.push_back("cut3b");
-  
+  cutTags_.push_back("cutInclusive"); cutNames_[ cutTags_.back()] = "Inclusive";
+  cutTags_.push_back("cutTrigger");  cutNames_[cutTags_.back()]="Trigger";
+  cutTags_.push_back("cutPV");  cutNames_[cutTags_.back()]="PV";
+  cutTags_.push_back("cut3Jets");  cutNames_[cutTags_.back()]=">=3Jets";
+  cutTags_.push_back("cutJetPt1");  cutNames_[cutTags_.back()]="JetPt1";
+  cutTags_.push_back("cutJetPt2");  cutNames_[cutTags_.back()]="JetPt2";
+  cutTags_.push_back("cutJetPt3");  cutNames_[cutTags_.back()]="JetPt3";
+  cutTags_.push_back("cutHT");  cutNames_[cutTags_.back()]="HT";
+  cutTags_.push_back("cutMET");  cutNames_[cutTags_.back()]="MET";
+  cutTags_.push_back("cutMHT");  cutNames_[cutTags_.back()]="MHT";
+  cutTags_.push_back("cutMuVeto");  cutNames_[cutTags_.back()]="MuVeto";
+  cutTags_.push_back("cutEleVeto");  cutNames_[cutTags_.back()]="EleVeto";
+  cutTags_.push_back("cutDeltaPhi");  cutNames_[cutTags_.back()]="DeltaPhi";
+  cutTags_.push_back("cut1b");  cutNames_[cutTags_.back()]=">=1b";
+  cutTags_.push_back("cut2b");  cutNames_[cutTags_.back()]=">=2b";
+  cutTags_.push_back("cut3b");  cutNames_[cutTags_.back()]=">=3b";
+
+  //read the above comment...this must be here (not lower)
   for (unsigned int i=0;i<cutTags_.size(); i++) {
     cutMap_[cutTags_[i]] = i;
   }
@@ -826,52 +810,37 @@ bool basicLoop::setCutScheme(CutScheme cutscheme) {
   if (theCutScheme_==kSync1) {
     cutNames_.clear();
     cutTags_.clear();
-
-    cutNames_.push_back("Inclusive");
-    cutNames_.push_back("Trigger");
-    cutNames_.push_back("PV");
-    cutNames_.push_back(">=3Jets");
-    cutNames_.push_back("JetPt1");
-    cutNames_.push_back("JetPt2");
-    cutNames_.push_back("JetPt3");
-    cutNames_.push_back("HT");
-
-    cutNames_.push_back("MuVeto");
-    cutNames_.push_back("EleVeto");
-
-    cutNames_.push_back("MET");
-    cutNames_.push_back("MHT");
-
-    cutNames_.push_back("DeltaPhi");
-    cutNames_.push_back(">=1b");
-    cutNames_.push_back(">=2b");
-    cutNames_.push_back(">=3b");
     //now the tags
-    cutTags_.push_back("cutInclusive");
-    cutTags_.push_back("cutTrigger");
-    cutTags_.push_back("cutPV");
-    cutTags_.push_back("cut3Jets");
-    cutTags_.push_back("cutJetPt1");
-    cutTags_.push_back("cutJetPt2");
-    cutTags_.push_back("cutJetPt3");
-    cutTags_.push_back("cutHT");
+    cutTags_.push_back("cutInclusive");cutNames_[ cutTags_.back()] = "Inclusive";
+    cutTags_.push_back("cutTrigger"); cutNames_[cutTags_.back()]="Trigger";
+    cutTags_.push_back("cutPV"); cutNames_[cutTags_.back()]="PV";
+    cutTags_.push_back("cut3Jets"); cutNames_[cutTags_.back()]=">=3Jets";
+    cutTags_.push_back("cutJetPt1"); cutNames_[cutTags_.back()]="JetPt1";
+    cutTags_.push_back("cutJetPt2"); cutNames_[cutTags_.back()]="JetPt2";
+    cutTags_.push_back("cutJetPt3");cutNames_[cutTags_.back()]="JetPt3";
 
-    cutTags_.push_back("cutMuVeto");
-    cutTags_.push_back("cutEleVeto");
+    cutTags_.push_back("cutMuVeto"); cutNames_[cutTags_.back()]="MuVeto";
+    cutTags_.push_back("cutEleVeto"); cutNames_[cutTags_.back()]="EleVeto";
 
-    cutTags_.push_back("cutMET");
-    cutTags_.push_back("cutMHT");
+    cutTags_.push_back("cutHT"); cutNames_[cutTags_.back()]="HT";
 
-    cutTags_.push_back("cutDeltaPhi");
-    cutTags_.push_back("cut1b");
-    cutTags_.push_back("cut2b");
-    cutTags_.push_back("cut3b");
+    cutTags_.push_back("cutMET"); cutNames_[cutTags_.back()]="MET";
+    cutTags_.push_back("cutMHT"); cutNames_[cutTags_.back()]="MHT";
+
+    cutTags_.push_back("cutDeltaPhi"); cutNames_[cutTags_.back()]="DeltaPhi";
+    cutTags_.push_back("cut1b"); cutNames_[cutTags_.back()]=">=1b";
+    cutTags_.push_back("cut2b"); cutNames_[cutTags_.back()]=">=2b";
+    cutTags_.push_back("cut3b"); cutNames_[cutTags_.back()]=">=3b";
+
+  }
+
+  for (unsigned int i=0;i<cutTags_.size(); i++) {
+    cout<<cutTags_[i]<<"\t"<<cutNames_[ cutTags_[i]]<<endl;
   }
 
   return true;
 }
 
-//bool basicLoop::cutRequired(const unsigned int cutIndex) {
 bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to improve performance
 
 
@@ -912,7 +881,7 @@ bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to
     else if (cutTag == "cutJetPt1")  cutIsRequired =  true;
     else if (cutTag == "cutJetPt2")  cutIsRequired =  true;
     else if (cutTag == "cutJetPt3")  cutIsRequired =  true;
-    else if (cutTag == "cutHT")  cutIsRequired =  false;
+    else if (cutTag == "cutHT")  cutIsRequired =  true;
     //MET
     else if (cutTag == "cutMET")  cutIsRequired =  (theMETType_== kMET || theMETType_==ktcMET ||theMETType_==kpfMET);
     //MHT
@@ -1102,6 +1071,18 @@ bool basicLoop::passCut(const TString cutTag) {
     if (cutTag=="cutJetPt2") return jetPtOfN(2)>50;
     if (cutTag=="cutJetPt3") return jetPtOfN(3)>50;;
   }
+
+  if (cutTag=="cut3Jets" && theJetType_==kPF && theCutScheme_==kRA2) return (tightJetIndex->size() >= 3);
+
+  if (cutTag=="cutHT" && theJetType_==kPF && theCutScheme_==kRA2) {
+    //calculate HT
+    double pfHT = 0;
+    for (unsigned int i=0; i<tightJetIndex->size(); i++){
+      pfHT+=jetPt.at(i);
+    }
+    return (pfHT>300.);
+  }
+  else if (cutTag=="cutHT" && theCutScheme_==kSync1) return getHT_Sync1() >300;
 
   //MET
   //it is now an anachronism that we treat MET and MHT as different cut flow steps
@@ -1426,6 +1407,24 @@ double basicLoop::getMinDeltaR_bj(unsigned int bindex) {
   return minDeltaR;
 }
 
+float basicLoop::getHT_Sync1() {
+  //it is unclear to me if people want to do this with my proposal
+  //(identical to the tight jets in the ntuple)
+  //or using the good jet def'n as given by isGoodJet_Sync1()
+
+  //can run it both ways (for LM0) and compare!
+  float ht=0;
+
+  //easy def'n using the ntuple cuts
+  //  for (unsigned int i=0; i<jetPt.size() ; i++) ht += jetPt.at(i);
+
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+    if (isGoodJet_Sync1( i ) ) ht+= loosejetPt->at(i);
+  }
+
+  return ht;
+}
+
 bool basicLoop::isGoodJet_Sync1(unsigned int ijet) {
 
   if ( loosejetPt->at(ijet) <50) return false;
@@ -1602,8 +1601,9 @@ double basicLoop::getCrossSection(const TString inname) {
 
   //  https://twiki.cern.ch/twiki/bin/view/CMS/ProductionReProcessingSpring10
   //  if (inname.Contains("/TTbarJets/") )                     return 165;
-  if (inname.Contains("/TTbarJets/") )                     return 157.5;
-  /*
+  //  if (inname.Contains("/TTbarJets/") )                     return 157.5;
+  if (inname.Contains("/TTbarJets/") )                     return 95; //LO only
+  
   else if (inname.Contains("/LM0/"))                       return 38.93;
   else if (inname.Contains("/LM1/"))                       return 4.888;
   else if (inname.Contains("/LM2/"))                       return 0.6027;
@@ -1620,13 +1620,14 @@ double basicLoop::getCrossSection(const TString inname) {
   else if (inname.Contains("/LM11/"))                      return 0.8236;
   else if (inname.Contains("/LM12/"))                      return 4.414;
   else if (inname.Contains("/LM13/"))                      return 6.899;
-  */
+  
 
   //not updated from tom
   else if (inname.Contains("/LM9t175/"))                   return 4.241;
   else if (inname.Contains("/LM9p/"))                      return 1.653;
 
   ///these are from Tom
+  /*
   else if (inname.Contains("/LM0/"))                       return 54.89;
   else if (inname.Contains("/LM1/"))                       return 6.550;
   else if (inname.Contains("/LM2/"))                       return 0.8015;
@@ -1641,6 +1642,7 @@ double basicLoop::getCrossSection(const TString inname) {
   else if (inname.Contains("/LM11/"))                      return 1.1119;
   else if (inname.Contains("/LM12/"))                      return 5.915;
   else if (inname.Contains("/LM13/"))                      return 9.797;
+  */
 
   //this block is not updated from tom (so maybe wrong)
   else if (inname.Contains("/MoreMSSM/"))                  return 1.73;
@@ -1784,7 +1786,8 @@ TString basicLoop::getCutDescriptionString() {
   cuts+= dpTypeNames_[theDPType_];
   for (unsigned int icut=0; icut<ignoredCut_.size() ; icut++) {
     cuts+="_No";
-    cuts += jmt::fortranize(cutNames_.at(icut));
+    //it would be more robust to use .find() instead of []
+    cuts += jmt::fortranize( cutNames_[ignoredCut_.at(icut)]);
   }
   return cuts; 
 }
@@ -1807,7 +1810,7 @@ void basicLoop::printState() {
   cout<<"DeltaPhi type set to: "<<dpTypeNames_[theDPType_]<<endl;
   cout<<"Requiring at least    "<<nBcut_<<" b tags"<<endl;
   for (unsigned int i = 0; i< ignoredCut_.size() ; i++) {
-    cout<<"Will ignore cut:    "<<cutNames_.at(i)<<endl;
+    cout<<"Will ignore cut:    "<<cutNames_[ignoredCut_.at(i)]<<endl;
   }
   
 }
