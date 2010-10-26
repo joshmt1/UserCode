@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-isMC = True
+isMC = False
 
 process = cms.Process("BasicTreeMaker")
 
@@ -65,7 +65,8 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                         muonAlgorithms = cms.vstring("cleanPatMuons","selectedPatMuonsPF"),
 
 #the 'SUSY trigger' used in the cut flow is the first (valid) one listed here
-                                        triggersOfInterest = cms.vstring("HLT_HT100U","HLT_HT120U","HLT_HT140U","HLT_HT150U","HLT_HT200",
+                                        triggersOfInterest = cms.vstring("HLT_HT100U","HLT_HT120U","HLT_HT140U","HLT_HT150U","HLT_HT150U_v3",
+                                                                         "HLT_HT200",
                                                                          "HLT_MET45","HLT_MET60","HLT_MET65","HLT_MET100",
                                                                          "HLT_Jet15U","HLT_Jet30U","HLT_Jet50U","HLT_Jet70U","HLT_Jet100U",
                                                                          "HLT_DiJetAve15U","HLT_DiJetAve30U","HLT_DiJetAve50U","HLT_DiJetAve70U",
@@ -82,9 +83,17 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                             version = cms.string('PURE09'), #these are the 384 defaults
                                             quality = cms.string('LOOSE')
                                         ),
+                                        jetIdTight = cms.PSet( #for calo and jpt
+                                            version = cms.string('PURE09'), #these are the 384 defaults
+                                            quality = cms.string('TIGHT')
+                                        ),
                                         pfjetIdLoose = cms.PSet( #for pf jets
                                             version = cms.string('FIRSTDATA'), #these are the 384 defaults
                                             quality = cms.string('LOOSE')
+                                        ),
+                                        pfjetIdTight = cms.PSet( #for pf jets
+                                            version = cms.string('FIRSTDATA'), #these are the 384 defaults
+                                            quality = cms.string('TIGHT')
                                         ),
                                         
                                         ## muons
@@ -99,9 +108,17 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                             ECalVeto = cms.double(4.0),
                                             HCalVeto = cms.double(6.0),
                                             RelIso = cms.double(0.1), #uses R=0.3 (at least in 384)
-                                            cutsToIgnore = cms.vstring('ED0', 'SD0', 'ECalVeto', 'HCalVeto'),
+
+                                            #requires PhysicsTools/SelectorUtils V00-02-24
+                                            LepZ = cms.double(1),
+                                            nPixelHits = cms.int32(1),
+                                            nMatchedStations = cms.int32(1),
+                                            
+                                            cutsToIgnore = cms.vstring('ED0', 'SD0', 'ECalVeto', 'HCalVeto','LepZ','nPixelHits','minNMatches'),
                                             RecalcFromBeamSpot = cms.bool(True),
-                                            beamLineSrc = cms.InputTag("offlineBeamSpot")
+                                            beamLineSrc = cms.InputTag("offlineBeamSpot"),
+                                            pvSrc = cms.InputTag(pvString)
+
                                             ),
  
                                         ## electrons
@@ -129,7 +146,6 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                         metMin = cms.double( 150.0 )
 )
 
-#remove the path when not in testing mode
 process.TFileService = cms.Service("TFileService", fileName = cms.string('BasicNtuple.root') )
 
 if isMC:
