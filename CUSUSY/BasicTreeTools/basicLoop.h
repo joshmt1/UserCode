@@ -19,6 +19,7 @@
 // ---- ::Loop() and ::ABCDtree() are now compatible with data
 #include <iostream>
 #include <vector>
+#include <set>
 
 //avoid spaces and funny characters!
 const char *CutSchemeNames_[]={"RA2", "Sync1"};
@@ -47,6 +48,13 @@ public :
   enum dpType {kDeltaPhi=0, kminDP, kMPT, kDPSync1};
   dpType theDPType_;
   unsigned int nBcut_;
+
+  bool isData_; //set in ctor
+
+  //any trigger on this list will be considered OK for passing the trigger cut
+  //key is the trigger name ; value is the position in the passTrigger variable in the ntuple
+  std::map<TString, int>  triggerList_;
+  //can use hltPrescale to figure out if the trigger exists in a given event/sample
 
   std::vector<TString> cutTags_;
   std::map<TString, TString> cutNames_; //key is a cutTag
@@ -356,7 +364,7 @@ public :
    TBranch        *b_topDecayCode;   //!
    TBranch        *b_flavorHistory;   //!
 
-   basicLoop(TTree *tree=0);
+   basicLoop(TTree *tree=0, TTree *infotree=0);    // ========================================== begin, end
    virtual ~basicLoop();
    virtual Int_t    Cut(Long64_t entry);
    virtual Int_t    GetEntry(Long64_t entry);
@@ -411,6 +419,8 @@ public :
    bool passDeltaPhi_Sync1() ;
    float getHT_Sync1();
 
+   bool passHLT(); bool printedHLT_;
+
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
    double getMinDeltaPhiMET(unsigned int maxjets) ;
@@ -430,14 +440,16 @@ public :
 #endif
 
 #ifdef basicLoop_cxx
-basicLoop::basicLoop(TTree *tree)
+basicLoop::basicLoop(TTree *tree, TTree *infotree)
 //====================== begin
   :  theCutScheme_(kRA2),
      theMETType_(kMET),
      theMETRange_(kHigh),
      theJetType_(kCalo),
      theDPType_(kminDP),
-     nBcut_(0) 
+     nBcut_(0),
+     isData_(false),
+     printedHLT_(false)
 //====================== end
 {
 // if parameter tree is not specified (or zero), connect the file
@@ -454,9 +466,36 @@ basicLoop::basicLoop(TTree *tree)
    Init(tree);
 
    // ========================================== begin
+   triggerList_.clear();
+   if (infotree!=0) {
+     std::set<TString> triggersForCut;
+     triggersForCut.insert("HLT_HT100U");
+     triggersForCut.insert("HLT_HT120U");
+     triggersForCut.insert("HLT_HT140U");
+     triggersForCut.insert("HLT_HT150U");
+     triggersForCut.insert("HLT_HT150U_v3");
+     triggersForCut.insert("HLT_HT200");
+
+     Long64_t ninfo = infotree->GetEntries();
+     if (ninfo != 1) std::cout<<"Strange! the infotree has "<<ninfo<<" entries!"<<std::endl;
+     if (ninfo > 0) {
+       std::vector<std::string> * triggerList=0;
+       infotree->SetBranchAddress("triggerList", &triggerList);
+       infotree->GetEntry(0);
+       for (unsigned int itrig=0; itrig<triggerList->size(); itrig++) {
+	 //	 std::cout<<"in infotree, found trigger: "<<triggerList->at(itrig)<<std::endl;
+	 if ( triggersForCut.find( TString(triggerList->at(itrig))) != triggersForCut.end()) {
+	   std::cout<<"Will accept events with trigger: "<<triggerList->at(itrig)<<std::endl;
+	   triggerList_[  TString(triggerList->at(itrig))] = itrig;
+	 }
+       }
+     }
+   }
    //this routine initializes the various cutNames_ etc vectors
    setCutScheme(kRA2);   
    setJetType(kCalo);
+   //set isData_
+   if (  getSampleName(findInputName()) == "data") {cout<<"Sample is real data!"<<endl; isData_=true;}
    // ========================================== end
 
 }
@@ -834,9 +873,10 @@ bool basicLoop::setCutScheme(CutScheme cutscheme) {
 
   }
 
-  for (unsigned int i=0;i<cutTags_.size(); i++) {
-    cout<<cutTags_[i]<<"\t"<<cutNames_[ cutTags_[i]]<<endl;
-  }
+  //debug
+  //  for (unsigned int i=0;i<cutTags_.size(); i++) {
+  //    cout<<cutTags_[i]<<"\t"<<cutNames_[ cutTags_[i]]<<endl;
+  //  }
 
   return true;
 }
@@ -1051,11 +1091,29 @@ bool basicLoop::passDeltaPhi_Sync1() {
   return pass;
 }
 
-//bool basicLoop::passCut(const unsigned int cutIndex) {
+bool basicLoop::passHLT() {
+
+  //we make an OR of what is in triggerList_
+  for (std::map<TString, int>::const_iterator itrig=triggerList_.begin(); 
+       itrig!=triggerList_.end(); ++itrig) {
+
+    if ( passTrigger->at( itrig->second) ) {
+      if (!printedHLT_) {
+	cout<<"Pass: "<<itrig->first<<" "<<hltPrescale->at(itrig->second)<<endl;
+	printedHLT_=true;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 bool basicLoop::passCut(const TString cutTag) {
   //implement special exceptions here
 
   const bool debug=false;  if (debug) cout<<cutTag<<endl;
+
+  if (cutTag=="cutTrigger" ) return passHLT();
 
   //lepton vetoes
   if (cutTag=="cutMuVeto" && theCutScheme_==kRA2) return passMuVetoRA2();
@@ -1588,7 +1646,7 @@ TString basicLoop::getSampleName(const TString inname) {
   else if (inname.Contains("/ZJets/"))                     return "ZJets";
   else if (inname.Contains("/Zinvisible/"))                return "Zinvisible";
 
-  else if (inname.Contains("/DATA/"))                return "data"; //need to decide if this works
+  else if (inname.Contains("/DATA/"))                      return "data";
   
   std::cout<<"Cannot find sample name for this sample!"<<std::endl;
   
