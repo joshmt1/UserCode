@@ -1,6 +1,10 @@
 Release notes
 --
 
+V00-01-02 - Fix isGlobalMuonPromptTight and add electron info. Update to using SelectorUtils V00-02-24
+
+V00-01-01 - no substantive changes
+
 V00-01-00 - version used for first iteration of UCSB/UCR/CU sync exercise.
 Known problems  -- isGlobalMuonPromptTight is useless
 		-- should store more info on electrons in order to redo all ID cuts
