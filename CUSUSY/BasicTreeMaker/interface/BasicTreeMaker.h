@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.5 2010/10/21 19:14:10 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.6 2010/10/21 22:13:36 joshmt Exp $
 //
 //
 
@@ -107,7 +107,9 @@ private:
   std::vector<std::string> muonAlgorithmNames_; //the real collection names
 
   JetIDSelectionFunctor                jetIdLoose_;
+  JetIDSelectionFunctor                jetIdTight_;
   PFJetIDSelectionFunctor              PFjetIdLoose_;
+  PFJetIDSelectionFunctor              PFjetIdTight_;
   MuonVPlusJetsIDSelectionFunctor      muonId_;
   ElectronVPlusJetsIDSelectionFunctor  electronId_;
 
@@ -213,6 +215,7 @@ string is the jetAlgorithmTag
   std::map< std::string,  std::vector<float> > loosejetEta;
   std::map< std::string,  std::vector<float> > loosejetPhi;
   std::map< std::string,  std::vector<bool> > loosejetPassLooseID;
+  std::map< std::string,  std::vector<bool> > loosejetPassTightID;
   std::map< std::string,  std::vector<float> > loosejetEnergyFracHadronic;
 
   std::map< std::string,  std::vector<int> > loosejetFlavor;

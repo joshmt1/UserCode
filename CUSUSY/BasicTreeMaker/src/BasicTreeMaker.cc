@@ -29,7 +29,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.12 2010/10/21 19:14:10 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.13 2010/10/21 22:13:36 joshmt Exp $
 //
 //
 
@@ -115,7 +115,9 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   muonAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("muonAlgorithms")),
 
   jetIdLoose_      (iConfig.getParameter<edm::ParameterSet>("jetIdLoose") ),
+  jetIdTight_      (iConfig.getParameter<edm::ParameterSet>("jetIdTight") ),
   PFjetIdLoose_    (iConfig.getParameter<edm::ParameterSet>("pfjetIdLoose") ),
+  PFjetIdTight_    (iConfig.getParameter<edm::ParameterSet>("pfjetIdTight") ),
   muonId_          (iConfig.getParameter<edm::ParameterSet>("muonId") ),
   electronId_      (iConfig.getParameter<edm::ParameterSet>("electronId") ),
 
@@ -460,6 +462,13 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
     //record pT and eta of all that pass 
     muonPt[muTag].push_back( imuon->pt() );
     muonEta[muTag].push_back( imuon->eta());
+    if (debug) {
+      std::cout<<"muon pT: "<<imuon->pt()<<" "<<imuon->innerTrack()->pt()<<std::endl;
+      std::cout<<"muon isolation pairs: "<< //these are confirmed match in 384 running over a data PATtuple
+	imuon->ecalIso()<<" "<<imuon->isolationR03().emEt<<"\t"<<
+	imuon->hcalIso()<<" "<<imuon->isolationR03().hadEt<<"\t"<<
+	imuon->trackIso()<<" "<<imuon->isolationR03().sumPt<<std::endl;
+    }
     muonTrackIso[muTag].push_back( imuon->trackIso() );
     muonEcalIso[muTag].push_back( imuon->ecalIso() );
     muonHcalIso[muTag].push_back( imuon->hcalIso() );
@@ -610,6 +619,8 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
   //variables for use in the jet loop
   pat::strbitset ret1 = jetIdLoose_.getBitTemplate();
   pat::strbitset retpf = PFjetIdLoose_.getBitTemplate();
+  pat::strbitset ret1t = jetIdTight_.getBitTemplate();
+  pat::strbitset retpft = PFjetIdTight_.getBitTemplate();
   double MHTx = 0, MHTy = 0;
   //now loop over sorted jets
   for (size_t ii = 0 ; ii< sortedJetIndices.size(); ++ii) {
@@ -630,12 +641,16 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     
     //MHT is calculated using loose jet cuts
     //HT is calculated using regular jet cuts
-    bool passJetID = false;
+    bool passJetID = false, passTightJetID=false;
     if ( jet.isPFJet() ) {
       passJetID = PFjetIdLoose_(jet,retpf);
+      //      try { 
+      passTightJetID = PFjetIdTight_(jet,retpft); //} catch (...) {std::cout<<"Problem in PFjetIdTight!"<<std::endl;}
     }
     else if (jet.isJPTJet() || jet.isCaloJet() ) {
       passJetID = jetIdLoose_(jet, ret1);
+      //      try { 
+      passTightJetID = jetIdTight_(jet, ret1t); //} catch (...) {std::cout<<"Problem in jetIdTight!"<<std::endl;}
     }
     else {std::cout<<"Unknown jet type!"<<std::endl;}
 
@@ -667,6 +682,7 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       loosejetFlavor[jetAlgorithmTags_[jetIndex]].push_back( jet.partonFlavour() );
 
       loosejetPassLooseID[jetAlgorithmTags_[jetIndex]].push_back( passJetID);
+      loosejetPassTightID[jetAlgorithmTags_[jetIndex]].push_back( passTightJetID);
       float hfrac=0;
       if ( jet.isCaloJet() || jet.isJPTJet()) hfrac= jet.energyFractionHadronic();
       else if (jet.isPFJet()) {
@@ -884,6 +900,7 @@ BasicTreeMaker::resetTreeVariables() {
     loosejetEta[*ij].clear();
     loosejetPhi[*ij].clear();
     loosejetPassLooseID[*ij].clear();
+    loosejetPassTightID[*ij].clear();
     loosejetEnergyFracHadronic[*ij].clear();
     loosejetFlavor[*ij].clear();
     loosejetGenParticlePDGId[*ij].clear();
@@ -1137,6 +1154,7 @@ BasicTreeMaker::beginJob()
     tree_->Branch( (string("loosejetEta")+tail).c_str(),&loosejetEta[*ij]);
     tree_->Branch( (string("loosejetPhi")+tail).c_str(),&loosejetPhi[*ij]);
     tree_->Branch( (string("loosejetPassLooseID")+tail).c_str(),&loosejetPassLooseID[*ij]);
+    tree_->Branch( (string("loosejetPassTightID")+tail).c_str(),&loosejetPassTightID[*ij]);
     tree_->Branch( (string("loosejetEnergyFracHadronic")+tail).c_str(),&loosejetEnergyFracHadronic[*ij]);
 
     tree_->Branch( (string("loosejetFlavor")+tail).c_str(),&loosejetFlavor[*ij]);
