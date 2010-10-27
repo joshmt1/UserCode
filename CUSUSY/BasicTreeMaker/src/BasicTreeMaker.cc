@@ -29,7 +29,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.14 2010/10/26 13:15:02 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.15 2010/10/27 08:23:54 winstrom Exp $
 //
 //
 
@@ -67,6 +67,9 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 
 #include "RecoBTag/PerformanceDB/interface/BtagPerformance.h"
 #include "RecoBTag/Records/interface/BTagPerformanceRecord.h"
+
+#include "RecoBTag/SecondaryVertex/interface/TrackKinematics.h"
+
 #include "CondFormats/PhysicsToolsObjects/interface/BinningPointByMap.h"
 
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
