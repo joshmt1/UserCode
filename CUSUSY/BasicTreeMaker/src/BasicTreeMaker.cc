@@ -29,7 +29,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.15 2010/10/27 08:23:54 winstrom Exp $
+// $Id: BasicTreeMaker.cc,v 1.16 2010/10/27 08:29:43 winstrom Exp $
 //
 //
 
@@ -694,10 +694,16 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       else {std::cout<<"Unknown jet type!"<<std::endl;}
       loosejetEnergyFracHadronic[jetAlgorithmTags_[jetIndex]].push_back(hfrac );
 
-      if ( jet.genJet() != 0 && jet.genParticle() != 0) {
-	
-	loosejetGenParticlePDGId[jetAlgorithmTags_[jetIndex]].push_back( jet.genParticle()->pdgId() );
+      if ( jet.genJet() != 0 ) {
+	loosejetGenPt[jetAlgorithmTags_[jetIndex]].push_back( jet.genJet()->px() );
+	loosejetGenPhi[jetAlgorithmTags_[jetIndex]].push_back( jet.genJet()->phi() );
+	loosejetGenEta[jetAlgorithmTags_[jetIndex]].push_back( jet.genJet()->eta() );
+
 	loosejetInvisibleEnergy[jetAlgorithmTags_[jetIndex]].push_back( jet.genJet()->invisibleEnergy());
+	
+	if ( jet.genParticle() != 0) {
+	  loosejetGenParticlePDGId[jetAlgorithmTags_[jetIndex]].push_back( jet.genParticle()->pdgId() );
+	  
 	//	std::cout<<jet.partonFlavour()<<"\t"<<jet.genParticle()->pdgId()<<"\t"<<jet.genJet()->invisibleEnergy()<<std::endl;
 	//std::cout<<"\t\t"<<jet.genJet()->getGenConstituents().size()<<std::endl;
 	
@@ -710,13 +716,19 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
 	// 		   <<"\t"<<jet.genJet()->getGenConstituents().at(ijet)->energy()
 	// 		   <<"\t"<<jet.genJet()->getGenConstituents().at(ijet)->et()<<std::endl;
 	// 	}
+	}
+
+	//note! in this case it is important to fill all variables with dummy values!
+	else { //no genparticle match
+	  loosejetGenParticlePDGId[jetAlgorithmTags_[jetIndex]].push_back( -99 );
+	}
       }
-      else {
-	//	std::cout<<jet.partonFlavour()<<"\tNo gen match!"<<std::endl;
-	loosejetGenParticlePDGId[jetAlgorithmTags_[jetIndex]].push_back( -99 );
+      else { //no genjet match
 	loosejetInvisibleEnergy[jetAlgorithmTags_[jetIndex]].push_back( -99 );
+	loosejetGenPt[jetAlgorithmTags_[jetIndex]].push_back( -99 );
+	loosejetGenPhi[jetAlgorithmTags_[jetIndex]].push_back( -99 );
+	loosejetGenEta[jetAlgorithmTags_[jetIndex]].push_back( -99 );
       }
-      
       
       for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
 	loosejetBTagDisc[jetAlgorithmTags_[jetIndex]][btagAlgorithmNames_[ib]].push_back( jet.bDiscriminator(btagAlgorithmNames_[ib]) );
@@ -724,7 +736,7 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
 
 
       //Beginnning Secondary Vertex Stuff
-
+      if (jet.tagInfoSecondaryVertex() != 0) {
       int nSV = jet.tagInfoSecondaryVertex()->nVertices();
       loosejetNSV[jetAlgorithmTags_[jetIndex]].push_back(nSV);
       if(nSV>0)
@@ -767,10 +779,13 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
 	  loosejetSVUnWeightedCosTheta[jetAlgorithmTags_[jetIndex]].push_back(-100.);
 	  loosejetSVWeightedCosTheta[jetAlgorithmTags_[jetIndex]].push_back(-100.);
 	}
-
+      }
+//       else {
+// 	std::cout<<"Found no secondary vertex info!"<<std::endl;
+//       }
       //Ending Secondary Vertex Stuff
 
-    }
+    } //end of block for loose jets
     if (passTightCuts) {
       //allow us to reference things only stored for loose jets
       tightJetIndex[jetAlgorithmTags_[jetIndex]].push_back( loosejetPt[jetAlgorithmTags_[jetIndex]].size() - 1);
@@ -837,10 +852,15 @@ BasicTreeMaker::fillMetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
 
   for (unsigned int imettype = 0; imettype < metAlgorithmNames_.size(); imettype++) {
     edm::Handle<edm::View<pat::MET> > metHandle; 
-    iEvent.getByLabel( metAlgorithmNames_[imettype], metHandle); //hopefully getbylabel takes  a string
+    iEvent.getByLabel( metAlgorithmNames_[imettype], metHandle);
     MET[ metAlgorithmTags_[imettype] ] = metHandle->front().et() ;
     METphi[ metAlgorithmTags_[imettype] ] = metHandle->front().phi() ;
     METsig [ metAlgorithmTags_[imettype]]= metHandle->front().mEtSig();
+
+    if (isMC_ && metHandle->front().genMET()) {
+      GenMET[ metAlgorithmTags_[imettype] ] = metHandle->front().genMET()->et() ;
+      GenMETphi[ metAlgorithmTags_[imettype] ] = metHandle->front().genMET()->phi() ;
+    }
   }
     
   cutResults.push_back(MET["calo"] >= metMin_); //note that we are cutting on caloMET
@@ -951,6 +971,11 @@ BasicTreeMaker::resetTreeVariables() {
     loosejetEt[*ij].clear();
     loosejetEta[*ij].clear();
     loosejetPhi[*ij].clear();
+
+    loosejetGenPt[*ij].clear();
+    loosejetGenEta[*ij].clear();
+    loosejetGenPhi[*ij].clear();
+
     loosejetPassLooseID[*ij].clear();
     loosejetPassTightID[*ij].clear();
     loosejetEnergyFracHadronic[*ij].clear();
@@ -1032,6 +1057,9 @@ BasicTreeMaker::resetTreeVariables() {
     MET[metAlgorithmTags_[im]]=-99;
     METphi[metAlgorithmTags_[im]]=-99;
     METsig[metAlgorithmTags_[im]]=-99;
+
+    GenMET[metAlgorithmTags_[im]]=-99;
+    GenMETphi[metAlgorithmTags_[im]]=-99;
   }
   DeltaPhi_JetMHT1 = -99;
   DeltaPhi_JetMHT2 = -99;
@@ -1218,6 +1246,10 @@ BasicTreeMaker::beginJob()
 
     tree_->Branch( (string("loosejetFlavor")+tail).c_str(),&loosejetFlavor[*ij]);
     
+    tree_->Branch( (string("loosejetGenPt")+tail).c_str(),&loosejetGenPt[*ij]);
+    tree_->Branch( (string("loosejetGenEta")+tail).c_str(),&loosejetGenEta[*ij]);
+    tree_->Branch( (string("loosejetGenPhi")+tail).c_str(),&loosejetGenPhi[*ij]);
+
     tree_->Branch( (string("loosejetGenParticlePDGId")+tail).c_str(),&loosejetGenParticlePDGId[*ij]);
     tree_->Branch( (string("loosejetInvisibleEnergy")+tail).c_str(),&loosejetInvisibleEnergy[*ij]);
 
@@ -1273,6 +1305,18 @@ BasicTreeMaker::beginJob()
     thirdarg=metname;
     thirdarg += "/F";
     tree_->Branch(metname.c_str(),&METsig[metAlgorithmTags_[im]],thirdarg.c_str());
+
+    metname=metAlgorithmTags_[im];
+    metname += "GenMET";
+    thirdarg=metname;
+    thirdarg += "/F";
+    tree_->Branch(metname.c_str(),&GenMET[metAlgorithmTags_[im]],thirdarg.c_str());
+
+    metname=metAlgorithmTags_[im];
+    metname += "GenMETphi";
+    thirdarg=metname;
+    thirdarg += "/F";
+    tree_->Branch(metname.c_str(),&GenMETphi[metAlgorithmTags_[im]],thirdarg.c_str());
   }
 
   tree_->Branch("trackPt",&trackPt);

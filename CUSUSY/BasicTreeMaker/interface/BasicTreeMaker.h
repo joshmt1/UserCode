@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.7 2010/10/26 13:15:02 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.8 2010/10/27 08:23:54 winstrom Exp $
 //
 //
 
@@ -226,6 +226,9 @@ string is the jetAlgorithmTag
   std::map< std::string,  std::vector<float> > loosejetSVWeightedCosTheta;
 
   std::map< std::string,  std::vector<int> > loosejetFlavor;
+  std::map< std::string,  std::vector<int> > loosejetGenPt;
+  std::map< std::string,  std::vector<int> > loosejetGenPhi;
+  std::map< std::string,  std::vector<int> > loosejetGenEta;
   std::map< std::string,  std::vector<int> > loosejetGenParticlePDGId;
   std::map< std::string,  std::vector<float> > loosejetInvisibleEnergy;
   std::map< std::string,  std::map < std::string, std::vector<float> > > loosejetBTagDisc;
@@ -252,6 +255,9 @@ string is the jetAlgorithmTag
   std::map< std::string, float> MET;
   std::map< std::string, float> METphi;
   std::map< std::string, float> METsig; //met significance
+  //mc met info
+  std::map< std::string, float> GenMET;
+  std::map< std::string, float> GenMETphi;
 
   //track info
   std::vector<float> trackPt;

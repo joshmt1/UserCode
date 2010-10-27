@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-isMC = False
+isMC = True
 
 process = cms.Process("BasicTreeMaker")
 
