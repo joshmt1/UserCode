@@ -1,4 +1,4 @@
-// -*- C++ -*-
+/// -*- C++ -*-
 //
 // Package:    BasicTreeMaker
 // Class:      BasicTreeMaker
@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.6 2010/10/21 22:13:36 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.7 2010/10/26 13:15:02 joshmt Exp $
 //
 //
 
@@ -217,6 +217,13 @@ string is the jetAlgorithmTag
   std::map< std::string,  std::vector<bool> > loosejetPassLooseID;
   std::map< std::string,  std::vector<bool> > loosejetPassTightID;
   std::map< std::string,  std::vector<float> > loosejetEnergyFracHadronic;
+  std::map< std::string,  std::vector<int> > loosejetNSV;
+  std::map< std::string,  std::vector<float> > loosejetSVUnWeightedMass;
+  std::map< std::string,  std::vector<float> > loosejetSVWeightedMass;
+  std::map< std::string,  std::vector<float> > loosejetSVUnWeightedLifetime;
+  std::map< std::string,  std::vector<float> > loosejetSVWeightedLifetime;
+  std::map< std::string,  std::vector<float> > loosejetSVUnWeightedCosTheta;
+  std::map< std::string,  std::vector<float> > loosejetSVWeightedCosTheta;
 
   std::map< std::string,  std::vector<int> > loosejetFlavor;
   std::map< std::string,  std::vector<int> > loosejetGenParticlePDGId;

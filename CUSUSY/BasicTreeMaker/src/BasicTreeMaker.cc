@@ -29,7 +29,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.13 2010/10/21 22:13:36 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.14 2010/10/26 13:15:02 joshmt Exp $
 //
 //
 
@@ -718,6 +718,55 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
 	loosejetBTagDisc[jetAlgorithmTags_[jetIndex]][btagAlgorithmNames_[ib]].push_back( jet.bDiscriminator(btagAlgorithmNames_[ib]) );
       }
+
+
+      //Beginnning Secondary Vertex Stuff
+
+      int nSV = jet.tagInfoSecondaryVertex()->nVertices();
+      loosejetNSV[jetAlgorithmTags_[jetIndex]].push_back(nSV);
+      if(nSV>0)
+	{
+	  reco::TrackKinematics secondaryVertex(jet.tagInfoSecondaryVertex()->secondaryVertex(0) );
+	  double vertexMass = secondaryVertex.vectorSum().M();
+	  double weightedVertexMass = secondaryVertex.weightedVectorSum().M();
+	  loosejetSVUnWeightedMass[jetAlgorithmTags_[jetIndex]].push_back(vertexMass);
+	  loosejetSVWeightedMass[jetAlgorithmTags_[jetIndex]].push_back(weightedVertexMass);
+	  double vertexMomentum = secondaryVertex.vectorSum().P();
+	  double weightedVertexMomentum = secondaryVertex.weightedVectorSum().P();
+	  double vertexDistance = sqrt((jet.tagInfoSecondaryVertex()->secondaryVertex(0).position() - jet.vertex()).mag2());
+	  loosejetSVUnWeightedLifetime[jetAlgorithmTags_[jetIndex]].push_back(vertexMass*vertexDistance/vertexMomentum);
+	  loosejetSVWeightedLifetime[jetAlgorithmTags_[jetIndex]].push_back(weightedVertexMass*vertexDistance/weightedVertexMomentum);
+	  //Now I want the angle of the vertex with the boost direction of the jet.
+	  //To boost into the jet's rest frame (where the jet's p4 is (E,px,py,pz) ) we can use \beta=(-px/E,-py/E,-pz/E)
+	  //This transforms the jet's p4 into (m1,0,0,0)
+	  //applying this transform to the vertex's p4 (E2,px2,py2,pz2) gives an awful mess
+	  //However, what we want is the angle of the vertex location w.r.t. the boost axis, which is much nicer.  If we take the dot product of
+	  //the momentum 3 vector of (E2,px2,py2,pz2) boosted into the rest frame of the jet with the boost vector \beta and then normalize so that 
+	  //we are left with the cosine of the angle between them, the formula is (after asking Mathematica for some simplification):
+	  // 
+	  //       E*(\vec(p1).\vec(p2))-E2(\vec(p1)^2)
+	  //       ------------------------------------
+	  //          sqrt((p1.p2)^2-m1^2*m2^2)/m1
+      
+	  double cosTheta = jet.p4().mass()*(jet.p4().energy()*(secondaryVertex.vectorSum().Vect().Dot(jet.p4().Vect()))-secondaryVertex.vectorSum().energy()*(jet.p4().Vect().mag2()))/(pow(secondaryVertex.vectorSum().Dot(jet.p4()),2)-jet.p4().mass2()*secondaryVertex.vectorSum().mass2());
+      
+	  double weightedCosTheta = jet.p4().mass()*(jet.p4().energy()*(secondaryVertex.weightedVectorSum().Vect().Dot(jet.p4().Vect()))-secondaryVertex.weightedVectorSum().energy()*(jet.p4().Vect().mag2()))/(pow(secondaryVertex.weightedVectorSum().Dot(jet.p4()),2)-jet.p4().mass2()*secondaryVertex.weightedVectorSum().mass2());
+      
+	  loosejetSVUnWeightedCosTheta[jetAlgorithmTags_[jetIndex]].push_back(cosTheta);
+	  loosejetSVWeightedCosTheta[jetAlgorithmTags_[jetIndex]].push_back(weightedCosTheta);
+	}
+      else
+	{
+	  loosejetSVUnWeightedMass[jetAlgorithmTags_[jetIndex]].push_back(-100.);
+	  loosejetSVWeightedMass[jetAlgorithmTags_[jetIndex]].push_back(-100.);
+	  loosejetSVUnWeightedLifetime[jetAlgorithmTags_[jetIndex]].push_back(-100.);
+	  loosejetSVWeightedLifetime[jetAlgorithmTags_[jetIndex]].push_back(-100.);
+	  loosejetSVUnWeightedCosTheta[jetAlgorithmTags_[jetIndex]].push_back(-100.);
+	  loosejetSVWeightedCosTheta[jetAlgorithmTags_[jetIndex]].push_back(-100.);
+	}
+
+      //Ending Secondary Vertex Stuff
+
     }
     if (passTightCuts) {
       //allow us to reference things only stored for loose jets
@@ -905,6 +954,13 @@ BasicTreeMaker::resetTreeVariables() {
     loosejetFlavor[*ij].clear();
     loosejetGenParticlePDGId[*ij].clear();
     loosejetInvisibleEnergy[*ij].clear();
+    loosejetNSV[*ij].clear();
+    loosejetSVWeightedMass[*ij].clear();
+    loosejetSVUnWeightedMass[*ij].clear();
+    loosejetSVWeightedLifetime[*ij].clear();
+    loosejetSVUnWeightedLifetime[*ij].clear();
+    loosejetSVWeightedCosTheta[*ij].clear();
+    loosejetSVUnWeightedCosTheta[*ij].clear();
 
     badjetPt[*ij].clear();
     badjetEta[*ij].clear();
@@ -1161,6 +1217,15 @@ BasicTreeMaker::beginJob()
     
     tree_->Branch( (string("loosejetGenParticlePDGId")+tail).c_str(),&loosejetGenParticlePDGId[*ij]);
     tree_->Branch( (string("loosejetInvisibleEnergy")+tail).c_str(),&loosejetInvisibleEnergy[*ij]);
+
+    tree_->Branch( (string("loosejetNSV")+tail).c_str(),&loosejetNSV[*ij]);
+    tree_->Branch( (string("loosejetSVUnWeightedMass")+tail).c_str(),&loosejetSVUnWeightedMass[*ij]);
+    tree_->Branch( (string("loosejetSVWeightedMass")+tail).c_str(),&loosejetSVWeightedMass[*ij]);
+    tree_->Branch( (string("loosejetSVUnWeightedLifetime")+tail).c_str(),&loosejetSVUnWeightedLifetime[*ij]);
+    tree_->Branch( (string("loosejetSVWeightedLifetime")+tail).c_str(),&loosejetSVWeightedLifetime[*ij]);
+    tree_->Branch( (string("loosejetSVUnWeightedCosTheta")+tail).c_str(),&loosejetSVUnWeightedCosTheta[*ij]);
+    tree_->Branch( (string("loosejetSVWeightedCosTheta")+tail).c_str(),&loosejetSVWeightedCosTheta[*ij]);
+
     //ROOT does not allow us to put a map of vectors into a tree
     //so we have to go with this approach
     for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {

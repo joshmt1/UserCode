@@ -1,6 +1,8 @@
 Release notes
 --
 
+low20101027 - adding secondary vertex information to jets
+
 V00-01-02 - Fix isGlobalMuonPromptTight and add electron info. Update to using SelectorUtils V00-02-24
 
 V00-01-01 - no substantive changes
