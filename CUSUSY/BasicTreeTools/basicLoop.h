@@ -460,6 +460,8 @@ public :
    virtual void     nbLoop();
    virtual void     ABCDtree(unsigned int dataindex=0);
 
+   bool isV00_01_02();
+
    void fillTightJetInfo();
    void InitJets();
 
@@ -787,14 +789,17 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("loosejetEta_calo", &loosejetEta_calo, &b_loosejetEta_calo);
    fChain->SetBranchAddress("loosejetPhi_calo", &loosejetPhi_calo, &b_loosejetPhi_calo);
    fChain->SetBranchAddress("loosejetPassLooseID_calo", &loosejetPassLooseID_calo, &b_loosejetPassLooseID_calo);
-   fChain->SetBranchAddress("loosejetPassTightID_calo", &loosejetPassTightID_calo, &b_loosejetPassTightID_calo);
+   if (isV00_01_02()) fChain->SetBranchAddress("loosejetPassTightID_calo", &loosejetPassTightID_calo, &b_loosejetPassTightID_calo);
    fChain->SetBranchAddress("loosejetEnergyFracHadronic_calo", &loosejetEnergyFracHadronic_calo, &b_loosejetEnergyFracHadronic_calo);
    fChain->SetBranchAddress("loosejetFlavor_calo", &loosejetFlavor_calo, &b_loosejetFlavor_calo);
+   if (isV00_01_02()) { //make backwards compatible
    fChain->SetBranchAddress("loosejetGenPt_calo", &loosejetGenPt_calo, &b_loosejetGenPt_calo);
    fChain->SetBranchAddress("loosejetGenEta_calo", &loosejetGenEta_calo, &b_loosejetGenEta_calo);
    fChain->SetBranchAddress("loosejetGenPhi_calo", &loosejetGenPhi_calo, &b_loosejetGenPhi_calo);
    fChain->SetBranchAddress("loosejetGenParticlePDGId_calo", &loosejetGenParticlePDGId_calo, &b_loosejetGenParticlePDGId_calo);
+   }
    fChain->SetBranchAddress("loosejetInvisibleEnergy_calo", &loosejetInvisibleEnergy_calo, &b_loosejetInvisibleEnergy_calo);
+   if (isV00_01_02()) { //make backwards compatible
    fChain->SetBranchAddress("loosejetNSV_calo", &loosejetNSV_calo, &b_loosejetNSV_calo);
    fChain->SetBranchAddress("loosejetSVUnWeightedMass_calo", &loosejetSVUnWeightedMass_calo, &b_loosejetSVUnWeightedMass_calo);
    fChain->SetBranchAddress("loosejetSVWeightedMass_calo", &loosejetSVWeightedMass_calo, &b_loosejetSVWeightedMass_calo);
@@ -802,6 +807,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("loosejetSVWeightedLifetime_calo", &loosejetSVWeightedLifetime_calo, &b_loosejetSVWeightedLifetime_calo);
    fChain->SetBranchAddress("loosejetSVUnWeightedCosTheta_calo", &loosejetSVUnWeightedCosTheta_calo, &b_loosejetSVUnWeightedCosTheta_calo);
    fChain->SetBranchAddress("loosejetSVWeightedCosTheta_calo", &loosejetSVWeightedCosTheta_calo, &b_loosejetSVWeightedCosTheta_calo);
+   }
    fChain->SetBranchAddress("loosejetBTagDisc_trackCountingHighPurBJetTags_calo", &loosejetBTagDisc_trackCountingHighPurBJetTags_calo, &b_loosejetBTagDisc_trackCountingHighPurBJetTags_calo);
    fChain->SetBranchAddress("loosejetBTagDisc_trackCountingHighEffBJetTags_calo", &loosejetBTagDisc_trackCountingHighEffBJetTags_calo, &b_loosejetBTagDisc_trackCountingHighEffBJetTags_calo);
    fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo", &loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo, &b_loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo);
@@ -817,14 +823,17 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("loosejetEta_PF", &loosejetEta_PF, &b_loosejetEta_PF);
    fChain->SetBranchAddress("loosejetPhi_PF", &loosejetPhi_PF, &b_loosejetPhi_PF);
    fChain->SetBranchAddress("loosejetPassLooseID_PF", &loosejetPassLooseID_PF, &b_loosejetPassLooseID_PF);
-   fChain->SetBranchAddress("loosejetPassTightID_PF", &loosejetPassTightID_PF, &b_loosejetPassTightID_PF);
+   if (isV00_01_02())fChain->SetBranchAddress("loosejetPassTightID_PF", &loosejetPassTightID_PF, &b_loosejetPassTightID_PF);
    fChain->SetBranchAddress("loosejetEnergyFracHadronic_PF", &loosejetEnergyFracHadronic_PF, &b_loosejetEnergyFracHadronic_PF);
    fChain->SetBranchAddress("loosejetFlavor_PF", &loosejetFlavor_PF, &b_loosejetFlavor_PF);
+   if (isV00_01_02()) {
    fChain->SetBranchAddress("loosejetGenPt_PF", &loosejetGenPt_PF, &b_loosejetGenPt_PF);
    fChain->SetBranchAddress("loosejetGenEta_PF", &loosejetGenEta_PF, &b_loosejetGenEta_PF);
    fChain->SetBranchAddress("loosejetGenPhi_PF", &loosejetGenPhi_PF, &b_loosejetGenPhi_PF);
+   }
    fChain->SetBranchAddress("loosejetGenParticlePDGId_PF", &loosejetGenParticlePDGId_PF, &b_loosejetGenParticlePDGId_PF);
    fChain->SetBranchAddress("loosejetInvisibleEnergy_PF", &loosejetInvisibleEnergy_PF, &b_loosejetInvisibleEnergy_PF);
+   if (isV00_01_02()) {
    fChain->SetBranchAddress("loosejetNSV_PF", &loosejetNSV_PF, &b_loosejetNSV_PF);
    fChain->SetBranchAddress("loosejetSVUnWeightedMass_PF", &loosejetSVUnWeightedMass_PF, &b_loosejetSVUnWeightedMass_PF);
    fChain->SetBranchAddress("loosejetSVWeightedMass_PF", &loosejetSVWeightedMass_PF, &b_loosejetSVWeightedMass_PF);
@@ -832,6 +841,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("loosejetSVWeightedLifetime_PF", &loosejetSVWeightedLifetime_PF, &b_loosejetSVWeightedLifetime_PF);
    fChain->SetBranchAddress("loosejetSVUnWeightedCosTheta_PF", &loosejetSVUnWeightedCosTheta_PF, &b_loosejetSVUnWeightedCosTheta_PF);
    fChain->SetBranchAddress("loosejetSVWeightedCosTheta_PF", &loosejetSVWeightedCosTheta_PF, &b_loosejetSVWeightedCosTheta_PF);
+   }
    fChain->SetBranchAddress("loosejetBTagDisc_trackCountingHighPurBJetTags_PF", &loosejetBTagDisc_trackCountingHighPurBJetTags_PF, &b_loosejetBTagDisc_trackCountingHighPurBJetTags_PF);
    fChain->SetBranchAddress("loosejetBTagDisc_trackCountingHighEffBJetTags_PF", &loosejetBTagDisc_trackCountingHighEffBJetTags_PF, &b_loosejetBTagDisc_trackCountingHighEffBJetTags_PF);
    fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_PF", &loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_PF, &b_loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_PF);
@@ -853,18 +863,18 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("caloMET", &caloMET, &b_caloMET);
    fChain->SetBranchAddress("caloMETphi", &caloMETphi, &b_caloMETphi);
    fChain->SetBranchAddress("caloMETsig", &caloMETsig, &b_caloMETsig);
-   fChain->SetBranchAddress("caloGenMET", &caloGenMET, &b_caloGenMET);
-   fChain->SetBranchAddress("caloGenMETphi", &caloGenMETphi, &b_caloGenMETphi);
+   if (isV00_01_02())   fChain->SetBranchAddress("caloGenMET", &caloGenMET, &b_caloGenMET);
+   if (isV00_01_02())   fChain->SetBranchAddress("caloGenMETphi", &caloGenMETphi, &b_caloGenMETphi);
    fChain->SetBranchAddress("tcMET", &tcMET, &b_tcMET);
    fChain->SetBranchAddress("tcMETphi", &tcMETphi, &b_tcMETphi);
    fChain->SetBranchAddress("tcMETsig", &tcMETsig, &b_tcMETsig);
-   fChain->SetBranchAddress("tcGenMET", &tcGenMET, &b_tcGenMET);
-   fChain->SetBranchAddress("tcGenMETphi", &tcGenMETphi, &b_tcGenMETphi);
+   if (isV00_01_02())    fChain->SetBranchAddress("tcGenMET", &tcGenMET, &b_tcGenMET);
+   if (isV00_01_02())    fChain->SetBranchAddress("tcGenMETphi", &tcGenMETphi, &b_tcGenMETphi);
    fChain->SetBranchAddress("pfMET", &pfMET, &b_pfMET);
    fChain->SetBranchAddress("pfMETphi", &pfMETphi, &b_pfMETphi);
    fChain->SetBranchAddress("pfMETsig", &pfMETsig, &b_pfMETsig);
-   fChain->SetBranchAddress("pfGenMET", &pfGenMET, &b_pfGenMET);
-   fChain->SetBranchAddress("pfGenMETphi", &pfGenMETphi, &b_pfGenMETphi);
+   if (isV00_01_02())    fChain->SetBranchAddress("pfGenMET", &pfGenMET, &b_pfGenMET);
+   if (isV00_01_02())    fChain->SetBranchAddress("pfGenMETphi", &pfGenMETphi, &b_pfGenMETphi);
    fChain->SetBranchAddress("trackPt", &trackPt, &b_trackPt);
    fChain->SetBranchAddress("trackEta", &trackEta, &b_trackEta);
    fChain->SetBranchAddress("trackPhi", &trackPhi, &b_trackPhi);
@@ -880,7 +890,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("muonTrackd0", &muonTrackd0, &b_muonTrackd0);
    fChain->SetBranchAddress("muonTrackPhi", &muonTrackPhi, &b_muonTrackPhi);
    fChain->SetBranchAddress("muonPassID", &muonPassID, &b_muonPassID);
-   fChain->SetBranchAddress("muonVtx_z", &muonVtx_z, &b_muonVtx_z);
+   if (isV00_01_02())    fChain->SetBranchAddress("muonVtx_z", &muonVtx_z, &b_muonVtx_z);
    fChain->SetBranchAddress("muonEcalVeto", &muonEcalVeto, &b_muonEcalVeto);
    fChain->SetBranchAddress("muonHcalVeto", &muonHcalVeto, &b_muonHcalVeto);
    fChain->SetBranchAddress("nMuons", &nMuons, &b_nMuons);
@@ -889,8 +899,8 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("eleTrackIso", &eleTrackIso, &b_eleTrackIso);
    fChain->SetBranchAddress("eleEcalIso", &eleEcalIso, &b_eleEcalIso);
    fChain->SetBranchAddress("eleHcalIso", &eleHcalIso, &b_eleHcalIso);
-   fChain->SetBranchAddress("eledB", &eledB, &b_eledB);
-   fChain->SetBranchAddress("eleVtx_z", &eleVtx_z, &b_eleVtx_z);
+   if (isV00_01_02())    fChain->SetBranchAddress("eledB", &eledB, &b_eledB);
+   if (isV00_01_02())    fChain->SetBranchAddress("eleVtx_z", &eleVtx_z, &b_eleVtx_z);
    fChain->SetBranchAddress("eleIDLoose", &eleIDLoose, &b_eleIDLoose);
    fChain->SetBranchAddress("eleIDRobustTight", &eleIDRobustTight, &b_eleIDRobustTight);
    fChain->SetBranchAddress("elePassID", &elePassID, &b_elePassID);
@@ -907,7 +917,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("muonTrackd0_PF", &muonTrackd0_PF, &b_muonTrackd0_PF);
    fChain->SetBranchAddress("muonTrackPhi_PF", &muonTrackPhi_PF, &b_muonTrackPhi_PF);
    fChain->SetBranchAddress("muonPassID_PF", &muonPassID_PF, &b_muonPassID_PF);
-   fChain->SetBranchAddress("muonVtx_z_PF", &muonVtx_z_PF, &b_muonVtx_z_PF);
+   if (isV00_01_02())    fChain->SetBranchAddress("muonVtx_z_PF", &muonVtx_z_PF, &b_muonVtx_z_PF);
    fChain->SetBranchAddress("muonEcalVeto_PF", &muonEcalVeto_PF, &b_muonEcalVeto_PF);
    fChain->SetBranchAddress("muonHcalVeto_PF", &muonHcalVeto_PF, &b_muonHcalVeto_PF);
    fChain->SetBranchAddress("nMuons_PF", &nMuons_PF, &b_nMuons_PF);
@@ -916,8 +926,8 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("eleTrackIso_PF", &eleTrackIso_PF, &b_eleTrackIso_PF);
    fChain->SetBranchAddress("eleEcalIso_PF", &eleEcalIso_PF, &b_eleEcalIso_PF);
    fChain->SetBranchAddress("eleHcalIso_PF", &eleHcalIso_PF, &b_eleHcalIso_PF);
-   fChain->SetBranchAddress("eledB_PF", &eledB_PF, &b_eledB_PF);
-   fChain->SetBranchAddress("eleVtx_z_PF", &eleVtx_z_PF, &b_eleVtx_z_PF);
+   if (isV00_01_02())    fChain->SetBranchAddress("eledB_PF", &eledB_PF, &b_eledB_PF);
+   if (isV00_01_02())    fChain->SetBranchAddress("eleVtx_z_PF", &eleVtx_z_PF, &b_eleVtx_z_PF);
    fChain->SetBranchAddress("eleIDLoose_PF", &eleIDLoose_PF, &b_eleIDLoose_PF);
    fChain->SetBranchAddress("eleIDRobustTight_PF", &eleIDRobustTight_PF, &b_eleIDRobustTight_PF);
    fChain->SetBranchAddress("elePassID_PF", &elePassID_PF, &b_elePassID_PF);
@@ -949,6 +959,13 @@ void basicLoop::Show(Long64_t entry)
 }
 
 // ========================================== begin
+
+bool basicLoop::isV00_01_02() {
+
+  if (  (findInputName()).Contains("/V00-01-02/") ) return true;
+  return false;
+
+}
 
 bool basicLoop::setCutScheme(CutScheme cutscheme) {
 
@@ -1793,6 +1810,7 @@ void basicLoop::InitJets() {
     badjetPhi = badjetPhi_calo;
 
   //new in V00-01-02
+    //this is ok in any version (the pointer is 0 in older ntuple versions)
     loosejetGenPt = loosejetGenPt_calo;
     loosejetGenEta = loosejetGenEta_calo;
     loosejetGenPhi = loosejetGenPhi_calo;
