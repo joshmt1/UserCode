@@ -9,15 +9,15 @@
   //const TString hname="Hnjets";
   //const TString hname="Hnjets_ge2b";
   //  const TString hname="HdeltaPhiMPTMET_ge2b";
-  //const TString hname="H_MET_ge2b";
-  const TString hname="Hjetpt1_ge2b";
+  const TString hname="H_MET_ge2b";
+  //const TString hname="Hjetpt1_ge2b";
   //const TString hname="HdeltaPhiMPTMET";
    //const TString hname="HminDeltaR_bj_ge2b";
   //const TString hname="Hnjets_nocuts";
   //  const TString xtitle="Number of jets";
   //  const TString xtitle="#Delta #phi (MPT,MET)";
-  //  const TString xtitle="MET";
-  const TString xtitle="pT of jet 1";
+    const TString xtitle="caloMET";
+  //const TString xtitle="pT of jet 1";
   //const TString xtitle="event minimum DeltaR(b,non-b)";
 
   //  const TString hname="HdeltaPhiMPTMET";
@@ -25,12 +25,16 @@
   //  const TString xtitle="#Delta #Phi (MET,MPT)";
   
   //    const TString cutstring = "RA2METminDP_NoMET_NoDeltaPhi";
-  const TString cutstring = "RA2wideMETminDP";
+  //  const TString cutstring = "RA2wideMETminDP";
+  const TString cutstring = "RA2_calo_METwide_minDP";
   //const TString cutstring = "RA2medMET";
   const TString sigsample = "LM9";
 
+  //  const TString customTitle =""; //set to this to not use a custom title
+  const TString customTitle="10.8 pb^{-1} (CU group cuts)";
+
   const bool dodata=true;
-  const double MCreweight = (2771.0+167.0)/(50e3); //use to adjust the MC luminosity
+  const double MCreweight = (2771.0+167.0+3898+511+3467)/(100e3); //use to adjust the MC luminosity
 
   const int dataColor=7;
   //range for rescaling
@@ -39,12 +43,12 @@
   const  double highlimit=170;
 
   //range for plotting
-  const bool customrange=false; //do we want to customize the range?
-  const double lowplotlimit=0;
-  const double highplotlimit=180;
+  const bool customrange=true; //do we want to customize the range?
+  const double lowplotlimit=50;
+  const double highplotlimit=200;
 
   //rebin?
-  const bool dorebin=true;
+  const bool dorebin=false;
   int nrebin=2;
 
   gStyle->SetOptStat(0); //comment out as desired
@@ -121,7 +125,10 @@
       mystack.Add( hh_njets.find(hname,fh.at(i)) );
 
       //copy title from histograms to histogram stack
-      if (i==0) mystack.SetTitle(hh_njets.find(hname,fh.at(i))->GetTitle());
+      if (i==0) {
+	if (customTitle!="") mystack.SetTitle(customTitle);
+	else	mystack.SetTitle(hh_njets.find(hname,fh.at(i))->GetTitle());
+      }
 
       TString filename=fh.at(i)->GetName();
       TObjArray* pieces = filename.Tokenize(".");
