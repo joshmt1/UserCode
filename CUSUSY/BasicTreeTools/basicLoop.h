@@ -62,6 +62,8 @@ public :
   std::vector<TString> ignoredCut_; //allow more than 1 ignored cut!
   //if theCutFlow changes, be sure to change cutnames_ as well
 
+  std::set<jmt::eventID> specifiedEvents_;
+
   enum TopDecayCategory {kTTbarUnknown=0,kAllLeptons=1,kAllHadronic=2,kOneElectron=3,kOneMuon=4,kOneTauE=5,kOneTauMu=6,kOneTauHadronic=7,kAllTau=8,kTauPlusLepton=9, nTopCategories=10};
 
   //tight jet info
@@ -377,6 +379,7 @@ public :
    virtual void     Loop(unsigned int dataindex=0);
    //   virtual void     compareRA2(); //deprecated function
    virtual void     exampleLoop();
+   virtual void     screendump();
    virtual void     nbLoop();
    virtual void     ABCDtree(unsigned int dataindex=0);
 
@@ -396,6 +399,9 @@ public :
    void setBCut(unsigned int nb);
    TString getCutDescriptionString();
    TString getBCutDescriptionString();
+
+   void specifyEvent(ULong64_t run, ULong64_t lumisection, ULong64_t event);
+   bool eventIsSpecified();
 
    float getMET(); //return MET determined by theMETType_
    float getMETphi(); //return MET determined by theMETType_
@@ -466,6 +472,8 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
    Init(tree);
 
    // ========================================== begin
+   specifiedEvents_.clear();
+
    triggerList_.clear();
    if (infotree!=0) {
      std::set<TString> triggersForCut;
@@ -477,7 +485,6 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
      triggersForCut.insert("HLT_HT200");
 
      Long64_t ninfo = infotree->GetEntries();
-     if (ninfo != 1) std::cout<<"Strange! the infotree has "<<ninfo<<" entries!"<<std::endl;
      if (ninfo > 0) {
        std::vector<std::string> * triggerList=0;
        infotree->SetBranchAddress("triggerList", &triggerList);
@@ -858,6 +865,16 @@ bool basicLoop::setCutScheme(CutScheme cutscheme) {
     cutTags_.push_back("cutJetPt2"); cutNames_[cutTags_.back()]="JetPt2";
     cutTags_.push_back("cutJetPt3");cutNames_[cutTags_.back()]="JetPt3";
 
+    /*
+doing it this way is a dirty hack, but it is so much easier than implementing a new cutScheme definition.
+    */
+    const bool modb=false;
+    if (modb) {
+      cutTags_.push_back("cut1b"); cutNames_[cutTags_.back()]=">=1b";
+      cutTags_.push_back("cut2b"); cutNames_[cutTags_.back()]=">=2b";
+      cutTags_.push_back("cut3b"); cutNames_[cutTags_.back()]=">=3b";
+    }
+
     cutTags_.push_back("cutMuVeto"); cutNames_[cutTags_.back()]="MuVeto";
     cutTags_.push_back("cutEleVeto"); cutNames_[cutTags_.back()]="EleVeto";
 
@@ -867,9 +884,11 @@ bool basicLoop::setCutScheme(CutScheme cutscheme) {
     cutTags_.push_back("cutMHT"); cutNames_[cutTags_.back()]="MHT";
 
     cutTags_.push_back("cutDeltaPhi"); cutNames_[cutTags_.back()]="DeltaPhi";
-    cutTags_.push_back("cut1b"); cutNames_[cutTags_.back()]=">=1b";
-    cutTags_.push_back("cut2b"); cutNames_[cutTags_.back()]=">=2b";
-    cutTags_.push_back("cut3b"); cutNames_[cutTags_.back()]=">=3b";
+    if (!modb) {
+      cutTags_.push_back("cut1b"); cutNames_[cutTags_.back()]=">=1b";
+      cutTags_.push_back("cut2b"); cutNames_[cutTags_.back()]=">=2b";
+      cutTags_.push_back("cut3b"); cutNames_[cutTags_.back()]=">=3b";
+    }
 
   }
 
@@ -1231,7 +1250,7 @@ int basicLoop::countBJets_Sync1() {
 
 Int_t basicLoop::Cut(Long64_t entry)
 {
-  
+
   for (unsigned int i=0; i< cutTags_.size(); i++) {
     if (cutRequired( cutTags_[i] ) && !passCut( cutTags_[i]) ) return -1;
   }
@@ -1829,6 +1848,35 @@ void basicLoop::setIgnoredCut(const TString cutTag) {
 
 void basicLoop::resetIgnoredCut() {
   ignoredCut_.clear();
+}
+
+void basicLoop::specifyEvent(ULong64_t run, ULong64_t lumisection, ULong64_t event) {
+
+  jmt::eventID myevent;
+  myevent.run = run;
+  myevent.ls=lumisection;
+  myevent.ev = event;
+  specifiedEvents_.insert( myevent);
+
+}
+
+bool basicLoop::eventIsSpecified() {
+  //check if the current event is on the specified list
+  //if the list is empty, just return true
+
+  //this implementation does not allow for a wildcard-type search (e.g. all of one lumi section)
+  //can think about it....
+
+  if (specifiedEvents_.empty()) return true;
+
+  jmt::eventID thisevent;
+  thisevent.run = runNumber;
+  thisevent.ls = lumiSection;
+  thisevent.ev = eventNumber;
+
+  if ( specifiedEvents_.find( thisevent) != specifiedEvents_.end()) return true;
+
+  return false;
 }
 
 

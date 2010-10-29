@@ -25,6 +25,56 @@ void basicLoop::exampleLoop()
    }
 }
 
+void basicLoop::screendump()
+{
+
+  //for now hard-coded with a couple events
+  /* some data events
+  specifyEvent(143962, 2, 732462);
+  specifyEvent(143962, 2, 810194);
+  */
+
+  /* LM0 events */
+  specifyEvent(1, 6, 817);
+  specifyEvent(1, 186, 25463);
+
+  ULong64_t nfound=0;
+
+   if (fChain == 0) return;
+
+   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+   const TString sp=" ";
+   Long64_t nbytes = 0, nb = 0;
+   for (Long64_t jentry=0; jentry<nentries;jentry++) {
+      Long64_t ientry = LoadTree(jentry);
+      if (ientry < 0) break;
+      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+
+      if (eventIsSpecified() ) {
+	nfound++;
+	cout<<"--- record for event: ("<<jentry <<") run,ls,ev = "<<runNumber<<sp<<lumiSection<<sp<<eventNumber<<endl;
+	//Show() doesn't cut it-- it just shows the pointer addresses!
+
+	if (true) {
+	  for (unsigned int i=0 ; i<cutTags_.size(); i++) {
+	    if (cutRequired(cutTags_[i])) {
+	      TString passstr = passCut(cutTags_[i]) ? "pass" : "fail";
+	      cout<< cutNames_[cutTags_[i]] <<sp<<passstr<<endl;
+	    }
+	  }
+	}
+
+	if (true) {
+	  cout<<" jet info (pT, Eta, hadFrac, isGood) n good jets = "<<nGoodJets_Sync1()<<endl;
+	  for (unsigned int ijet=0; ijet<loosejetPt->size(); ijet++) {
+	    TString jetisgood = isGoodJet_Sync1(ijet) ? "Good" : "notGood";
+	    cout<<"\tjet "<<ijet<<": "<<loosejetPt->at(ijet)<<sp<<loosejetEta->at(ijet)<<sp<<loosejetEnergyFracHadronic->at(ijet)<<sp<<jetisgood<<endl;
+	  }
+	}
+      }
+      if (nfound == specifiedEvents_.size()) break; //save time at the end
+   }
+}
 
 /*
 print a cut flow table
@@ -42,8 +92,8 @@ void basicLoop::cutflow()
   
   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
   
-  const   double   weight = lumi * sigma / double(nentries); //calculate weight
-  
+  const   double   weight = isData_ ? 1 : lumi * sigma / double(nentries); //calculate weight
+
   Long64_t nbytes = 0, nb = 0;
   
   LoadTree(0);
@@ -59,11 +109,21 @@ void basicLoop::cutflow()
     nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
     //cout<<"== "<<jentry<<endl;
+  
+    //i hate to do this, but I'm going to put a hack here to check the run number
+    //    if (runNumber != 143962) continue;
 
     for (unsigned int i=0 ; i<cutTags_.size(); i++) {
       //cout<<i<<endl;
       if (cutRequired(cutTags_[i]) && passCut(cutTags_[i]) )   npass.at(i) = npass.at(i) +1;
       else if (cutRequired(cutTags_[i]) && !passCut(cutTags_[i]) ) break;
+
+      //optional code to dump events to file
+      /*
+      if (cutTags_[i] == "cutJetPt1") {
+	cout<<"run lumi event = "<<runNumber<<" "<<lumiSection<<" "<<eventNumber<<endl;
+      }
+      */
     }
     
   }
