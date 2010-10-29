@@ -16,7 +16,7 @@ these are not needed (assuming this macro is compiled) because of the include ab
 gSystem->Load("basicLoop_C.so");
 
 */
-const TString version = "V00-00-04";
+const TString version = "V00-01-01";
 
 void run_basicLoop()
 {
@@ -44,19 +44,23 @@ void run_basicLoop()
     if (version=="V00-00-01")  samplefiles+="/Spring10/*.root";
     else                       samplefiles+="/*.root";
 
-    cout<<"About to start on files: "<<samplefiles<<endl;
 
     if (samplefiles.Contains("DATA")) continue; //skip data (use run_basicLoop_data.C)
 
-    //if (!samplefiles.Contains("TTbarJets")) continue; //hack to skip some samples
-    //    if (!samplefiles.Contains("LM13")) continue; //hack to skip some samples
+    //if (!samplefiles.Contains("QCD")) continue; //hack to skip some samples
+    if (!(samplefiles.Contains("LM") || samplefiles.Contains("TTbar"))) continue; //hack to skip some samples
+
+    cout<<"About to start on files: "<<samplefiles<<endl;
 
     TChain ch("BasicTreeMaker/tree");
+    TChain info("BasicTreeMaker/infotree");
     ch.Add(samplefiles);
-    basicLoop looper(&ch);
+    info.Add(samplefiles);
+    basicLoop looper(&ch,&info);
     //important! this is where cuts are defined
     looper.setCutScheme(basicLoop::kRA2); //this is now the only scheme!
     looper.setMETType(basicLoop::kMET);
+    looper.setMETRange(basicLoop::kWide);
     looper.setDPType(basicLoop::kminDP);
     //no b tagging cut so that plots can apply it selectively
 
