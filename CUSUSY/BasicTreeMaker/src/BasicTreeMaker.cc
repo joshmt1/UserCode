@@ -29,7 +29,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.16 2010/10/27 08:29:43 winstrom Exp $
+// $Id: BasicTreeMaker.cc,v 1.17 2010/10/27 16:04:03 joshmt Exp $
 //
 //
 
@@ -738,6 +738,7 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       //Beginnning Secondary Vertex Stuff
       if (jet.tagInfoSecondaryVertex() != 0) {
       int nSV = jet.tagInfoSecondaryVertex()->nVertices();
+      loosejetNTracks[jetAlgorithmTags_[jetIndex]].push_back(jet.associatedTracks().size());
       loosejetNSV[jetAlgorithmTags_[jetIndex]].push_back(nSV);
       if(nSV>0)
 	{
@@ -759,14 +760,16 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
 	  //the momentum 3 vector of (E2,px2,py2,pz2) boosted into the rest frame of the jet with the boost vector \beta and then normalize so that 
 	  //we are left with the cosine of the angle between them, the formula is (after asking Mathematica for some simplification):
 	  // 
-	  //       E*(\vec(p1).\vec(p2))-E2(\vec(p1)^2)
-	  //       ------------------------------------
-	  //          sqrt((p1.p2)^2-m1^2*m2^2)/m1
+	  //         E*(\vec(p1).\vec(p2))-E2(\vec(p1)^2)
+	  //       -----------------------------------------
+	  //       sqrt(\vec(p1)^2*sqrt((p1.p2)^2-m1^2*m2^2)
       
-	  double cosTheta = jet.p4().mass()*(jet.p4().energy()*(secondaryVertex.vectorSum().Vect().Dot(jet.p4().Vect()))-secondaryVertex.vectorSum().energy()*(jet.p4().Vect().mag2()))/(pow(secondaryVertex.vectorSum().Dot(jet.p4()),2)-jet.p4().mass2()*secondaryVertex.vectorSum().mass2());
-      
-	  double weightedCosTheta = jet.p4().mass()*(jet.p4().energy()*(secondaryVertex.weightedVectorSum().Vect().Dot(jet.p4().Vect()))-secondaryVertex.weightedVectorSum().energy()*(jet.p4().Vect().mag2()))/(pow(secondaryVertex.weightedVectorSum().Dot(jet.p4()),2)-jet.p4().mass2()*secondaryVertex.weightedVectorSum().mass2());
-      
+	  double cosTheta = ( jet.p4().Vect().mag2() !=0 && pow(secondaryVertex.vectorSum().Dot(jet.p4()),2) != jet.p4().mass2()*secondaryVertex.vectorSum().mass2() ) ? 
+	    (jet.p4().energy()*(secondaryVertex.vectorSum().Vect().Dot(jet.p4().Vect()))-secondaryVertex.vectorSum().energy()*(jet.p4().Vect().mag2()))/sqrt(jet.p4().Vect().mag2()*(pow(secondaryVertex.vectorSum().Dot(jet.p4()),2)-jet.p4().mass2()*secondaryVertex.vectorSum().mass2())) : 0 ;
+	  
+	  double weightedCosTheta = ( jet.p4().Vect().mag2() !=0 && pow(secondaryVertex.weightedVectorSum().Dot(jet.p4()),2) != jet.p4().mass2()*secondaryVertex.weightedVectorSum().mass2() ) ? 
+	    (jet.p4().energy()*(secondaryVertex.weightedVectorSum().Vect().Dot(jet.p4().Vect()))-secondaryVertex.weightedVectorSum().energy()*(jet.p4().Vect().mag2()))/sqrt(jet.p4().Vect().mag2()*(pow(secondaryVertex.weightedVectorSum().Dot(jet.p4()),2)-jet.p4().mass2()*secondaryVertex.weightedVectorSum().mass2())) : 0 ;
+	     
 	  loosejetSVUnWeightedCosTheta[jetAlgorithmTags_[jetIndex]].push_back(cosTheta);
 	  loosejetSVWeightedCosTheta[jetAlgorithmTags_[jetIndex]].push_back(weightedCosTheta);
 	}
@@ -982,6 +985,7 @@ BasicTreeMaker::resetTreeVariables() {
     loosejetFlavor[*ij].clear();
     loosejetGenParticlePDGId[*ij].clear();
     loosejetInvisibleEnergy[*ij].clear();
+    loosejetNTracks[*ij].clear();
     loosejetNSV[*ij].clear();
     loosejetSVWeightedMass[*ij].clear();
     loosejetSVUnWeightedMass[*ij].clear();
@@ -1253,6 +1257,7 @@ BasicTreeMaker::beginJob()
     tree_->Branch( (string("loosejetGenParticlePDGId")+tail).c_str(),&loosejetGenParticlePDGId[*ij]);
     tree_->Branch( (string("loosejetInvisibleEnergy")+tail).c_str(),&loosejetInvisibleEnergy[*ij]);
 
+    tree_->Branch( (string("loosejetNTracks")+tail).c_str(),&loosejetNTracks[*ij]);
     tree_->Branch( (string("loosejetNSV")+tail).c_str(),&loosejetNSV[*ij]);
     tree_->Branch( (string("loosejetSVUnWeightedMass")+tail).c_str(),&loosejetSVUnWeightedMass[*ij]);
     tree_->Branch( (string("loosejetSVWeightedMass")+tail).c_str(),&loosejetSVWeightedMass[*ij]);

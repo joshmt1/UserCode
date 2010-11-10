@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.8 2010/10/27 08:23:54 winstrom Exp $
+// $Id: BasicTreeMaker.h,v 1.9 2010/10/27 16:04:03 joshmt Exp $
 //
 //
 
@@ -217,6 +217,7 @@ string is the jetAlgorithmTag
   std::map< std::string,  std::vector<bool> > loosejetPassLooseID;
   std::map< std::string,  std::vector<bool> > loosejetPassTightID;
   std::map< std::string,  std::vector<float> > loosejetEnergyFracHadronic;
+  std::map< std::string,  std::vector<int> > loosejetNTracks;
   std::map< std::string,  std::vector<int> > loosejetNSV;
   std::map< std::string,  std::vector<float> > loosejetSVUnWeightedMass;
   std::map< std::string,  std::vector<float> > loosejetSVWeightedMass;
