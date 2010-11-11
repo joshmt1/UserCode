@@ -15,6 +15,7 @@ for filespec in $thelist; do
     thedir=`awk -F= '/user_remote_dir/ {print $2}' $filespec | sed 's@/user/j/joshmt/@/castor/cern.ch/user/j/joshmt/@' | sed "s/$old/$new/"`
     echo $thedir
     nsmkdir -p $thedir
+    nschmod 777 $thedir
     sed "s/$old/$new/" $filespec > $filespec.new
     mv $filespec cfg_files_$old
     mv $filespec.new $filespec
