@@ -16,7 +16,7 @@ these are not needed (assuming this macro is compiled) because of the include ab
 gSystem->Load("basicLoop_C.so");
 
 */
-const TString version = "V00-00-05/DATA/38X";
+const TString version = "V00-01-02/DATA/38X";
 
 void run_ABCDLoop_data()
 {
@@ -39,30 +39,37 @@ void run_ABCDLoop_data()
   TObjArray* dirlist = dummy.GetListOfFiles();
   int nfiles=dirlist->GetEntries();
 
-  unsigned int currentfileindex=1;
+
+  TChain ch("BasicTreeMaker/tree");
+  TChain info("BasicTreeMaker/infotree");
+ 
+  //assemble the whole thing into one TChain!
   for (int ifile=0; ifile<nfiles; ifile++) {
     TString samplefiles = dirlist->At(ifile)->GetTitle();
-    samplefiles+="/*.root";
-
-    cout<<"About to start on files: "<<samplefiles<<endl;
-
-    //if (!samplefiles.Contains("LM13")) continue; //for V00-00-04b
     
-    //for V00-00-04
-
-    TChain ch("BasicTreeMaker/tree");
+    samplefiles+="/*.root";
+    
+    //    if (!samplefiles.Contains("JetMET-")) continue;
+    cout<<"About to add files in: "<<samplefiles<<endl;
+    
     ch.Add(samplefiles);
-    basicLoop looper(&ch);
-    //important! this is where cuts are defined
-    looper.setCutScheme(basicLoop::kRA2METminDP);
-    //looper.setCutScheme(basicLoop::kRA2METMPT);
-    looper.setBCut(0); //adjust number of b tags here
-    //careful what is set here!
-    looper.setIgnoredCut(basicLoop::cutMET); //MET
-    //looper.setIgnoredCut(basicLoop::cutMHT); //for kRA2
-    looper.setIgnoredCut(basicLoop::cutDeltaPhi); //DeltaPhi
-
-    looper.ABCDtree(currentfileindex++);  //go!
+    info.Add(samplefiles);
   }
 
+  basicLoop looper(&ch,&info);  
+
+  //important! this is where cuts are defined
+  looper.setCutScheme(basicLoop::kRA2);
+  
+  looper.setMETType(basicLoop::kpfMET);  //other options are basicLoop::ktcMET, basicLoop::kMET, basicLoop::kMHT
+  looper.setJetType(basicLoop::kPF); //other options are basicLoop::kCalo
+  looper.setBCut(0); //adjust number of b tags here
+  
+  //careful what is set here!
+  looper.setIgnoredCut("cutMET"); //for kRA2
+  looper.setIgnoredCut("cutDeltaPhi");
+  
+  looper.ABCDtree(0);
 }
+
+
