@@ -207,6 +207,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   ABCDtree.Branch("minDeltaPhiMHT",&minDeltaPhiMHT,"minDeltaPhiMHT/D");
   ABCDtree.Branch("minDeltaRbj",&minDeltaRbj,"minDeltaRbj/D");
   ABCDtree.Branch("DeltaPhiMPTMET",&DeltaPhiMPTMET,"DeltaPhiMPTMET/D");
+  ABCDtree.Branch("nbSSVM", &nbSSVM, "nbSSVM/I");
 
   
   Long64_t nbytes = 0, nb = 0;
