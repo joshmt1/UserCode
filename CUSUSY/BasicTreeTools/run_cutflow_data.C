@@ -48,7 +48,7 @@ void run_cutflow_data()
     
     samplefiles+="/*.root";
 
-    if (!samplefiles.Contains("JetMET-")) continue;
+    //    if (!samplefiles.Contains("JetMET-")) continue;
     cout<<"About to add files in: "<<samplefiles<<endl;
 
     ch.Add(samplefiles);
