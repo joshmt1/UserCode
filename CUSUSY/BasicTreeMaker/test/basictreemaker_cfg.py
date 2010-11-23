@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-isMC = False
+isMC = True
 
 process = cms.Process("BasicTreeMaker")
 
@@ -12,6 +12,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 process.source = cms.Source("PoolSource",
     # replace 'myfile.root' with the source file you want to use
     fileNames = cms.untracked.vstring(
+#    'file:/cu1/joshmt/AOD/Fall10-QCD_TuneD6T_HT-1000_7TeV-madgraph-C473857E-99DA-DF11-8531-00163691DC86.SUSYPAT.root'
     'INPUT'
 #    'file:/cu1/joshmt/DonPAT/data/PAT_38X_jetmettau_sep17rereco_sep11_9_1_wJJ.root'
 #    'file:/cu1/joshmt/DonPAT/MoreMSSM_PAT_10_1_osg.root'
@@ -56,8 +57,8 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
 #first the names of various collections
                                         pvTag = cms.InputTag(pvString),
 #i am still having problems with JPT jets, so leave them out
-                                        jetAlgorithms = cms.vstring( "cleanPatJetsAK5Calo","selectedPatJetsPF" ), #real collection names
-                                        jetNames      = cms.vstring( "calo","PF" ), #for TTree use
+                                        jetAlgorithms = cms.vstring( "cleanPatJetsAK5Calo","cleanPatJetsAK5JPT","selectedPatJetsPF" ), #real collection names
+                                        jetNames      = cms.vstring( "calo","JPT","PF" ), #for TTree use
                                         metAlgorithms = cms.vstring( "patMETsAK5Calo", "patMETsTC","patMETsPF"),
 
 #careful...the lepton code is pretty sensitive to the input here
@@ -146,6 +147,7 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                         metMin = cms.double( 150.0 )
 )
 
+#process.TFileService = cms.Service("TFileService", fileName = cms.string('/cu1/joshmt/AOD/BasicNtuple.root') )
 process.TFileService = cms.Service("TFileService", fileName = cms.string('BasicNtuple.root') )
 
 if isMC:
