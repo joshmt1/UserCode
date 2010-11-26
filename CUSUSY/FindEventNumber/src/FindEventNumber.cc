@@ -13,7 +13,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Sat Oct 30 21:09:21 CEST 2010
-// $Id$
+// $Id: FindEventNumber.cc,v 1.1 2010/11/26 09:06:08 joshmt Exp $
 //
 //
 
@@ -85,13 +85,15 @@ FindEventNumber::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
    using namespace edm;
 
-   //   unsigned int   runNumber   = iEvent.run();
-   unsigned int   eventNumber = iEvent.eventAuxiliary().event() ;
+   unsigned int   runNumber   = iEvent.run();
+   //unsigned int   eventNumber = iEvent.eventAuxiliary().event() ;
    //   unsigned int   lumiSection = iEvent.getLuminosityBlock().luminosityBlock();
    
    //hard code a list of event numbers!
-   if ( eventNumber == 817 ) return true;
-   if ( eventNumber == 25463 ) return true;
+   //   if ( eventNumber == 817 ) return true;
+   //   if ( eventNumber == 25463 ) return true;
+
+   if (runNumber == 148032) return true;
 
    return false;
 }
