@@ -29,7 +29,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.17 2010/10/27 16:04:03 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.18 2010/11/10 16:33:57 winstrom Exp $
 //
 //
 
@@ -459,9 +459,11 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
     //all hell breaks loose if we don't require the muons to be global...
     //i'm sure this could be fixed but i don't care
     if ( !imuon->muonID("AllGlobalMuons") ) continue;
+    if (debug)     std::cout<<"found Global Muon" <<std::endl;
 
     muonIsGlobalMuonPromptTight[muTag].push_back(imuon->muonID("GlobalMuonPromptTight"));
-    
+    if (debug)     std::cout<<"done with muon id" <<std::endl;    
+
     //record pT and eta of all that pass 
     muonPt[muTag].push_back( imuon->pt() );
     muonEta[muTag].push_back( imuon->eta());
@@ -634,7 +636,7 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     
     //fill the 'very loose' vectors with uncorrected jet info
     if ( jet.isCaloJet() ) {
-      pat::Jet uncorrectedJet = jet.correctedJet("raw"); //get the uncorrected jet (i hope)
+      pat::Jet uncorrectedJet = jet.correctedJet("Uncorrected"); //get the uncorrected jet (i hope)
       if (uncorrectedJet.pt() >= 10) { //can apply tighter cuts offline
 	veryloosejetPtUncorr.push_back(uncorrectedJet.pt());
 	veryloosejetEtaUncorr.push_back(uncorrectedJet.eta());
