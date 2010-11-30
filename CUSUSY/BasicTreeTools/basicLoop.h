@@ -21,12 +21,32 @@
 #include <vector>
 #include <set>
 
+/*
+some proto-documentation:
+
+To implement a new Cut Scheme:
+
+-- add a text string to CutSchemeNames_ and a corresponding value to the CutScheme enum
+-- Add a block to setCutScheme(). This defines the order of the cut flow
+-- Add a block to cutRequired(). This defines whether the cut is actually used in this scheme
+-- for any cut where the default value stored in the ntuple is not valid, add if statements in passCut() that
+can handle this cut properly. (see note below)
+
+
+notes on the schemes:
+RA2 -- the legacy scheme. still uses some info precomputed in the ntuple. I *think* it still works.
+Sync1 -- cuts for first sync exercise. Recomputes (almost?) every cut.
+Baseline0 -- *must* recompute every cut. "Baseline" analysis cuts as laid out by me on the joint Twiki.
+
+*/
+
 //avoid spaces and funny characters!
-const char *CutSchemeNames_[]={"RA2", "Sync1"};
+const char *CutSchemeNames_[]={"RA2", "Sync1", "Baseline0"};
 const char *METTypeNames_[]={"MHT", "MET",  "tcMET", "pfMET"};
 const char *METRangeNames_[]={"med",  "high", "wide"}; //'no cut' is not given, because the cut can always be skipped!
 
 const char *jetTypeNames_[]={"calo","PF"}; //no JPT in ntuple for now
+const char *leptonTypeNames_[]={"RegLep","PFLep"}; //no JPT in ntuple for now
 
 const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1"};
 
@@ -37,7 +57,7 @@ const double lumi=100;
 class basicLoop {
 public :
   // ========================================== begin
-  enum CutScheme {kRA2=0, kSync1, nCutSchemes}; //cut schemes must be implemented in setCutScheme,etc and in the list above
+  enum CutScheme {kRA2=0, kSync1, kBaseline0, nCutSchemes}; //cut schemes must be implemented in setCutScheme,etc and in the list above
   CutScheme theCutScheme_;
   enum METType {kMHT=0, kMET, ktcMET, kpfMET};
   METType theMETType_;
@@ -45,6 +65,8 @@ public :
   METRange theMETRange_;
   enum jetType {kCalo=0, kPF};
   jetType theJetType_;
+  enum leptonType {kNormal=0, kPFLeptons};
+  leptonType theLeptonType_;
   enum dpType {kDeltaPhi=0, kminDP, kMPT, kDPSync1};
   dpType theDPType_;
   unsigned int nBcut_;
@@ -53,7 +75,8 @@ public :
 
   //any trigger on this list will be considered OK for passing the trigger cut
   //key is the trigger name ; value is the position in the passTrigger variable in the ntuple
-  std::map<TString, int>  triggerList_;
+  std::map<TString, int>  triggerList_; //contains only triggers used for determining the signal
+  std::map<TString, int>  triggerListAll_; //this contains all triggers
   //can use hltPrescale to figure out if the trigger exists in a given event/sample
 
   std::vector<TString> cutTags_;
@@ -454,11 +477,13 @@ public :
 
    // ========================================== begin
    virtual void     Loop(unsigned int dataindex=0);
-   //   virtual void     compareRA2(); //deprecated function
    virtual void     exampleLoop();
    virtual void     screendump();
    virtual void     nbLoop();
    virtual void     ABCDtree(unsigned int dataindex=0);
+   virtual void triggerPlot();
+   virtual void triggerPlotData();
+   virtual void triggerTest();
 
    bool isV00_01_02();
 
@@ -471,6 +496,7 @@ public :
    bool setCutScheme(CutScheme cutscheme);
    void setMETType(METType mettype);
    void setJetType(jetType jettype);
+   void setLeptonType(leptonType leptontype);
    void setMETRange(METRange metrange);
    void setDPType(dpType dptype);
    void setIgnoredCut(const TString cutTag);
@@ -497,14 +523,26 @@ public :
    bool passMuVetoSync1() ;
    bool passEleVetoSync1() ;
 
+   bool passTauVeto();
+
    bool isGoodJet_Sync1(unsigned int ijet);
+   bool isGoodJet(unsigned int ijet); //index here is on the loose jet list
+   bool isGoodJet30(unsigned int ijet); //index here is on the loose jet list
+   bool isLooseJet_Sync1(unsigned int ijet); //looser pt cut
    unsigned int nGoodJets_Sync1();
+   unsigned int nGoodJets();
    float jetPtOfN(unsigned int n);
    int countBJets_Sync1();
+   int countBJets();
    bool passDeltaPhi_Sync1() ;
    float getHT_Sync1();
+   float getHT();
 
-   bool passHLT(); bool printedHLT_;
+   bool passPV();
+
+   bool passHLT(); bool printedHLT_; TString lastTriggerPass_;
+   bool passHLT(const TString & triggerName);
+   int getHLTPrescale(const TString & triggerName);
 
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
@@ -531,29 +569,33 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
      theMETType_(kMET),
      theMETRange_(kHigh),
      theJetType_(kCalo),
+     theLeptonType_(kNormal),
      theDPType_(kminDP),
      nBcut_(0),
      isData_(false),
-     printedHLT_(false)
+     printedHLT_(false),
+     lastTriggerPass_("")
 //====================== end
 
 {
-// if parameter tree is not specified (or zero), connect the file
-// used to generate this class and read the Tree.
-   if (tree == 0) {
-      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("/cu1/joshmt/BasicNtuples/V00-01-02/QCD-Pt1000toInf-madgraph/BasicNtuple_1_1_zmJ.root");
-      if (!f) {
-         f = new TFile("/cu1/joshmt/BasicNtuples/V00-01-02/QCD-Pt1000toInf-madgraph/BasicNtuple_1_1_zmJ.root");
-         f->cd("/cu1/joshmt/BasicNtuples/V00-01-02/QCD-Pt1000toInf-madgraph/BasicNtuple_1_1_zmJ.root:/BasicTreeMaker");
-      }
-      tree = (TTree*)gDirectory->Get("tree");
 
-   }
-   Init(tree);
    // ========================================== begin
+  //don't do the default root thing of loading a default tree
+  if (tree == 0 || infotree==0) {
+    cout<<"One of the required input trees has not been provided as an argument to the constructor of basicLoop!"<<endl;
+    cout<<"It is required to provide pointers to both the tree and the infotree!"<<endl;
+    cout<<"basicLoop::basicLoop(TTree *tree, TTree *infotree)\n---------------------------------"<<endl;
+    cout<<"Careful! The class has not been constructed properly!"<<endl;
+    return;
+   }
+  // ========================================== end
+
+   Init(tree);
+
    specifiedEvents_.clear();
 
    triggerList_.clear();
+   triggerListAll_.clear();
    if (infotree!=0) {
      std::set<TString> triggersForCut;
      triggersForCut.insert("HLT_HT100U");
@@ -571,9 +613,10 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
        for (unsigned int itrig=0; itrig<triggerList->size(); itrig++) {
 	 //	 std::cout<<"in infotree, found trigger: "<<triggerList->at(itrig)<<std::endl;
 	 if ( triggersForCut.find( TString(triggerList->at(itrig))) != triggersForCut.end()) {
-	   std::cout<<"Will accept events with trigger: "<<triggerList->at(itrig)<<std::endl;
+	   //	   std::cout<<"Will accept events with trigger: "<<triggerList->at(itrig)<<std::endl;
 	   triggerList_[  TString(triggerList->at(itrig))] = itrig;
 	 }
+	 triggerListAll_[ TString(triggerList->at(itrig))] = itrig;
        }
      }
    }
@@ -963,6 +1006,7 @@ void basicLoop::Show(Long64_t entry)
 bool basicLoop::isV00_01_02() {
 
   if (  (findInputName()).Contains("/V00-01-02/") ) return true;
+  if (  (findInputName()).Contains("/V00-01-03/") ) return true;
   return false;
 
 }
@@ -1043,6 +1087,30 @@ doing it this way is a dirty hack, but it is so much easier than implementing a 
     }
 
   }
+  else if (theCutScheme_ == kBaseline0) {
+    cutNames_.clear();
+    cutTags_.clear();
+    //now the tags
+    cutTags_.push_back("cutInclusive");cutNames_[ cutTags_.back()] = "Inclusive";
+    cutTags_.push_back("cutTrigger"); cutNames_[cutTags_.back()]="Trigger";
+    cutTags_.push_back("cutPV"); cutNames_[cutTags_.back()]="PV";
+    cutTags_.push_back("cutHT"); cutNames_[cutTags_.back()]="HT";
+    cutTags_.push_back("cut3Jets"); cutNames_[cutTags_.back()]=">=3Jets";
+    cutTags_.push_back("cutJetPt1");  cutNames_[cutTags_.back()]="JetPt1";
+    cutTags_.push_back("cutJetPt2");  cutNames_[cutTags_.back()]="JetPt2";
+    cutTags_.push_back("cutJetPt3");  cutNames_[cutTags_.back()]="JetPt3";
+
+    cutTags_.push_back("cutEleVeto");  cutNames_[cutTags_.back()]="EleVeto";
+    cutTags_.push_back("cutMuVeto");  cutNames_[cutTags_.back()]="MuVeto";
+    cutTags_.push_back("cutTauVeto");  cutNames_[cutTags_.back()]="TauVeto";
+    
+    cutTags_.push_back("cutMET");  cutNames_[cutTags_.back()]="MET";
+
+    cutTags_.push_back("cutDeltaPhi"); cutNames_[cutTags_.back()]="DeltaPhi";
+    cutTags_.push_back("cut1b"); cutNames_[cutTags_.back()]=">=1b";
+    cutTags_.push_back("cut2b"); cutNames_[cutTags_.back()]=">=2b";
+    cutTags_.push_back("cut3b"); cutNames_[cutTags_.back()]=">=3b";
+  }
 
   //debug
   //  for (unsigned int i=0;i<cutTags_.size(); i++) {
@@ -1105,6 +1173,29 @@ bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to
     else if (cutTag == "cut3b") cutIsRequired =  nBcut_ >=3;
     else assert(0);
   }
+  else if (theCutScheme_==kBaseline0) {
+    if      (cutTag == "cutInclusive")  cutIsRequired =  true;
+    else if (cutTag == "cutTrigger")  cutIsRequired = true;
+    else if (cutTag == "cutPV")  cutIsRequired =  true;
+    else if (cutTag == "cutHT")  cutIsRequired =  true;
+    else if (cutTag == "cut3Jets")  cutIsRequired =  true;
+    else if (cutTag == "cutJetPt1")  cutIsRequired =  false;
+    else if (cutTag == "cutJetPt2")  cutIsRequired =  false;
+    else if (cutTag == "cutJetPt3")  cutIsRequired =  false;
+    //roll MHT into MET
+    else if (cutTag == "cutMET")  cutIsRequired =  (theMETType_== kMET || 
+						    theMETType_==ktcMET ||
+						    theMETType_==kpfMET ||
+						    theMETType_==kMHT);
+    else if (cutTag == "cutMuVeto") cutIsRequired =  true;
+    else if (cutTag == "cutEleVeto") cutIsRequired =  true;
+    else if (cutTag == "cutTauVeto") cutIsRequired =  false; //not required for now
+    else if (cutTag == "cutDeltaPhi") cutIsRequired =  true;
+    else if (cutTag == "cut1b") cutIsRequired =  nBcut_ >=1;
+    else if (cutTag == "cut2b") cutIsRequired =  nBcut_ >=2;
+    else if (cutTag == "cut3b") cutIsRequired =  nBcut_ >=3;
+    else assert(0);
+  }
   else assert(0);
 
   return cutIsRequired;
@@ -1112,54 +1203,75 @@ bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to
 
 bool basicLoop::passMuVetoSync1() {
 
-  
-  //need to be AllGlobalMuons
-  //this is all I stored in the ntuple
-  for ( unsigned int i = 0; i< muonPt->size(); i++) {
-    if ( muonPt->at(i) <= 10 ) continue;
-    if ( fabs(muonEta->at(i)) > 2.5 ) continue;
-    if ( (muonTrackIso->at(i) + muonHcalIso->at(i) + muonEcalIso->at(i))/muonPt->at(i) > 0.2) continue;
-    return false;
-  }
-  
-  /*
-  //need to be AllGlobalMuons
-  //this is all I stored in the ntuple
-  for ( unsigned int i = 0; i< muonPt_PF->size(); i++) {
-    if ( muonPt_PF->at(i) <= 10 ) continue;
-    if ( fabs(muonEta_PF->at(i)) > 2.5 ) continue;
-    if ( (muonTrackIso_PF->at(i) + muonHcalIso_PF->at(i) + muonEcalIso_PF->at(i))/muonPt_PF->at(i) > 0.2) continue;
-    return false;
-  }
-  */
+  unsigned int nmu = 0;
+  if (theLeptonType_ == kNormal) nmu=muonPt->size();  
+  else if (theLeptonType_ ==kPFLeptons) nmu=muonPt_PF->size();
+  else {assert(0);}
 
+  //need to be AllGlobalMuons
+  //this is all I stored in the ntuple
+  for ( unsigned int i = 0; i< nmu; i++) {
+    float pt=0,eta=0,reliso=0;
+    
+    //load information depending on lepton type
+    if (theLeptonType_ == kNormal) {
+      pt = muonPt->at(i);
+      eta = muonEta->at(i);
+      reliso = (muonTrackIso->at(i) + muonHcalIso->at(i) + muonEcalIso->at(i))/muonPt->at(i);
+    }
+    else if (theLeptonType_ ==kPFLeptons) {
+      pt = muonPt_PF->at(i);
+      eta = muonEta_PF->at(i);
+      reliso = (muonTrackIso_PF->at(i) + muonHcalIso_PF->at(i) + muonEcalIso_PF->at(i))/muonPt_PF->at(i);
+    }
+    else {assert(0);}
+
+    //now make cuts
+    if ( pt < 10 ) continue;
+    if ( fabs(eta) > 2.5 ) continue;
+    if ( reliso > 0.2) continue;
+    return false;
+  }
+  
+  return true;
+}
+
+bool basicLoop::passTauVeto() {
+  //TO DO
   return true;
 }
 
 bool basicLoop::passEleVetoSync1() {
 
-  for (unsigned int i=0; i< eleEt->size(); i++) {
+  unsigned int nele = 0;
+  if (theLeptonType_ == kNormal) nele=eleEt->size();  
+  else if (theLeptonType_ ==kPFLeptons) nele=eleEt_PF->size();
+  else {assert(0);}
 
-    if ( eleEt->at(i) < 15 ) continue;
-    if ( fabs(eleEta->at(i)) > 2.5 ) continue;
+  for (unsigned int i=0; i < nele; i++) {
+    float et=0,eta=0,reliso=0;
+    
+    //load information depending on lepton type
+    if (theLeptonType_ == kNormal) {
+      et = eleEt->at(i);
+      eta = eleEta->at(i);
+      reliso = (eleTrackIso->at(i) + eleHcalIso->at(i) + eleEcalIso->at(i))/eleEt->at(i);
+    }
+    else if (theLeptonType_ ==kPFLeptons) {
+      et = eleEt_PF->at(i);
+      eta = eleEta_PF->at(i);
+      reliso = (eleTrackIso_PF->at(i) + eleHcalIso_PF->at(i) + eleEcalIso_PF->at(i))/eleEt_PF->at(i);
+    }
+    else {assert(0);}
 
-    if ( (eleTrackIso->at(i) + eleHcalIso->at(i) + eleEcalIso->at(i))/eleEt->at(i) > 0.2) continue;
+    //make cuts    
+    if ( et < 15 ) continue;
+    if ( fabs(eta) > 2.5 ) continue;
+    if ( reliso > 0.2) continue;
+    
     //if any electron passes all of these cuts, then veto
     return false;
   }
-
-
-  /*
-  for (unsigned int i=0; i< eleEt_PF->size(); i++) {
-
-    if ( eleEt_PF->at(i) < 15 ) continue;
-    if ( fabs(eleEta_PF->at(i)) > 2.5 ) continue;
-
-    if ( (eleTrackIso_PF->at(i) + eleHcalIso_PF->at(i) + eleEcalIso_PF->at(i))/eleEt_PF->at(i) > 0.2) continue;
-    //if any electron passes all of these cuts, then veto
-    return false;
-  }
-  */
 
   return true;
 
@@ -1262,13 +1374,13 @@ bool basicLoop::passDeltaPhi_Sync1() {
   return pass;
 }
 
-bool basicLoop::passHLT() {
+bool basicLoop::passHLT() { //do I pass the OR of what is in triggerList_
 
-  //we make an OR of what is in triggerList_
   for (std::map<TString, int>::const_iterator itrig=triggerList_.begin(); 
        itrig!=triggerList_.end(); ++itrig) {
 
     if ( passTrigger->at( itrig->second) ) {
+      lastTriggerPass_ = itrig->first; //may want to remove this code sooner or later
       if (!printedHLT_) {
 	cout<<"Pass: "<<itrig->first<<" "<<hltPrescale->at(itrig->second)<<endl;
 	printedHLT_=true;
@@ -1279,19 +1391,65 @@ bool basicLoop::passHLT() {
   return false;
 }
 
+bool basicLoop::passHLT(const TString & triggerName) { //do I pass the trigger given as the argument?
+
+  if (triggerListAll_.find(triggerName) != triggerListAll_.end() ) {
+    int index = triggerListAll_[triggerName];
+    //    cout<<triggerName<<"\t"<<passTrigger->at(index)<<"\t"<<hltPrescale->at(index)<<endl;
+    return passTrigger->at(index);
+  }
+  //only get here if we don't find the trigger
+  cout<<triggerName<<" not found!"<<endl;
+  return false;
+  
+}
+
+int basicLoop::getHLTPrescale(const TString & triggerName) {
+
+  if (triggerListAll_.find(triggerName) != triggerListAll_.end() ) {
+    int index = triggerListAll_[triggerName];
+    //    cout<<triggerName<<"\t"<<passTrigger->at(index)<<"\t"<<hltPrescale->at(index)<<endl;
+    return hltPrescale->at(index);
+  }
+  //only get here if we don't find the trigger
+  cout<<triggerName<<" not found!"<<endl;
+  return -1;
+  
+}
+
 bool basicLoop::passCut(const TString cutTag) {
   //implement special exceptions here
 
   const bool debug=false;  if (debug) cout<<cutTag<<endl;
 
+  //trigger cut -- same for all cut schemes
   if (cutTag=="cutTrigger" ) return passHLT();
+
+  if (theCutScheme_ == kBaseline0) {
+    if (cutTag=="cutPV") return passPV();
+
+    if (cutTag=="cutHT") return getHT();
+
+    if (cutTag=="cut3Jets") return (nGoodJets() >= 3);
+
+    if (cutTag=="cutJetPt1") return jetPtOfN(1)>100; //this cut is not actually required at the moment
+
+    //deltaPhi done below (only updated for kminDP !)
+    //lepton vetoes done below
+    //MET done below
+    //b tagging done below
+  }
 
   //lepton vetoes
   if (cutTag=="cutMuVeto" && theCutScheme_==kRA2) return passMuVetoRA2();
   else if (cutTag=="cutMuVeto" && theCutScheme_==kSync1) return passMuVetoSync1();
+  else if (cutTag=="cutMuVeto" && theCutScheme_==kBaseline0) return passMuVetoSync1(); //passMuVetoDon()
 
   if (cutTag=="cutEleVeto" && theCutScheme_==kRA2) return passEleVetoRA2();
   else if (cutTag=="cutEleVeto" && theCutScheme_==kSync1) return passEleVetoSync1();
+  else if (cutTag=="cutEleVeto" && theCutScheme_==kBaseline0) return passEleVetoSync1(); //passEleVetoDon()
+
+  if (cutTag=="cutTauVeto" && theCutScheme_==kBaseline0) return passTauVeto();
 
   if (cutTag=="cut3Jets" && theCutScheme_==kSync1) return (nGoodJets_Sync1() >= 3);
 
@@ -1354,7 +1512,7 @@ bool basicLoop::passCut(const TString cutTag) {
 	   ( theDPType_ == kminDP ) ) {
     
     if (theMETType_ == kMHT)     return ( getMinDeltaPhiMHT(3) >= 0.3 );
-    else if (theMETType_ ==kMET ||theMETType_==ktcMET) return ( getMinDeltaPhiMET(3) >= 0.3 );
+    else if (theMETType_ ==kMET ||theMETType_==ktcMET ||theMETType_==kpfMET) return ( getMinDeltaPhiMET(3) >= 0.3 );
     else {assert(0);}
   }
   else if (cutTag == "cutDeltaPhi" && //replace normal DeltaPhi cut with DeltaPhi(MPT,MET) cut
@@ -1378,11 +1536,61 @@ bool basicLoop::passCut(const TString cutTag) {
       if (cutTag == "cut3b") return nb >=3;
     }
   }
+  else if (theCutScheme_==kBaseline0) {
+    if (cutTag == "cut1b" || cutTag == "cut2b" || cutTag == "cut3b") {
+      int nb = countBJets();
+      if (cutTag == "cut1b") return nb >=1;
+      if (cutTag == "cut2b") return nb >=2;
+      if (cutTag == "cut3b") return nb >=3;
+    }
+  }
 
+  //we want to avoid using the precomputed cut flow for the basline0 scheme
+  if (theCutScheme_==kBaseline0 && cutTag!="cutInclusive") {
+    cout<<"[passCut] should not have reached this point for Baseline0 scheme! "<<cutTag<<endl;;
+    assert(0);
+  }
 
   //in case this is not an exception, return the cut result stored in the ntuple
   int cutIndex = cutMap_[cutTag];
   return cutResults->at(cutIndex);
+}
+
+bool basicLoop::passPV() {
+
+  //this should be completely handled by the ntuple-maker
+  bool ntupleResult = cutResults->at( cutMap_["cutPV"]);
+
+  /*
+    I am eager to check the results of the PVSelector with these "handmade" results.
+    But eventually this redundancy should be removed.
+  */
+
+  //let's check it, though
+  bool pass=false;
+  for (unsigned int ipv = 0; ipv<pv_isFake->size(); ipv++) {
+    if ( pv_isFake->at(ipv) ) continue;
+    if ( fabs(pv_z->at(ipv)) > 24 ) continue;
+    if ( fabs(pv_rho->at(ipv)) > 2 ) continue;
+    if ( pv_ndof->at(ipv) <= 4 ) continue;
+
+    pass=true; break;
+  }
+  if (ntupleResult != pass) cout<<"PV results do not agree!"<<endl;
+
+  return ntupleResult; 
+}
+
+int basicLoop::countBJets() {
+  int nb=0;
+
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+    if (isGoodJet30( i) ) {
+      if ( loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags->at(i) >= 1.74 
+	   || loosejetBTagDisc_simpleSecondaryVertexBJetTags->at(i) >=1.74 ) nb++;
+    }
+  }
+  return nb;
 }
 
 int basicLoop::countBJets_Sync1() {
@@ -1423,7 +1631,10 @@ with Uncorrect Pt>20 GeV, not just jets passing my 'loose' cuts
    vector<float>   *loosejetPhiUncorr;*/
   double ht=0;
   for (unsigned int ijet=0; ijet<veryloosejetPtUncorr->size(); ijet++) {
-    double thispt =fabs(veryloosejetPtUncorr->at(ijet));
+
+    if ( fabs(veryloosejetEtaUncorr->at(ijet)) > 5 ) continue; //what is the eta range actually used by the HLT?
+
+    double thispt = veryloosejetPtUncorr->at(ijet);
     if (thispt>=threshold)   ht+= thispt;
   }
   
@@ -1470,23 +1681,40 @@ float basicLoop::getMETphi() {
 
 double basicLoop::getMinDeltaPhiMET(unsigned int maxjets) {
   /*
-    uses tight jets of the default type
+code is now bifurcated to:
+    use tight jets of the default type;
+    unless we are using kBaseline0, in which case we use isGoodJet() to find the good jets
   */
 
-
-
-  unsigned int njets=  jetPhi.size();
-
-  if (njets < maxjets) maxjets = njets;
-
-  //get the minimum angle between the first n jets and MET
   double mindp=99;
-  for (unsigned int i=0; i< maxjets; i++) {
 
-    double dp =  getDeltaPhi( jetPhi.at(i) , getMETphi());
-    if (dp<mindp) mindp=dp;
+  if (theCutScheme_==kBaseline0) {
+    unsigned int ngood=0;
+    //get the minimum angle between the first n jets and MET
+    for (unsigned int i=0; i< loosejetPhi->size(); i++) {
 
+      if (isGoodJet(i)) {
+	++ngood;
+	double dp =  getDeltaPhi( loosejetPhi->at(i) , getMETphi());
+	if (dp<mindp) mindp=dp;
+	if (ngood >= maxjets) break;
+      }
+    }
   }
+  //here is the "legacy" way of doing things
+  else {
+    unsigned int njets=  jetPhi.size();
+    if (njets < maxjets) maxjets = njets;
+    
+    //get the minimum angle between the first n jets and MET
+    for (unsigned int i=0; i< maxjets; i++) {
+      
+      double dp =  getDeltaPhi( jetPhi.at(i) , getMETphi());
+      if (dp<mindp) mindp=dp;
+      
+    }
+  }
+
   return mindp;
 }
 
@@ -1637,6 +1865,18 @@ double basicLoop::getMinDeltaR_bj(unsigned int bindex) {
   return minDeltaR;
 }
 
+float basicLoop::getHT() {
+  //use isGoodJet() to recalculate it for the specified jet type
+
+  float ht=0;
+
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+    if (isGoodJet( i ) ) ht+= loosejetPt->at(i);
+  }
+
+  return ht;
+}
+
 float basicLoop::getHT_Sync1() {
   //it is unclear to me if people want to do this with my proposal
   //(identical to the tight jets in the ntuple)
@@ -1655,6 +1895,24 @@ float basicLoop::getHT_Sync1() {
   return ht;
 }
 
+bool basicLoop::isGoodJet(unsigned int ijet) {
+
+  if ( loosejetPt->at(ijet) <50) return false;
+  if ( fabs(loosejetEta->at(ijet)) > 2.4) return false;
+  if ( !(loosejetPassLooseID->at(ijet)) ) return false;
+
+  return true;
+}
+
+bool basicLoop::isGoodJet30(unsigned int ijet) {
+
+  if ( loosejetPt->at(ijet) <30) return false;
+  if ( fabs(loosejetEta->at(ijet)) > 2.4) return false;
+  if ( !(loosejetPassLooseID->at(ijet)) ) return false;
+
+  return true;
+}
+
 bool basicLoop::isGoodJet_Sync1(unsigned int ijet) {
 
   if ( loosejetPt->at(ijet) <50) return false;
@@ -1666,13 +1924,29 @@ bool basicLoop::isGoodJet_Sync1(unsigned int ijet) {
   return true;
 }
 
+bool basicLoop::isLooseJet_Sync1(unsigned int ijet) {
+
+  if ( loosejetPt->at(ijet) <30) return false;
+  
+  if ( fabs(loosejetEta->at(ijet)) > 2.4) return false;
+  
+  if (loosejetEnergyFracHadronic->at(ijet) <0.1) return false;
+
+  return true;
+}
+
 float basicLoop::jetPtOfN(unsigned int n) {
-  //for now, use Sync1 jet cuts only
+  //updated to use Sync1 or Baseline0 cuts
 
   unsigned int ngood=0;
   for (unsigned int i=0; i<loosejetPt->size(); i++) {
 
-    if (isGoodJet_Sync1(i) ) {
+    bool pass=false;
+    if (theCutScheme_==kSync1) pass = isGoodJet_Sync1(i);
+    else  if (theCutScheme_==kBaseline0) pass = isGoodJet(i);
+    else {assert(0);}
+
+    if (pass ) {
       ngood++;
       if (ngood==n) return  loosejetPt->at(i);
     }
@@ -1687,6 +1961,17 @@ unsigned int basicLoop::nGoodJets_Sync1() {
   for (unsigned int i=0; i<loosejetPt->size(); i++) {
     
     if (isGoodJet_Sync1(i) )   njets++;
+  }
+  return njets;
+}
+
+unsigned int basicLoop::nGoodJets() {
+  
+  unsigned int njets=0;
+
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+    
+    if (isGoodJet(i) )   njets++;
   }
   return njets;
 }
@@ -1997,6 +2282,12 @@ void basicLoop::setJetType(jetType jettype) {
 
 }
 
+void basicLoop::setLeptonType(leptonType leptontype) {
+
+  theLeptonType_ = leptontype;
+
+}
+
 void basicLoop::setMETRange(METRange metrange) {
 
   theMETRange_ = metrange;
@@ -2067,6 +2358,8 @@ TString basicLoop::getCutDescriptionString() {
   cuts += METTypeNames_[theMETType_];
   cuts += METRangeNames_[theMETRange_];
   cuts += "_";
+  cuts += leptonTypeNames_[theLeptonType_];
+  cuts += "_";
   cuts+= dpTypeNames_[theDPType_];
   for (unsigned int icut=0; icut<ignoredCut_.size() ; icut++) {
     cuts+="_No";
@@ -2089,6 +2382,7 @@ void basicLoop::printState() {
   cout<<"Weights are for L = "<<lumi<<" pb^-1"<<endl;
   cout<<"Cut scheme set to:    "<<CutSchemeNames_[theCutScheme_]<<endl;
   cout<<"jet type set to:      "<<jetTypeNames_[theJetType_]<<endl;
+  cout<<"lepton type set to:   "<<leptonTypeNames_[theLeptonType_]<<endl;
   cout<<"MET type set to:      "<<METTypeNames_[theMETType_]<<endl;
   cout<<"MET range set to:     "<<METRangeNames_[theMETRange_]<<endl;
   cout<<"DeltaPhi type set to: "<<dpTypeNames_[theDPType_]<<endl;
