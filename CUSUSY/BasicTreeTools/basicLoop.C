@@ -25,57 +25,6 @@ void basicLoop::exampleLoop()
    }
 }
 
-void basicLoop::screendump()
-{
-
-  //for now hard-coded with a couple events
-  /* some data events
-  specifyEvent(143962, 2, 732462);
-  specifyEvent(143962, 2, 810194);
-  */
-
-  /* LM0 events */
-  specifyEvent(1, 6, 817);
-  specifyEvent(1, 186, 25463);
-
-  ULong64_t nfound=0;
-
-   if (fChain == 0) return;
-
-   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
-   const TString sp=" ";
-   Long64_t nbytes = 0, nb = 0;
-   for (Long64_t jentry=0; jentry<nentries;jentry++) {
-      Long64_t ientry = LoadTree(jentry);
-      if (ientry < 0) break;
-      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
-
-      if (eventIsSpecified() ) {
-	nfound++;
-	cout<<"--- record for event: ("<<jentry <<") run,ls,ev = "<<runNumber<<sp<<lumiSection<<sp<<eventNumber<<endl;
-	//Show() doesn't cut it-- it just shows the pointer addresses!
-
-	if (true) {
-	  for (unsigned int i=0 ; i<cutTags_.size(); i++) {
-	    if (cutRequired(cutTags_[i])) {
-	      TString passstr = passCut(cutTags_[i]) ? "pass" : "fail";
-	      cout<< cutNames_[cutTags_[i]] <<sp<<passstr<<endl;
-	    }
-	  }
-	}
-
-	if (true) {
-	  cout<<" jet info (pT, Eta, hadFrac, isGood) n good jets = "<<nGoodJets_Sync1()<<endl;
-	  for (unsigned int ijet=0; ijet<loosejetPt->size(); ijet++) {
-	    TString jetisgood = isGoodJet_Sync1(ijet) ? "Good" : "notGood";
-	    cout<<"\tjet "<<ijet<<": "<<loosejetPt->at(ijet)<<sp<<loosejetEta->at(ijet)<<sp<<loosejetEnergyFracHadronic->at(ijet)<<sp<<jetisgood<<endl;
-	  }
-	}
-      }
-      if (nfound == specifiedEvents_.size()) break; //save time at the end
-   }
-}
-
 /*
 print a cut flow table
 lumi is set in basicLoop.h
@@ -633,33 +582,322 @@ void basicLoop::nbLoop()
 
 }
 
-//this function was used in V00-00-01 to cross check my implementation of the cut flow
-//against Don's. It is no longer useful
-/*
-void basicLoop::compareRA2()
+void basicLoop::screendump()
 {
-  Long64_t nbad=0,ngood=0;
+
+  //for now hard-coded with a couple events
+  /* some data events
+  specifyEvent(143962, 2, 732462);
+  specifyEvent(143962, 2, 810194);
+  */
+
+  /* LM0 events */
+  /*
+    specifyEvent(1, 6, 817);
+    specifyEvent(1, 186, 25463);
+  */
+
+  ULong64_t nfound=0;
 
    if (fChain == 0) return;
 
    Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+   const TString sp=" ";
+   Long64_t nbytes = 0, nb = 0;
+   for (Long64_t jentry=0; jentry<nentries;jentry++) {
+      Long64_t ientry = LoadTree(jentry);
+      if (ientry < 0) break;
+      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+
+      if (false) {
+	if (eventIsSpecified() ) {
+	  nfound++;
+	  cout<<"--- record for event: ("<<jentry <<") run,ls,ev = "<<runNumber<<sp<<lumiSection<<sp<<eventNumber<<endl;
+	  //Show() doesn't cut it-- it just shows the pointer addresses!
+	  
+	  if (true) {
+	    for (unsigned int i=0 ; i<cutTags_.size(); i++) {
+	      if (cutRequired(cutTags_[i])) {
+		TString passstr = passCut(cutTags_[i]) ? "pass" : "fail";
+		cout<< cutNames_[cutTags_[i]] <<sp<<passstr<<endl;
+	      }
+	    }
+	  }
+	  
+	  if (true) {
+	    cout<<" jet info (pT, Eta, hadFrac, isGood) n good jets = "<<nGoodJets_Sync1()<<endl;
+	    for (unsigned int ijet=0; ijet<loosejetPt->size(); ijet++) {
+	      TString jetisgood = isGoodJet_Sync1(ijet) ? "Good" : "notGood";
+	      cout<<"\tjet "<<ijet<<": "<<loosejetPt->at(ijet)<<sp<<loosejetEta->at(ijet)<<sp<<loosejetEnergyFracHadronic->at(ijet)<<sp<<jetisgood<<endl;
+	    }
+	  }
+	}
+	if (nfound == specifiedEvents_.size()) break; //save time at the end
+      }
+
+      //in case we just want to dump every event number
+      if (true) {
+	if (runNumber==143962) {
+	  cout<<"run ls event "<<runNumber<<" "<<lumiSection<<" "<<eventNumber<<endl;
+	}
+      }
+      
+   }
+}
+
+void basicLoop::triggerPlot()
+{
+
+  /*
+    in some ways it is stupid to do this independently from ::Loop(). oh well.....
+  */
+
+   if (fChain == 0) return;
+   printState();
+
+   //open output file
+   TString outfilename="triggerCurve."; 
+   outfilename+=getCutDescriptionString();
+   outfilename+=".";    outfilename+=getSampleName(findInputName());; 
+   outfilename+=".root";
+   TFile fout(outfilename,"RECREATE");
+
+   double ht_min=0,ht_max=900;
+   int ht_nbins=300;
+   TH1D H_HT_AfterCuts("H_HT_AfterCuts","ht after cuts",ht_nbins,ht_min,ht_max);
+   TH1D H_HT_AfterTrigger("H_HT_AfterTrigger","ht after cuts+trigger",ht_nbins,ht_min,ht_max);
+   TH1D H_HT_AfterHTU("H_HT_AfterHTU","ht after cuts+fake trigger",ht_nbins,ht_min,ht_max);
+
+   TH1D H_HTU_BeforeTrigger("H_HTU_BeforeTrigger","uncorrected offline ht before trigger cut",ht_nbins,ht_min,ht_max);
+   TH1D H_HTU_AfterTrigger("H_HTU_AfterTrigger","uncorrected offline ht after trigger cut",ht_nbins,ht_min,ht_max);
+
+   H_HT_AfterCuts.Sumw2();
+   H_HT_AfterTrigger.Sumw2();
+
+   H_HTU_BeforeTrigger.Sumw2();
+   H_HTU_AfterTrigger.Sumw2();
+
+   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+
+   Long64_t nbytes = 0, nb = 0;
+   for (Long64_t jentry=0; jentry<nentries ; jentry++) {
+      Long64_t ientry = LoadTree(jentry);
+      if (ientry < 0) break;
+      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+
+      if (Cut(ientry) < 0) continue; //jmt use cut
+
+      double ht = getHT_Sync1(); //recalculate HT
+      double htu = getUncorrectedHT(30); //does the HT100U in MC use 20 or 30???
+
+      H_HT_AfterCuts.Fill(ht);
+      H_HTU_BeforeTrigger.Fill(htu);
+      if (  passHLT("HLT_HT100U") ) {
+	H_HT_AfterTrigger.Fill(ht);
+	H_HTU_AfterTrigger.Fill(htu);
+      }
+      if ( htu > 100 ) {
+	H_HT_AfterHTU.Fill(ht);
+      }
+
+      //debug
+      if (true && jentry<25) {
+	cout<<passHLT("HLT_HT100U")<<"\t"<<htu<<"\t"<<ht<<endl;
+      }
+
+   }
+
+   TH1D Heff("Heff","pass trig fraction",ht_nbins,ht_min,ht_max);
+   TH1D Heff_FakeHTUTrigger("Heff_FakeHTUTrigger","pass fraction using HTU (not trigger)",ht_nbins,ht_min,ht_max);
+   TH1D H_HTU_turnon("H_HTU_turnon","pass trig fraction",ht_nbins,ht_min,ht_max);
+   H_HTU_turnon.SetXTitle("Uncorrected offline HT");
+   Heff.Sumw2();
+   Heff_FakeHTUTrigger.Sumw2();
+   H_HTU_turnon.Sumw2();
+   Heff.Divide(&H_HT_AfterTrigger,&H_HT_AfterCuts,1,1,"B");
+   Heff_FakeHTUTrigger.Divide(&H_HT_AfterTrigger,&H_HT_AfterHTU,1,1,"B");
+   H_HTU_turnon.Divide(&H_HTU_AfterTrigger,&H_HTU_BeforeTrigger,1,1,"B");
+
+   fout.Write();
+   fout.Close();
+
+}
+
+
+
+void basicLoop::triggerPlotData()
+{
+
+  /*
+    note...this code isn't going to work until I get HLT_HT100U_v3 into the ntuple
+    this means rerunning over the MultiJet datasets
+  */
+
+   if (fChain == 0) return;
+   printState();
+
+   //open output file
+   TString outfilename="triggerData."; 
+   outfilename+=getCutDescriptionString();
+   outfilename+=".";    outfilename+=getSampleName(findInputName());; 
+   outfilename+=".root";
+   TFile fout(outfilename,"RECREATE");
+
+   double ht_min=0,ht_max=900;
+   int ht_nbins=300;
+   TH1D H_HT_AfterHT100U("H_HT_AfterHT100U","ht after prescaled trigger",ht_nbins,ht_min,ht_max);
+   TH1D H_HT_AfterHT150U("H_HT_AfterHT150U","ht after physics trigger",ht_nbins,ht_min,ht_max);
+
+   /*
+   TH1D H_HT_AfterHTU("H_HT_AfterHTU","ht after cuts+fake trigger",ht_nbins,ht_min,ht_max);
+
+   TH1D H_HTU_BeforeTrigger("H_HTU_BeforeTrigger","uncorrected offline ht before trigger cut",ht_nbins,ht_min,ht_max);
+   TH1D H_HTU_AfterTrigger("H_HTU_AfterTrigger","uncorrected offline ht after trigger cut",ht_nbins,ht_min,ht_max);
+   H_HTU_BeforeTrigger.Sumw2();
+   H_HTU_AfterTrigger.Sumw2();
+   */
+
+   H_HT_AfterHT100U.Sumw2();
+   H_HT_AfterHT150U.Sumw2();
+
+   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+
+   Long64_t nbytes = 0, nb = 0;
+   for (Long64_t jentry=0; jentry<nentries ; jentry++) {
+      Long64_t ientry = LoadTree(jentry);
+      if (ientry < 0) break;
+      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+
+      //look only at very late runs
+      if (runNumber < 148783) continue;
+
+      //now verify that these triggers existed in this menu
+      if (getHLTPrescale("HLT_HT100U_v3") <1 || getHLTPrescale("HLT_HT150U_v3")<1) {
+	cout<<"Problem with one of the triggers!"<<endl;
+	cout<<getHLTPrescale("HLT_HT100U_v3")<<endl;
+	cout<<getHLTPrescale("HLT_HT150U_v3")<<endl;
+	return;
+      }
+
+      if (Cut(ientry) < 0) continue; //jmt use cut
+
+      if ( !passHLT("HLT_HT100U_v3") ) continue;
+
+      double ht = getHT_Sync1(); //recalculate HT
+
+      H_HT_AfterHT100U.Fill(ht);
+
+      if (  passHLT("HLT_HT150U_v3") ) {
+	H_HT_AfterHT150U.Fill(ht);
+      }
+
+   }
+
+   TH1D Heff("Heff","pass trig fraction",ht_nbins,ht_min,ht_max);
+   Heff.Sumw2();
+
+   Heff.Divide(&H_HT_AfterHT150U,&H_HT_AfterHT100U,1,1,"B");
+
+   fout.Write();
+   fout.Close();
+
+}
+
+void basicLoop::triggerTest()
+{
+   if (fChain == 0) return;
+
+   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+
+   std::map<TString, unsigned int> npassHLT;
+
+   std::map<TString, unsigned int> runNumber_min;
+   std::map<TString, unsigned int> runNumber_max;
+   std::map<TString, bool> printed;
+   std::vector<TString> triggers;
+   triggers.push_back("HLT_HT100U");
+   triggers.push_back("HLT_HT120U");
+   triggers.push_back("HLT_HT140U");
+   triggers.push_back("HLT_HT150U_v3");
+   for (unsigned int itrg = 0; itrg < triggers.size() ; itrg++) {
+     TString thistrg = triggers.at(itrg);
+     runNumber_min[thistrg] = 9999999;
+     runNumber_max[thistrg] = 0;
+     printed[thistrg]=false;
+   }
+   
+   //open output file
+   TString outfilename="trigger."; 
+   outfilename+=getCutDescriptionString();
+   outfilename+=".";    outfilename+=getSampleName(findInputName());; 
+   /*  i think i don't need this as long as i make a big tchain of all data files
+   if (isData) {
+     outfilename+="-";
+     outfilename+=dataindex;
+   }
+   */
+   outfilename+=".root";
+   TFile fout(outfilename,"RECREATE");
+
+
+   int minrun = 125000;
+   int maxrun = 150000;
+   TH1D Hrunnum("Hrunnum","run number",maxrun-minrun,minrun,maxrun);
+   TH1D Hrunnum_passHLT("Hrunnum_passHLT","run number",maxrun-minrun,minrun,maxrun);
+
+   Hrunnum.Sumw2();
+   Hrunnum_passHLT.Sumw2();
 
    Long64_t nbytes = 0, nb = 0;
    for (Long64_t jentry=0; jentry<nentries;jentry++) {
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) break;
-      nb = fChain->GetEntry(jentry);   nbytes += nb;
+      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
-      bool passJMT = Cut(ientry) > 0;
-      bool passDon = SUSY_cutResults->at(12);
+      Hrunnum.Fill(runNumber);
 
-      if ( passJMT == passDon) {ngood++;}
-      else {nbad++;}
+      //note that I have killed the Cut() function here and just call the trigger cut explicitly
+      if (passHLT() ) {
+	Hrunnum_passHLT.Fill(runNumber);
+	if (npassHLT.find(lastTriggerPass_) == npassHLT.end()) {
+	  npassHLT[lastTriggerPass_]=1;
+	  cout<<"An event passed: "<<lastTriggerPass_<<endl;
+	}
+	else {  npassHLT[lastTriggerPass_] =  npassHLT[lastTriggerPass_] +1;}
+      }
+
+      //after this function was written, i implemented a better way to do this
+      //leave the old code alone, but add some new code here:
+      for (unsigned int itrg = 0; itrg < triggers.size() ; itrg++) {
+	TString thistrg=triggers.at(itrg);
+	int prescale= getHLTPrescale(thistrg);
+	if (runNumber ==148032 && !printed[thistrg]) {
+	  cout<<runNumber<<"\t"<<thistrg<<"\t"<<prescale<<endl;
+	  printed[thistrg]=true;
+	}
+	if (prescale == 1) {
+	  if ( runNumber < runNumber_min[thistrg] ) runNumber_min[thistrg] = runNumber;
+	  if ( runNumber > runNumber_max[thistrg] ) runNumber_max[thistrg] = runNumber;
+	}
+      }
 
    }
+   
+   TH1D Hrunnum_ratio("Hrunnum_ratio","pass trig fraction",maxrun-minrun,minrun,maxrun);
+   Hrunnum_ratio.Sumw2();
+   Hrunnum_ratio.Divide(&Hrunnum_passHLT,&Hrunnum);
 
-   std::cout<<"Good = "<<ngood<<std::endl;
-   std::cout<<"Bad  = "<<nbad<<std::endl;
+   for ( std::map<TString, unsigned int>::const_iterator ihlt = npassHLT.begin() ; ihlt!=npassHLT.end(); ++ihlt) {
+     cout<< ihlt->first <<"\t"<<ihlt->second<<endl;
+   }
+
+   fout.Write();
+   fout.Close();
+   cout<<"\n======================="<<endl;
+   for (unsigned int itrg = 0; itrg < triggers.size() ; itrg++) {
+     TString thistrg=triggers.at(itrg);
+     cout<<thistrg<<"\t"<<runNumber_min[thistrg]<<"\t"<<runNumber_max[thistrg]<<endl;
+   }
 
 }
-*/
+
