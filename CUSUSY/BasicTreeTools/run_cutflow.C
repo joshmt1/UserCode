@@ -14,7 +14,10 @@ gSystem->Load("basicLoop_C.so");
 
 */
 
-const TString version = "V00-01-00";
+const TString version = "V00-01-01";
+
+//const TString extrapath = "SUSYPATv8_363"; //pass an empty string unless you need something else
+const TString extrapath = "";
 
 void run_cutflow()
 {
@@ -24,13 +27,11 @@ void run_cutflow()
   TString dir = "/cu1/joshmt/";
   if (computername =="JoshPC") {
     dir="~/data/";
-    //  libname="basicLoop_C.dll";
   }
   //could also add CASTOR
 
-  //gSystem->Load(libname);
-
   dir += "BasicNtuples/";
+  if (extrapath!="") { dir += extrapath; dir += "/";}
   dir += version; dir+="/";
   TChain dummy("dummy");
   TString dirs = dir; dirs+="*";
@@ -47,19 +48,27 @@ void run_cutflow()
     cout<<"About to start on files: "<<samplefiles<<endl;
 
     if (samplefiles.Contains("DATA")) continue; //skip data (use run_cutflow_data.C)
-    if (!(samplefiles.Contains("LM") || samplefiles.Contains("TTbar"))) continue; //hack to skip some samples
-
-    if (!samplefiles.Contains("LM0") ) continue; //hack to skip some samples
+    //    if (!(samplefiles.Contains("LM") || samplefiles.Contains("TTbar"))) continue; //hack to skip some samples
     
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
     ch.Add(samplefiles);
     info.Add(samplefiles);
     basicLoop looper(&ch,&info);
+
+    /* sync exercise settings
     looper.setCutScheme(basicLoop::kSync1);
     looper.setMETType(basicLoop::kpfMET);
     looper.setJetType(basicLoop::kPF);
+    looper.setLeptonType(basicLoop::kNormal);
     looper.setDPType(basicLoop::kDPSync1);
+    */
+    looper.setCutScheme(basicLoop::kBaseline0);
+    looper.setMETType(basicLoop::kpfMET);
+    looper.setMETRange(basicLoop::kHigh); //signal region
+    looper.setJetType(basicLoop::kPF);
+    looper.setLeptonType(basicLoop::kPFLeptons);
+    looper.setDPType(basicLoop::kminDP);
 
     looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
     looper.cutflow();
