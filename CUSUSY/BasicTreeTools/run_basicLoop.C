@@ -16,7 +16,10 @@ these are not needed (assuming this macro is compiled) because of the include ab
 gSystem->Load("basicLoop_C.so");
 
 */
-const TString version = "V00-01-01";
+const TString version = "V00-01-02";
+
+//const TString extrapath = "SUSYPATv8_363";
+const TString extrapath = ""; //use an empty string here unless there is good reason to do otherwise
 
 void run_basicLoop()
 {
@@ -31,6 +34,7 @@ void run_basicLoop()
   }
 
   dir += "BasicNtuples/";
+  if (extrapath!="") { dir += extrapath; dir += "/";}
   dir += version; dir+="/";
   TChain dummy("dummy");
   TString dirs = dir; dirs+="*";
@@ -48,7 +52,7 @@ void run_basicLoop()
     if (samplefiles.Contains("DATA")) continue; //skip data (use run_basicLoop_data.C)
 
     //if (!samplefiles.Contains("QCD")) continue; //hack to skip some samples
-    if (!(samplefiles.Contains("LM") || samplefiles.Contains("TTbar"))) continue; //hack to skip some samples
+    //if (!(samplefiles.Contains("LM") || samplefiles.Contains("TTbar"))) continue; //hack to skip some samples
 
     cout<<"About to start on files: "<<samplefiles<<endl;
 
@@ -58,8 +62,8 @@ void run_basicLoop()
     info.Add(samplefiles);
     basicLoop looper(&ch,&info);
     //important! this is where cuts are defined
-    looper.setCutScheme(basicLoop::kRA2); //this is now the only scheme!
-    looper.setMETType(basicLoop::kMET);
+    looper.setCutScheme(basicLoop::kRA2);
+    looper.setMETType(basicLoop::kpfMET);
     looper.setMETRange(basicLoop::kWide);
     looper.setDPType(basicLoop::kminDP);
     //no b tagging cut so that plots can apply it selectively

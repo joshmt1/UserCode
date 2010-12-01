@@ -120,12 +120,11 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   
   double sigma = getCrossSection(inname);
   TString sampleName = getSampleName(inname);
-  bool isData = (sampleName=="data") ? true : false; //for data
-  if (sigma<=0 && !isData) return;
+  if (sigma<=0 && !isData_) return;
 
   if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
   
-  double   weight = isData ? 1 : lumi * sigma / double(nentries); //calculate weight
+  double   weight = isData_ ? 1 : lumi * sigma / double(nentries); //calculate weight
 
   //open output file
   //FIXME hardcoded for dellcmscornell here
@@ -133,7 +132,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   outfilename+=getCutDescriptionString();
   outfilename+=".";    outfilename+=getBCutDescriptionString(); 
   outfilename+=".";    outfilename+=sampleName; 
-  if (isData) {
+  if (isData_) {
     outfilename+="-";
     outfilename+=dataindex;
   }
@@ -201,19 +200,17 @@ void basicLoop::Loop(unsigned int dataindex)
    
    double sigma = getCrossSection(inname);
    TString sampleName = getSampleName(inname);
-   bool isData = (sampleName=="data") ? true : false; //for data
-   if (isData) std::cout<<"This is real data!"<<std::endl;
-   if (sigma<=0 && !isData) return;
+   if (sigma<=0 && !isData_) return;
 
    if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
 
-   double   weight = isData ? 1 : lumi * sigma / double(nentries); //calculate weight
+   double   weight = isData_ ? 1 : lumi * sigma / double(nentries); //calculate weight
 
    //open output file
    TString outfilename="plots."; 
    outfilename+=getCutDescriptionString();
    outfilename+=".";    outfilename+=sampleName; 
-   if (isData) {
+   if (isData_) {
      outfilename+="-";
      outfilename+=dataindex;
    }
@@ -469,7 +466,7 @@ void basicLoop::Loop(unsigned int dataindex)
       HVminDeltaPhiMHTj_ge1b.Fill(minDeltaPhi_j_MHT,weight);
       HV2minDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
 
-      int topcat = isData ? -99 : getTopDecayCategory(); //no sense in looking at MC truth in the data
+      int topcat = isData_ ? -99 : getTopDecayCategory(); //no sense in looking at MC truth in the data
       double minDeltaR_bj=999;
       int nbjetsfound=0;
       double bjetpt1=0;
@@ -831,7 +828,7 @@ void basicLoop::triggerTest()
    outfilename+=getCutDescriptionString();
    outfilename+=".";    outfilename+=getSampleName(findInputName());; 
    /*  i think i don't need this as long as i make a big tchain of all data files
-   if (isData) {
+   if (isData_) {
      outfilename+="-";
      outfilename+=dataindex;
    }
