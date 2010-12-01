@@ -50,8 +50,8 @@ const char *leptonTypeNames_[]={"RegLep","PFLep"}; //no JPT in ntuple for now
 
 const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1"};
 
-//for sync exercise, use 100 pb^-1
-const double lumi=100;
+//in 1/pb
+const double lumi=36; //tentative number for the full dataset
 // ========================================== end
 
 class basicLoop {
@@ -2217,8 +2217,8 @@ double basicLoop::getCrossSection( TString inname) {
 
   //  https://twiki.cern.ch/twiki/bin/view/CMS/ProductionReProcessingSpring10
   //  if (inname.Contains("/TTbarJets/") )                     return 165;
-  //  if (inname.Contains("/TTbarJets/") )                     return 157.5;
-  if (inname.Contains("/TTbarJets/") )                     return 95; //LO only
+  if (inname.Contains("/TTbarJets/") )                     return 157.5;
+  //if (inname.Contains("/TTbarJets/") )                     return 95; //LO only
   
   else if (inname.Contains("/LM0/"))                       return 38.93;
   else if (inname.Contains("/LM1/"))                       return 4.888;
