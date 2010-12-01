@@ -524,6 +524,9 @@ public :
    bool passMuVetoSync1() ;
    bool passEleVetoSync1() ;
 
+   int countMuSync1() ;
+   int countEleSync1() ;
+
    bool passTauVeto();
 
    bool isGoodJet_Sync1(unsigned int ijet);
@@ -1202,7 +1205,19 @@ bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to
   return cutIsRequired;
 }
 
+
 bool basicLoop::passMuVetoSync1() {
+  //this is less fast than returning the veto as soon as we get to '1', but avoids code duplication
+
+  //in principle I can add a special argument to countMuSync1 to return as soon as it gets to 1,
+  //but let's leave that optimization for later
+
+  return (countMuSync1() == 0);
+}
+
+int basicLoop::countMuSync1() {
+
+  int ngoodmu=0;
 
   unsigned int nmu = 0;
   if (theLeptonType_ == kNormal) nmu=muonPt->size();  
@@ -1231,10 +1246,11 @@ bool basicLoop::passMuVetoSync1() {
     if ( pt < 10 ) continue;
     if ( fabs(eta) > 2.5 ) continue;
     if ( reliso > 0.2) continue;
-    return false;
+
+    ++ngoodmu;
   }
   
-  return true;
+  return ngoodmu;
 }
 
 bool basicLoop::passTauVeto() {
@@ -1243,6 +1259,14 @@ bool basicLoop::passTauVeto() {
 }
 
 bool basicLoop::passEleVetoSync1() {
+  //see comments in muon section
+
+  return (countEleSync1() == 0);
+}
+
+int basicLoop::countEleSync1() {
+
+  int ngoodele=0;
 
   unsigned int nele = 0;
   if (theLeptonType_ == kNormal) nele=eleEt->size();  
@@ -1270,11 +1294,11 @@ bool basicLoop::passEleVetoSync1() {
     if ( fabs(eta) > 2.5 ) continue;
     if ( reliso > 0.2) continue;
     
-    //if any electron passes all of these cuts, then veto
-    return false;
+    //if any electron passes all of these cuts, then it is good
+    ++ngoodele;
   }
 
-  return true;
+  return ngoodele;
 
 }
 
