@@ -7,6 +7,8 @@
 #include <TStyle.h>
 #include <fstream>
 
+#include "TMath.h"
+
 // just leave this code here, untouched.
 // it can be copied and pasted as an event loop template
 void basicLoop::exampleLoop()
@@ -239,10 +241,10 @@ void basicLoop::cutflowPlotter()
        H_NMuons[name]=new TH1D(name,name,10,0,10);
 
        name="H_MET_"; name += cutTags_[i];
-       H_MET[name]=new TH1D(name,name,10,0,10);
+       H_MET[name]=new TH1D(name,name,100,0,400);
 
        name="H_minDeltaPhi_"; name += cutTags_[i];
-       H_minDeltaPhi[name]=new TH1D(name,name,10,0,10);
+       H_minDeltaPhi[name]=new TH1D(name,name,50,0,TMath::Pi());
      }
    }
       
