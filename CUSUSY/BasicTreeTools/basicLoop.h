@@ -512,10 +512,11 @@ public :
    float getMETphi(); //return MET determined by theMETType_
    
    void cutflow();
+   void cutflowPlotter();
    bool cutRequired(TString cutTag) ;
    bool passCut(TString cutTag) ;
-   TString getSampleName(const TString inname) ;
-   double getCrossSection(const TString inname) ;
+   TString getSampleName(TString inname="") ;
+   double getCrossSection(TString inname="") ;
    TString findInputName() ;
 
    bool passMuVetoRA2() ;
@@ -1428,7 +1429,7 @@ bool basicLoop::passCut(const TString cutTag) {
   if (theCutScheme_ == kBaseline0) {
     if (cutTag=="cutPV") return passPV();
 
-    if (cutTag=="cutHT") return getHT();
+    if (cutTag=="cutHT") return getHT()>300;
 
     if (cutTag=="cut3Jets") return (nGoodJets() >= 3);
 
@@ -2144,8 +2145,9 @@ void basicLoop::InitJets() {
 }
 
 
-TString basicLoop::getSampleName(const TString inname) {
- 
+TString basicLoop::getSampleName(TString inname) {
+  if (inname=="") inname=findInputName();
+
   if (inname.Contains("/TTbarJets/") )                     return "TTbarJets";
   else if (inname.Contains("/LM0/"))                       return "LM0";
   else if (inname.Contains("/LM1/"))                       return "LM1";
@@ -2184,7 +2186,9 @@ TString basicLoop::getSampleName(const TString inname) {
 
 }
 
-double basicLoop::getCrossSection(const TString inname) {
+double basicLoop::getCrossSection( TString inname) {
+  if (inname=="") inname=findInputName();
+
   //may need to update these
 
   //  https://twiki.cern.ch/twiki/bin/view/CMS/ProductionReProcessingSpring10
@@ -2256,6 +2260,7 @@ double basicLoop::getCrossSection(const TString inname) {
 
 TString basicLoop::findInputName() {
    // ===== do something tricky to figure out which sample this is ======
+  if (fChain==0) return "errorNoChain";
    TString inname="";
    if (fChain->InheritsFrom(TChain::Class())) {
      if (((TChain*) fChain)->GetListOfFiles()->GetEntries() <1) {
