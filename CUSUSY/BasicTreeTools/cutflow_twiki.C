@@ -38,10 +38,12 @@ void cutflow_twiki()
 {
   //  gROOT->SetStyle("BABAR");
   //first we need to load each text file (one sample at a time)
-  const TString filestub ="RA2_MHThigh_DeltaPhi";
+  const TString filestub ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoDeltaPhi_NoTrigger";
 
   const int mode = 1; //mode 1 is print cut flow table ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
   assert(mode==1 || mode==2 || mode ==3);
+
+  const bool latexMode = true; //otherwise TWiki
 
   TString modeDescription="";
   if (mode==2) modeDescription="S/sqrt(S+B)";
@@ -49,8 +51,11 @@ void cutflow_twiki()
 
   int icolor=1;
 
-  //in principle these are coded in basicLoop.C/h; do the easy thing for now
+  //the big weakness in this code is that this is not encoded in the input somehow.
+  //should fix it for real later
+  //when I am fixing it for real, need to update the formatting to depend on latexMode
   std::vector<TString> cutnames;
+  /*
   cutnames.push_back("Inclusive");
   cutnames.push_back("Trigger");
   cutnames.push_back("PV");
@@ -64,7 +69,17 @@ void cutflow_twiki()
   cutnames.push_back(">=1 b");
   cutnames.push_back(">=2 b");
   cutnames.push_back(">=3 b");
-
+  */
+  cutnames.push_back("Inclusive");
+  cutnames.push_back("PV");
+  cutnames.push_back("HT");
+  cutnames.push_back(">= 3 Jets");
+  cutnames.push_back("#mu veto");
+  cutnames.push_back("e veto");
+  cutnames.push_back("MET");
+  cutnames.push_back(">=1 b");
+  cutnames.push_back(">=2 b");
+  cutnames.push_back(">=3 b");
 
   //is this really the best way to do this?
   int nqcd = 4;
@@ -197,20 +212,26 @@ void cutflow_twiki()
   int ncuts = signal[TString(signal_list[0])].size(); //should be the same in all cases!
   cout<<"ncuts = "<<ncuts<<endl;
   //need to get the cutnames into this script....
-  const  TString pm = " +/- ";
-  const  TString col = " | ";
+  const TString pm = latexMode ? " \\pm " : " +/- ";
+  const  TString col = latexMode ? " & " : " | ";
 
-  cout<<col<<"n" <<col<<"Cut"<<col;
+  if (!latexMode)  cout<<col<<"n" <<col;
+  cout<<"Cut"<<col;
   if (mode==1) {
     cout<<"QCD"<<col;
     for (int ibackground=0 ; ibackground<nbackground; ibackground++)     cout<< background_list[ibackground]<<col;
   }
-  for (int isignal=0 ; isignal<nsignal; isignal++)     cout<<signal_list[isignal]<<col;
+  for (int isignal=0 ; isignal<nsignal; isignal++)   {
+    cout<<signal_list[isignal];
+    if (!(latexMode && isignal==nsignal-1))  cout<<col;
+    else cout<<" \\\\";
+  }
   cout<<endl;
 
 
   for (int i=0; i<ncuts; i++) {
-    cout<<col<< i<<col<<cutnames.at(i)<<col;
+    if (!latexMode)    cout<<col<< i<<col;
+    cout<<cutnames.at(i)<<col;
 
     //cout<<setprecision(1);
 
@@ -244,7 +265,11 @@ void cutflow_twiki()
     background_total_err = sqrt(background_total_err);
 
     for (int isignal=0 ; isignal<nsignal; isignal++) {
-      if (mode==1)      cout<<format_nevents(signal[signal_list[isignal]].at(i) , signalerr[signal_list[isignal]].at(i)) << col;
+      if (mode==1)   {
+	cout<<format_nevents(signal[signal_list[isignal]].at(i) , signalerr[signal_list[isignal]].at(i)) ;
+	if (!(latexMode && isignal==nsignal-1)) cout<< col; //get rid of trailing & in latex mode
+	else cout<<" \\\\";
+      }
       else if (mode==2) {
 	if (signal[signal_list[isignal]].at(i)+ background_total >0)
 	  cout<<signal[signal_list[isignal]].at(i)/sqrt(signal[signal_list[isignal]].at(i)+ background_total)  << col;
