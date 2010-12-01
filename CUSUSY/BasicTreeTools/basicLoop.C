@@ -180,8 +180,139 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   
 }
 
+/*
+experimental new loop -- for use with Baseline0 cut scheme
+*/
+void basicLoop::cutflowPlotter()
+//no data index -- data must be passed in as one big chain!
+{
+ 
+   if (fChain == 0) return;
+   printState();
+
+   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+
+   std::cout<<"Got an input file name as: "<<findInputName()<<std::endl;
+   
+   double sigma = getCrossSection();
+   TString sampleName = getSampleName();
+   if (sigma<=0 && !isData_) {std::cout<<"Cross section problem! "<<sigma<<std::endl; return;}
+
+   if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
+
+   double   weight = isData_ ? 1 : lumi * sigma / double(nentries); //calculate weight
+
+   //open output file
+   TString outfilename="cutflowPlots.";
+   outfilename+=getCutDescriptionString();
+   outfilename+=".";    outfilename+=sampleName; 
+   outfilename+=".root";
+   TFile fout(outfilename,"RECREATE");
+
+   TH1::SetDefaultSumw2(); //trick to turn on Sumw2 for all histos
+
+   //make histograms (and call sumw2)
+   TString name;
+   std::map<TString, TH1D*> H_HT;
+   std::map<TString, TH1D*> H_NJets;
+   std::map<TString, TH1D*> H_NElectrons;
+   std::map<TString, TH1D*> H_NMuons;
+   std::map<TString, TH1D*> H_MET;
+   std::map<TString, TH1D*> H_minDeltaPhi;
+   std::map<TString, TH1D*> H_NBJets;
+   for (unsigned int i=0 ; i<cutTags_.size(); i++) {
+     if (cutRequired(cutTags_[i])  ) {
+       //name will indicate that the histogram is *after* the cut in the name
+       name="H_HT_";    name += cutTags_[i];
+       H_HT[name]=new TH1D(name,name,300,0,1200);
+
+       name="H_NJets_";    name += cutTags_[i];
+       H_NJets[name]=new TH1D(name,name,10,0,10);
+
+       name="H_NBJets_";    name += cutTags_[i];
+       H_NBJets[name]=new TH1D(name,name,10,0,10);
+
+       name="H_NElectrons_"; name += cutTags_[i];
+       H_NElectrons[name]=new TH1D(name,name,10,0,10);
+
+       name="H_NMuons_"; name += cutTags_[i];
+       H_NMuons[name]=new TH1D(name,name,10,0,10);
+
+       name="H_MET_"; name += cutTags_[i];
+       H_MET[name]=new TH1D(name,name,10,0,10);
+
+       name="H_minDeltaPhi_"; name += cutTags_[i];
+       H_minDeltaPhi[name]=new TH1D(name,name,10,0,10);
+     }
+   }
+      
+
+   //keep track of performance
+   TDatime starttime; //default ctor is for current time
+   Long64_t nbytes = 0, nb = 0;
+   for (Long64_t jentry=0; jentry<nentries ;jentry++) {
+      Long64_t ientry = LoadTree(jentry);
+      if (ientry < 0) {assert(0);}
+      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+
+      //calculate some quantities
+      //unlike in the old ::Loop, here be sure to plot the same quanities used
+      //by the Baseline0 scheme when making cuts
+      //therefore, this is only certain to work in Baseline0
+      float ht = getHT();
+    
+      int njets = nGoodJets();
+      int nbjets = countBJets();
+      int nelectrons = countEleSync1();
+      int nmuons = countMuSync1();
+      float met = getMET() ;
+      float minDeltaPhi = getMinDeltaPhiMET(3);
+
+      //don't call the Cut method but rather do the cut flow step by step
+      //just like in ::cutflow()  
+      for (unsigned int i=0 ; i<cutTags_.size(); i++) {
+	if (cutRequired(cutTags_[i]) && passCut(cutTags_[i]) ) {
+	  //event passes that step of cut flow!
+	  name="H_HT_";	  name += cutTags_[i];
+	  H_HT[name]->Fill(ht,weight);
+
+	  name="H_NJets_";	  name += cutTags_[i];
+	  H_NJets[name]->Fill(njets,weight);
+
+	  name="H_NBJets_";	  name += cutTags_[i];
+	  H_NBJets[name]->Fill(nbjets,weight);
+
+	  name="H_NElectrons_";	  name += cutTags_[i];
+	  H_NElectrons[name]->Fill(nelectrons,weight);
+
+	  name="H_NMuons_";	  name += cutTags_[i];
+	  H_NMuons[name]->Fill(nmuons,weight);
+
+	  name="H_MET_";	  name += cutTags_[i];
+	  H_MET[name]->Fill(met,weight);
+
+	  name="H_minDeltaPhi_";	  name += cutTags_[i];
+	  H_minDeltaPhi[name]->Fill(minDeltaPhi,weight);
+	}
+	else if (cutRequired(cutTags_[i]) && !passCut(cutTags_[i]) ) break;
+      }
+     
+   }
+   TDatime stoptime; //default ctor is for current time
+   UInt_t elapsed= stoptime.Convert() - starttime.Convert();
+
+   cout<<"events / time = "<<nentries<<" / "<<elapsed<<" = "<<double(nentries)/double(elapsed)<<" Hz"<<endl;
+ 
+
+   fout.Write();
+   fout.Close();
+
+}
+
 /* 
 main plot-making loop
+
+this code is quite old and may not be plotting the correct quantities in the Sync1 or Baseline0 schemes
 */
 void basicLoop::Loop(unsigned int dataindex)
 {
