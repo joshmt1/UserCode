@@ -46,7 +46,7 @@ const char *METTypeNames_[]={"MHT", "MET",  "tcMET", "pfMET"};
 const char *METRangeNames_[]={"med",  "high", "wide"}; //'no cut' is not given, because the cut can always be skipped!
 
 const char *jetTypeNames_[]={"calo","PF"}; //no JPT in ntuple for now
-const char *leptonTypeNames_[]={"RegLep","PFLep"}; //no JPT in ntuple for now
+const char *leptonTypeNames_[]={"RegLep","PFLep"};
 
 const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1"};
 
@@ -80,7 +80,7 @@ public :
   //can use hltPrescale to figure out if the trigger exists in a given event/sample
 
   std::vector<TString> cutTags_;
-  std::map<TString, TString> cutNames_; //key is a cutTag
+  std::map<TString, TString> cutNames_; //key is a cutTag. these should be "human readable" but should not have any spaces
   std::map<TString, int> cutMap_; //key is a cutTag, value is the position in the ntuple CutResults
   std::vector<TString> ignoredCut_; //allow more than 1 ignored cut!
   //if theCutFlow changes, be sure to change cutnames_ as well
