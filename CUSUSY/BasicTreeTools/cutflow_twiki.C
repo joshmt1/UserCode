@@ -18,6 +18,13 @@ root -b -l -q cutflow_twiki.C++
 #include "TAxis.h"
 TCanvas * Ccutflow;
 
+//global settings that change what the output of the code is
+
+const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoDeltaPhi_NoTrigger";
+const int mode_ = 1; //mode 1 is print cut flow table ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
+const bool latexMode_ = true; //otherwise TWiki
+
+
 //utility function for making output more readable
 TString format_nevents(double n,double e) {
   char out[100];
@@ -34,61 +41,95 @@ TString format_nevents(double n,double e) {
   return TString(out);
 }
 
+//i can't think of an elegant solution, other than to just run this each time
+void combineSamples(TString outputname, std::vector<TString> inputList)
+{
+  /*
+idea here is to open the input files, combine them, and write out a combined file.
+in this way, the main code can read the combined sample without any special treatment
+This is exactly how QCD used to be treated in the main function, but now I want to generalize it and write the file too
+  */
+
+  unsigned int nToCombine = inputList.size();
+  std::vector<TString> cutnames;
+  std::map<TString, std::vector<float> > n;
+  std::map<TString, std::vector<float> > err;
+
+  //first load the event counts and errors for the input samples
+  for (unsigned int i=0 ; i<nToCombine; i++) {
+    TString filename = "cutflow.";
+    filename+=filestub_;
+    filename+="."; filename+=inputList[i];
+    filename += ".dat";
+
+    cout<<"Reading "<<filename<<endl;
+    float nevt,nevterr;
+    char cutdesc[100];
+    ifstream file(filename.Data());
+    if (!file.good()) {cout<<"bad file! "<<filename<<endl; assert(0);}
+    while (file>>cutdesc>>nevt>>nevterr ) {
+      if (i==0)  cutnames.push_back(cutdesc);
+      n[TString(inputList[i])].push_back(nevt);
+      err[TString(inputList[i])].push_back(nevterr);
+    }
+    file.close();
+  }
+
+  //open a file for output
+  TString outfilename="cutflow."; 
+  outfilename +=filestub_;
+  outfilename +=".";
+  outfilename +=outputname;
+  outfilename +=".dat";
+  remove(outfilename.Data()); //if it already exists, delete it
+  ofstream ofile(outfilename.Data());
+
+  unsigned int ncuts = cutnames.size();
+  for (unsigned int i=0; i<ncuts; i++) {
+    float total=0;
+    float total_err=0;
+
+    for (unsigned int j=0 ; j<nToCombine; j++) {
+      total += n[inputList[j]].at(i);
+      total_err += pow(err[inputList[j]].at(i),2);
+    }
+
+    total_err = sqrt(total_err);
+    //now we've got to write the output file
+    ofile<<cutnames.at(i)<<"\t"<<total<<"\t"<<total_err<<endl;
+  }
+  ofile.close();
+
+}
+
 void cutflow_twiki()
 {
-  //  gROOT->SetStyle("BABAR");
-  //first we need to load each text file (one sample at a time)
-  const TString filestub ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoDeltaPhi_NoTrigger";
-
-  const int mode = 1; //mode 1 is print cut flow table ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
-  assert(mode==1 || mode==2 || mode ==3);
-
-  const bool latexMode = true; //otherwise TWiki
+  assert(mode_==1 || mode_==2 || mode_ ==3);
 
   TString modeDescription="";
-  if (mode==2) modeDescription="S/sqrt(S+B)";
-  else if (mode==3) modeDescription="S/sqrt(B)";
+  if (mode_==2) modeDescription="S/sqrt(S+B)";
+  else if (mode_==3) modeDescription="S/sqrt(B)";
 
   int icolor=1;
 
-  //the big weakness in this code is that this is not encoded in the input somehow.
-  //should fix it for real later
-  //when I am fixing it for real, need to update the formatting to depend on latexMode
+  //the cut names are no longer hard-coded here, but are rather read in from the cutflow files
+  //so old cutflow files won't work any more!
   std::vector<TString> cutnames;
-  /*
-  cutnames.push_back("Inclusive");
-  cutnames.push_back("Trigger");
-  cutnames.push_back("PV");
-  cutnames.push_back(">= 3 Jets");
-  cutnames.push_back("HT");
-  if (filestub.Contains("MET")) { cutnames.push_back("MET");}
-  else { cutnames.push_back("MHT");}
-  cutnames.push_back("#mu veto");
-  cutnames.push_back("e veto");
-  cutnames.push_back("#Delta #phi");
-  cutnames.push_back(">=1 b");
-  cutnames.push_back(">=2 b");
-  cutnames.push_back(">=3 b");
-  */
-  cutnames.push_back("Inclusive");
-  cutnames.push_back("PV");
-  cutnames.push_back("HT");
-  cutnames.push_back(">= 3 Jets");
-  cutnames.push_back("#mu veto");
-  cutnames.push_back("e veto");
-  cutnames.push_back("MET");
-  cutnames.push_back(">=1 b");
-  cutnames.push_back(">=2 b");
-  cutnames.push_back(">=3 b");
 
   //is this really the best way to do this?
   int nqcd = 4;
   char *qcd_list[]={"QCD100","QCD250","QCD500","QCD1000"};
-  int nbackground = 6;
-  char *background_list[]={"TTbarJets","SingleTop-tChannel","SingleTop-tWChannel","Zinvisible","WJets","ZJets"};
+  int nbackground = 5;
+  char *background_list[]={"TTbarJets","SingleTop","Zinvisible","WJets","ZJets"};
   int nsignal = 5;//16; //oops, where did LM3 go?
   //  char *signal_list[]={"LM0", "LM1", "LM2", "LM4", "LM5", "LM6","LM7", "LM8","LM9","LM9p", "LM9t175", "LM10", "LM11", "LM12","LM13","mMSSM"};
   char *signal_list[]={"LM0", "LM1", "LM9","LM13","mMSSMv3"};
+
+  //in principle we can also rewrite the code using this to combine QCD
+  std::vector<TString> singletopnames;
+  singletopnames.push_back("SingleTop-tChannel");
+  singletopnames.push_back("SingleTop-tWChannel");
+  combineSamples("SingleTop",singletopnames);
 
   //these are only relevant for mode==1
   const int drawsignalindex = 3; //this is the signal to use for the plot
@@ -111,9 +152,10 @@ void cutflow_twiki()
   std::map<TString, std::vector<float> > signalerr;
 
   //lordy, this could really be more generic!
+  char cutdesc[100];
   for (int i=0 ; i<nqcd; i++) {
     TString filename = "cutflow.";
-    filename+=filestub;
+    filename+=filestub_;
     filename+="."; filename+=qcd_list[i];
     filename += ".dat";
 
@@ -121,21 +163,22 @@ void cutflow_twiki()
     float nevt,nevterr;
     ifstream file(filename.Data());
     if (!file.good()) {cout<<"bad file! "<<filename<<endl; return;}
-    while (file>>nevt>>nevterr ) {
+    while (file>>cutdesc>>nevt>>nevterr ) {
+      if (i==0)  cutnames.push_back(cutdesc);
       qcd[TString(qcd_list[i])].push_back(nevt);
       qcderr[TString(qcd_list[i])].push_back(nevterr);
     }
     file.close();
   }
 
-  if (mode==1) {
+  if (mode_==1) {
     Hcutflow[TString("QCD")] = new TH1D("HQCD","QCD",cutnames.size(),0,cutnames.size());
     Hcutflow["QCD"]->SetLineColor(icolor);   Hcutflow["QCD"]->SetMarkerColor(icolor);
     Hcutflow["QCD"]->SetFillColor(icolor);
     icolor++;
   }
 
-  if (mode==1) {
+  if (mode_==1) {
     Hcutflow[mysig] = new TH1D("Hsignal",mysig,cutnames.size(),0,cutnames.size());
     Hcutflow[mysig]->SetLineColor(icolor);   Hcutflow[mysig]->SetMarkerColor(icolor);
     Hcutflow[mysig]->SetFillColor(icolor);
@@ -144,11 +187,11 @@ void cutflow_twiki()
 
   for (int i=0 ; i<nbackground; i++) {
     TString filename = "cutflow.";
-    filename+=filestub;
+    filename+=filestub_;
     filename+="."; filename+=background_list[i];
     filename += ".dat";
 
-    if (mode==1) {
+    if (mode_==1) {
       Hcutflow[TString(background_list[i])] = new TH1D("H"+TString(background_list[i]),TString(background_list[i]),cutnames.size(),0,cutnames.size());
       cout<<"Created histogram name = "<<Hcutflow[TString(background_list[i])]->GetName()<<endl;
       Hcutflow[TString(background_list[i])]->SetLineColor(icolor); 
@@ -162,10 +205,10 @@ void cutflow_twiki()
     ifstream file(filename.Data());
     if (!file.good()) {cout<<"bad file! "<<filename<<endl; return;}
     int ibin=1;
-    while (file>>nevt>>nevterr ) {
+    while (file>>cutdesc>>nevt>>nevterr ) {
       background[TString(background_list[i])].push_back(nevt);
       backgrounderr[TString(background_list[i])].push_back(nevterr);
-      if (mode==1) {
+      if (mode_==1) {
 	Hcutflow[TString(background_list[i])]->SetBinContent(ibin,nevt);
 	Hcutflow[TString(background_list[i])]->SetBinError(ibin,nevterr);
 	ibin++;
@@ -179,11 +222,11 @@ void cutflow_twiki()
 
   for (int i=0 ; i<nsignal; i++) {
     TString filename = "cutflow.";
-    filename+=filestub;
+    filename+=filestub_;
     filename+="."; filename+=signal_list[i];
     filename += ".dat";
 
-    if (mode==2 ||mode ==3) {
+    if (mode_==2 ||mode_ ==3) {
       Hcutflow[TString(signal_list[i])] = new TH1D("H"+TString(signal_list[i]),TString(signal_list[i]),cutnames.size(),0,cutnames.size());
       cout<<"Created histogram name = "<<Hcutflow[TString(signal_list[i])]->GetName()<<endl;
       Hcutflow[TString(signal_list[i])]->SetLineColor(icolor); 
@@ -197,7 +240,7 @@ void cutflow_twiki()
     float nevt,nevterr;
     ifstream file(filename.Data());
     if (!file.good()) {cout<<"bad file! "<<filename<<endl; return;}
-    while (file>>nevt>>nevterr ) {
+    while (file>>cutdesc>>nevt>>nevterr ) {
       signal[TString(signal_list[i])].push_back(nevt);
       signalerr[TString(signal_list[i])].push_back(nevterr);
     }
@@ -211,26 +254,25 @@ void cutflow_twiki()
   //then we need to translate to a one cut at a time table
   int ncuts = signal[TString(signal_list[0])].size(); //should be the same in all cases!
   cout<<"ncuts = "<<ncuts<<endl;
-  //need to get the cutnames into this script....
-  const TString pm = latexMode ? " \\pm " : " +/- ";
-  const  TString col = latexMode ? " & " : " | ";
+  const TString pm = latexMode_ ? " \\pm " : " +/- ";
+  const  TString col = latexMode_ ? " & " : " | ";
 
-  if (!latexMode)  cout<<col<<"n" <<col;
+  if (!latexMode_)  cout<<col<<"n" <<col;
   cout<<"Cut"<<col;
-  if (mode==1) {
+  if (mode_==1) {
     cout<<"QCD"<<col;
     for (int ibackground=0 ; ibackground<nbackground; ibackground++)     cout<< background_list[ibackground]<<col;
   }
   for (int isignal=0 ; isignal<nsignal; isignal++)   {
     cout<<signal_list[isignal];
-    if (!(latexMode && isignal==nsignal-1))  cout<<col;
+    if (!(latexMode_ && isignal==nsignal-1))  cout<<col;
     else cout<<" \\\\";
   }
   cout<<endl;
 
 
   for (int i=0; i<ncuts; i++) {
-    if (!latexMode)    cout<<col<< i<<col;
+    if (!latexMode_)    cout<<col<< i<<col;
     cout<<cutnames.at(i)<<col;
 
     //cout<<setprecision(1);
@@ -243,7 +285,7 @@ void cutflow_twiki()
       qcd_total += qcd[qcd_list[iqcd]].at(i);
       qcd_total_err += pow(qcderr[qcd_list[iqcd]].at(i),2);
     }
-    if (mode ==1) {
+    if (mode_ ==1) {
       Hcutflow["QCD"]->SetBinContent(i+1,qcd_total);
       Hcutflow["QCD"]->SetBinError(i+1,sqrt(qcd_total_err));
     }
@@ -252,10 +294,10 @@ void cutflow_twiki()
     float background_total_err=qcd_total_err; //before taking the square root
 
     qcd_total_err = sqrt(qcd_total_err);
-    if (mode==1) cout<< format_nevents(qcd_total , qcd_total_err)<<col;
+    if (mode_==1) cout<< format_nevents(qcd_total , qcd_total_err)<<col;
 
     for (int ibackground=0 ; ibackground<nbackground; ibackground++) {
-      if (mode==1)
+      if (mode_==1)
 	cout<< format_nevents(background[background_list[ibackground]].at(i) ,backgrounderr[background_list[ibackground]].at(i)) << col;
       background_total += background[background_list[ibackground]].at(i);
       background_total_err += pow(backgrounderr[background_list[ibackground]].at(i),2);
@@ -265,32 +307,32 @@ void cutflow_twiki()
     background_total_err = sqrt(background_total_err);
 
     for (int isignal=0 ; isignal<nsignal; isignal++) {
-      if (mode==1)   {
+      if (mode_==1)   {
 	cout<<format_nevents(signal[signal_list[isignal]].at(i) , signalerr[signal_list[isignal]].at(i)) ;
-	if (!(latexMode && isignal==nsignal-1)) cout<< col; //get rid of trailing & in latex mode
+	if (!(latexMode_ && isignal==nsignal-1)) cout<< col; //get rid of trailing & in latex mode
 	else cout<<" \\\\";
       }
-      else if (mode==2) {
+      else if (mode_==2) {
 	if (signal[signal_list[isignal]].at(i)+ background_total >0)
 	  cout<<signal[signal_list[isignal]].at(i)/sqrt(signal[signal_list[isignal]].at(i)+ background_total)  << col;
 	else  cout<<" - "<<endl;
       }
-      else if (mode==3) {
+      else if (mode_==3) {
 	if ( background_total >0)
 	  cout<<signal[signal_list[isignal]].at(i)/sqrt(background_total)  << col;
 	else  cout<<" - "<<endl;
       }
-      if (mode ==1 && isignal == drawsignalindex) {
+      if (mode_ ==1 && isignal == drawsignalindex) {
 	  Hcutflow[mysig]->SetBinContent(i+1,signal[signal_list[isignal]].at(i));
 	  Hcutflow[mysig]->SetBinError(i+1,signalerr[signal_list[isignal]].at(i));
       }
-      else if (mode==2) {
+      else if (mode_==2) {
 	if (signal[signal_list[isignal]].at(i)+ background_total >0) {
 	  //not so keen on the fact that I'm duplicating the calculation code here...
 	  Hcutflow[signal_list[isignal]]->SetBinContent(i+1, signal[signal_list[isignal]].at(i)/sqrt(signal[signal_list[isignal]].at(i)+ background_total));
 	}
       }
-      else if (mode==3) {
+      else if (mode_==3) {
 	if ( background_total >0) 
 	  Hcutflow[signal_list[isignal]]->SetBinContent(i+1,signal[signal_list[isignal]].at(i)/sqrt(background_total) );
       }
@@ -306,10 +348,10 @@ void cutflow_twiki()
   //etc
 
   Ccutflow = new TCanvas("Ccutflow");
-  //  if (mode==1)  Ccutflow->SetLogy();
+  //  if (mode_==1)  Ccutflow->SetLogy();
   THStack mystack("mystack","Cut Flow Steps"); //only used for mode 1
   float legx1=0.6,legy1=0.6,legx2=0.9,legy2=0.9;
-  if (mode==2 || mode==3) {
+  if (mode_==2 || mode_==3) {
     legx1=0.1; legx2=0.3;
   }
   TLegend leg(legx1,legy1,legx2,legy2);
@@ -317,7 +359,7 @@ void cutflow_twiki()
 
   TString opt="";
   double highest=0;
-  if (mode==1) {
+  if (mode_==1) {
     mystack.Add( Hcutflow["QCD"]); //add qcd first
     leg.AddEntry(Hcutflow["QCD"],"QCD");
     for (int ib=0; ib<nbackground; ib++)  {
@@ -339,7 +381,7 @@ void cutflow_twiki()
 
   gStyle->SetOptStat(0);
   TAxis* ax=0;
-  if (mode==1) {
+  if (mode_==1) {
     mystack.SetMaximum(750); //hard-coded!
     mystack.Draw("HIST");
     TH1* hax=mystack.GetHistogram();
@@ -359,13 +401,13 @@ void cutflow_twiki()
   }
   leg.Draw();
 
-  TString outname = filestub;
+  TString outname = filestub_;
   outname+=".";
-  if (mode==1) {
+  if (mode_==1) {
     outname+=mysig;
     outname+=".";
   }
-  outname+=mode;
+  outname+=mode_;
   outname+=".eps";
   Ccutflow->SaveAs(outname);
 
