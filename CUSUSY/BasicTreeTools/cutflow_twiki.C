@@ -21,9 +21,10 @@ TCanvas * Ccutflow;
 //global settings that change what the output of the code is
 
 const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoDeltaPhi_NoTrigger";
-const int mode_ = 1; //mode 1 is print cut flow table ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
+//mode 1 is print cut flow table (B & S) ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
+//mode 4 is like 1 but B only, 5 is like 1 but S only
+const int mode_ = 5;
 const bool latexMode_ = true; //otherwise TWiki
-
 
 //utility function for making output more readable
 TString format_nevents(double n,double e) {
@@ -104,7 +105,6 @@ This is exactly how QCD used to be treated in the main function, but now I want 
 
 void cutflow_twiki()
 {
-  assert(mode_==1 || mode_==2 || mode_ ==3);
 
   TString modeDescription="";
   if (mode_==2) modeDescription="S/sqrt(S+B)";
@@ -169,6 +169,8 @@ void cutflow_twiki()
     Hcutflow[mysig]->SetFillColor(icolor);
     icolor++;
   }
+  
+  //do all of the reading and histo creation no matter what mode (1,4,5) we're in
 
   for (int i=0 ; i<nbackground; i++) {
     TString filename = "cutflow.";
@@ -240,20 +242,28 @@ void cutflow_twiki()
   cout<<"ncuts = "<<ncuts<<endl;
   const TString pm = latexMode_ ? " \\pm " : " +/- ";
   const  TString col = latexMode_ ? " & " : " | ";
+  const TString endtex = " \\\\";
 
+  //this section prints out the header line of the table
   if (!latexMode_)  cout<<col<<"n" <<col;
   cout<<"Cut"<<col;
-  if (mode_==1) {
-    //    cout<<"QCD"<<col;
-    for (int ibackground=0 ; ibackground<nbackground; ibackground++)     cout<< background_list[ibackground]<<col;
+  if (mode_==1 ||mode_==4) { //print background names
+    for (int ibackground=0 ; ibackground<nbackground; ibackground++)  {
+      cout<< background_list[ibackground];
+      if (!(mode_==4 && latexMode_ && ibackground==nbackground-1))    cout<<col;
+      else if ( mode_==4 && latexMode_ && ibackground==nbackground-1) cout<<endtex;
+    }
   }
-  for (int isignal=0 ; isignal<nsignal; isignal++)   {
-    cout<<signal_list[isignal];
-    if (!(latexMode_ && isignal==nsignal-1))  cout<<col;
-    else cout<<" \\\\";
+  if (mode_ !=4) { //print signal names
+    for (int isignal=0 ; isignal<nsignal; isignal++)   {
+      cout<<signal_list[isignal];
+      if (!(latexMode_ && isignal==nsignal-1))  cout<<col;
+      else cout<<endtex;
+    }
   }
   cout<<endl;
 
+  //now we print out the actual numbers
   for (int i=0; i<ncuts; i++) {
     if (!latexMode_)    cout<<col<< i<<col;
     cout<<cutnames.at(i)<<col;
@@ -263,8 +273,14 @@ void cutflow_twiki()
     double background_total_err=0;
 
     for (int ibackground=0 ; ibackground<nbackground; ibackground++) {
-      if (mode_==1)
-	cout<< format_nevents(background[background_list[ibackground]].at(i) ,backgrounderr[background_list[ibackground]].at(i)) << col;
+      bool lastInRow = ibackground==nbackground-1;
+
+      if (mode_==1 || mode_==4)
+	cout<< format_nevents(background[background_list[ibackground]].at(i) ,backgrounderr[background_list[ibackground]].at(i));
+      //in latex mode, the final column marker of a line in not there
+      if (mode_==1 )  cout<< col;
+      else if (mode_==4 && !(latexMode_&& lastInRow)) cout<<col;
+      else if (mode_==4 && latexMode_ && lastInRow) cout<<endtex;
       background_total += background[background_list[ibackground]].at(i);
       background_total_err += pow(backgrounderr[background_list[ibackground]].at(i),2);
     }
@@ -274,19 +290,27 @@ void cutflow_twiki()
 
     //what we print depends on the mode
     for (int isignal=0 ; isignal<nsignal; isignal++) {
-      if (mode_==1)   {
+      bool lastInRow = isignal==nsignal-1;
+
+      if (mode_==1 || mode_==5)   {
 	cout<<format_nevents(signal[signal_list[isignal]].at(i) , signalerr[signal_list[isignal]].at(i)) ;
-	if (!(latexMode_ && isignal==nsignal-1)) cout<< col; //get rid of trailing & in latex mode
-	else cout<<" \\\\";
+	if (!(latexMode_ && lastInRow)) cout<< col; //get rid of trailing & in latex mode
+	else cout<<endtex;
       }
       else if (mode_==2) {
-	if (signal[signal_list[isignal]].at(i)+ background_total >0)
-	  cout<<signal[signal_list[isignal]].at(i)/sqrt(signal[signal_list[isignal]].at(i)+ background_total)  << col;
+	if (signal[signal_list[isignal]].at(i)+ background_total >0) {
+	  cout<<signal[signal_list[isignal]].at(i)/sqrt(signal[signal_list[isignal]].at(i)+ background_total);
+	  if (latexMode_&&lastInRow) cout  << endtex;
+	  else cout<<col;
+	}
 	else  cout<<" - "<<endl;
       }
       else if (mode_==3) {
-	if ( background_total >0)
-	  cout<<signal[signal_list[isignal]].at(i)/sqrt(background_total)  << col;
+	if ( background_total >0) {
+	  cout<<signal[signal_list[isignal]].at(i)/sqrt(background_total);
+	  if (latexMode_&&lastInRow) cout<<endtex;
+	  else cout  << col;
+	}
 	else  cout<<" - "<<endl;
       }
       if (mode_ ==1 && isignal == drawsignalindex) {
@@ -309,6 +333,8 @@ void cutflow_twiki()
     cout<<endl;
   }
 
+  //at this point we've got our table and we don't want to continue;
+  if (mode_==4 || mode_==5) return;
 
   Ccutflow = new TCanvas("Ccutflow");
   //  if (mode_==1)  Ccutflow->SetLogy();
