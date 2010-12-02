@@ -52,8 +52,8 @@ This is exactly how QCD used to be treated in the main function, but now I want 
 
   unsigned int nToCombine = inputList.size();
   std::vector<TString> cutnames;
-  std::map<TString, std::vector<float> > n;
-  std::map<TString, std::vector<float> > err;
+  std::map<TString, std::vector<double> > n;
+  std::map<TString, std::vector<double> > err;
 
   //first load the event counts and errors for the input samples
   for (unsigned int i=0 ; i<nToCombine; i++) {
@@ -63,7 +63,7 @@ This is exactly how QCD used to be treated in the main function, but now I want 
     filename += ".dat";
 
     cout<<"Reading "<<filename<<endl;
-    float nevt,nevterr;
+    double nevt,nevterr;
     char cutdesc[100];
     ifstream file(filename.Data());
     if (!file.good()) {cout<<"bad file! "<<filename<<endl; assert(0);}
@@ -86,8 +86,8 @@ This is exactly how QCD used to be treated in the main function, but now I want 
 
   unsigned int ncuts = cutnames.size();
   for (unsigned int i=0; i<ncuts; i++) {
-    float total=0;
-    float total_err=0;
+    double total=0;
+    double total_err=0;
 
     for (unsigned int j=0 ; j<nToCombine; j++) {
       total += n[inputList[j]].at(i);
@@ -96,7 +96,7 @@ This is exactly how QCD used to be treated in the main function, but now I want 
 
     total_err = sqrt(total_err);
     //now we've got to write the output file
-    ofile<<cutnames.at(i)<<"\t"<<total<<"\t"<<total_err<<endl;
+    ofile<<setprecision(12)<<cutnames.at(i)<<"\t"<<total<<"\t"<<total_err<<endl;
   }
   ofile.close();
 
@@ -116,67 +116,52 @@ void cutflow_twiki()
   //so old cutflow files won't work any more!
   std::vector<TString> cutnames;
 
-  //is this really the best way to do this?
-  int nqcd = 4;
-  char *qcd_list[]={"QCD100","QCD250","QCD500","QCD1000"};
-  int nbackground = 5;
-  char *background_list[]={"TTbarJets","SingleTop","Zinvisible","WJets","ZJets"};
+  int nbackground = 6;
+  char *background_list[]={"QCD","TTbarJets","SingleTop","Zinvisible","WJets","ZJets"};
   int nsignal = 5;//16; //oops, where did LM3 go?
   //  char *signal_list[]={"LM0", "LM1", "LM2", "LM4", "LM5", "LM6","LM7", "LM8","LM9","LM9p", "LM9t175", "LM10", "LM11", "LM12","LM13","mMSSM"};
   char *signal_list[]={"LM0", "LM1", "LM9","LM13","mMSSMv3"};
 
-  //in principle we can also rewrite the code using this to combine QCD
+  //combine single top into one category
   std::vector<TString> singletopnames;
   singletopnames.push_back("SingleTop-tChannel");
   singletopnames.push_back("SingleTop-tWChannel");
   combineSamples("SingleTop",singletopnames);
+
+  //combine qcd into one
+  std::vector<TString> qcdnames;
+  qcdnames.push_back("QCD100");
+  qcdnames.push_back("QCD250");
+  qcdnames.push_back("QCD500");
+  qcdnames.push_back("QCD1000");
+  combineSamples("QCD",qcdnames);
 
   //these are only relevant for mode==1
   const int drawsignalindex = 3; //this is the signal to use for the plot
   const TString mysig = signal_list[drawsignalindex];
 
   //as long as i compile, I can use the most basic stl containers
-  // ... what was I thinking? what i really want is a map of these, indexed by the names.
-  //can ROOT handle it? //seems ok....
-
-  std::map<TString, std::vector<float> > qcd;
-  std::map<TString, std::vector<float> > qcderr;
-
-  std::map<TString, std::vector<float> > background;
-  std::map<TString, std::vector<float> > backgrounderr;
+  std::map<TString, std::vector<double> > background;
+  std::map<TString, std::vector<double> > backgrounderr;
   //probably I could have used a TH1 as a storage container from the beginning
   //but keep the old STL structure in order to avoid bugs
   std::map<TString, TH1D*> Hcutflow;
 
-  std::map<TString, std::vector<float> > signal;
-  std::map<TString, std::vector<float> > signalerr;
+  std::map<TString, std::vector<double> > signal;
+  std::map<TString, std::vector<double> > signalerr;
 
-  //lordy, this could really be more generic!
+//I need to fill cutnames!
+  TString filename = "cutflow.";
+  filename+=filestub_;
+  filename+="."; filename+=background_list[0];
+  filename += ".dat";
+  ifstream file(filename.Data());
+  if (!file.good()) {cout<<"bad file! "<<filename<<endl; return;}
   char cutdesc[100];
-  for (int i=0 ; i<nqcd; i++) {
-    TString filename = "cutflow.";
-    filename+=filestub_;
-    filename+="."; filename+=qcd_list[i];
-    filename += ".dat";
-
-    cout<<"Reading "<<filename<<endl;
-    float nevt,nevterr;
-    ifstream file(filename.Data());
-    if (!file.good()) {cout<<"bad file! "<<filename<<endl; return;}
-    while (file>>cutdesc>>nevt>>nevterr ) {
-      if (i==0)  cutnames.push_back(cutdesc);
-      qcd[TString(qcd_list[i])].push_back(nevt);
-      qcderr[TString(qcd_list[i])].push_back(nevterr);
-    }
-    file.close();
-  }
-
-  if (mode_==1) {
-    Hcutflow[TString("QCD")] = new TH1D("HQCD","QCD",cutnames.size(),0,cutnames.size());
-    Hcutflow["QCD"]->SetLineColor(icolor);   Hcutflow["QCD"]->SetMarkerColor(icolor);
-    Hcutflow["QCD"]->SetFillColor(icolor);
-    icolor++;
-  }
+  double a,b;
+  while (file>>cutdesc>>a>>b )    cutnames.push_back(cutdesc);
+  file.close();
+  //done filling cutnames
 
   if (mode_==1) {
     Hcutflow[mysig] = new TH1D("Hsignal",mysig,cutnames.size(),0,cutnames.size());
@@ -201,7 +186,7 @@ void cutflow_twiki()
     }
     
     cout<<"Reading "<<filename<<endl;
-    float nevt,nevterr;
+    double nevt,nevterr;
     ifstream file(filename.Data());
     if (!file.good()) {cout<<"bad file! "<<filename<<endl; return;}
     int ibin=1;
@@ -215,7 +200,6 @@ void cutflow_twiki()
       }
     }
     file.close();
-    //    cout<<  background[TString(background_list[i])].size()<<"\t"<<backgrounderr[TString(background_list[i])].size()<<endl;
   }
   cout<<"--"<<endl;
   cout<<  background.size()<<"\t"<<  backgrounderr.size()<<endl;
@@ -237,7 +221,7 @@ void cutflow_twiki()
     }
     
     cout<<"Reading "<<filename<<endl;
-    float nevt,nevterr;
+    double nevt,nevterr;
     ifstream file(filename.Data());
     if (!file.good()) {cout<<"bad file! "<<filename<<endl; return;}
     while (file>>cutdesc>>nevt>>nevterr ) {
@@ -260,7 +244,7 @@ void cutflow_twiki()
   if (!latexMode_)  cout<<col<<"n" <<col;
   cout<<"Cut"<<col;
   if (mode_==1) {
-    cout<<"QCD"<<col;
+    //    cout<<"QCD"<<col;
     for (int ibackground=0 ; ibackground<nbackground; ibackground++)     cout<< background_list[ibackground]<<col;
   }
   for (int isignal=0 ; isignal<nsignal; isignal++)   {
@@ -270,31 +254,13 @@ void cutflow_twiki()
   }
   cout<<endl;
 
-
   for (int i=0; i<ncuts; i++) {
     if (!latexMode_)    cout<<col<< i<<col;
     cout<<cutnames.at(i)<<col;
 
-    //cout<<setprecision(1);
-
-    float qcd_total=0;
-    float qcd_total_err=0;
-    //it would be more elegant to iterate over the map...but to hell with elegance
-    for (int iqcd=0 ; iqcd<nqcd; iqcd++) {
-      //      cout<<     qcd[qcd_list[iqcd]].at(i) << " | ";
-      qcd_total += qcd[qcd_list[iqcd]].at(i);
-      qcd_total_err += pow(qcderr[qcd_list[iqcd]].at(i),2);
-    }
-    if (mode_ ==1) {
-      Hcutflow["QCD"]->SetBinContent(i+1,qcd_total);
-      Hcutflow["QCD"]->SetBinError(i+1,sqrt(qcd_total_err));
-    }
-
-    float background_total=qcd_total;
-    float background_total_err=qcd_total_err; //before taking the square root
-
-    qcd_total_err = sqrt(qcd_total_err);
-    if (mode_==1) cout<< format_nevents(qcd_total , qcd_total_err)<<col;
+    //qcd is now treated as just another background
+    double background_total=0;
+    double background_total_err=0;
 
     for (int ibackground=0 ; ibackground<nbackground; ibackground++) {
       if (mode_==1)
@@ -306,6 +272,7 @@ void cutflow_twiki()
     //now that we've summed the squares, take the square root
     background_total_err = sqrt(background_total_err);
 
+    //what we print depends on the mode
     for (int isignal=0 ; isignal<nsignal; isignal++) {
       if (mode_==1)   {
 	cout<<format_nevents(signal[signal_list[isignal]].at(i) , signalerr[signal_list[isignal]].at(i)) ;
@@ -341,11 +308,7 @@ void cutflow_twiki()
     
     cout<<endl;
   }
-  //this is working! need to: combine QCD into one number; 
-  //do similar for other backgrounds;  -- done
-  //add signal;  --done
-  //compute s/root(s+b)
-  //etc
+
 
   Ccutflow = new TCanvas("Ccutflow");
   //  if (mode_==1)  Ccutflow->SetLogy();
@@ -360,13 +323,11 @@ void cutflow_twiki()
   TString opt="";
   double highest=0;
   if (mode_==1) {
-    mystack.Add( Hcutflow["QCD"]); //add qcd first
-    leg.AddEntry(Hcutflow["QCD"],"QCD");
     for (int ib=0; ib<nbackground; ib++)  {
-      mystack.Add( Hcutflow[ background_list[ib]]); //then backgrounds
+      mystack.Add( Hcutflow[ background_list[ib]]); //backgrounds first
       leg.AddEntry(Hcutflow[ background_list[ib]],background_list[ib]);
     }
-    mystack.Add(Hcutflow[mysig]); //finally signal
+    mystack.Add(Hcutflow[mysig]); //signal last
     leg.AddEntry(Hcutflow[mysig],mysig);
   }
   else {
@@ -394,7 +355,7 @@ void cutflow_twiki()
     Hcutflow.begin()->second->SetTitle("");
     Hcutflow.begin()->second->SetYTitle(modeDescription);
   }
-  cout<<ax<<endl;
+  //  cout<<ax<<endl;
   
   for (unsigned int icut=0; icut<cutnames.size(); icut++) {
     ax->SetBinLabel(icut+1,cutnames.at(icut));
