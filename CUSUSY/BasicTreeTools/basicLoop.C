@@ -99,7 +99,8 @@ void basicLoop::cutflow()
       sprintf(ccc,"%20s %15d | %.2f | Weighted = %f +/- %f",cutNames_[cutTags_[i]].Data(),npass.at(i),100*double(npass.at(i))/double(npass.at(0)),weighted,weighted_error);
       cout<<ccc<<endl;
 
-      file <<  weighted<<"\t" << weighted_error<<endl;
+      //now including a decription string too. not perfect but better than nothing
+      file <<cutNames_[cutTags_[i]].Data()<<"\t" << weighted<<"\t" << weighted_error<<endl;
     }
   }
   
