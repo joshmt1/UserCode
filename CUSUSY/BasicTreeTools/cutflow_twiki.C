@@ -25,19 +25,23 @@ const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoDeltaPhi_NoTrigge
 //mode 4 is like 1 but B only, 5 is like 1 but S only
 const int mode_ = 5;
 const bool latexMode_ = true; //otherwise TWiki
+const TString pm = latexMode_ ? " \\pm " : " +/- ";
 
 //utility function for making output more readable
 TString format_nevents(double n,double e) {
+
+  TString mathmode = latexMode_ ? "$" : "";
+
   char out[100];
   if (e>=1  ||  e < 0.00001) {
-    sprintf(out,"%.0f +/- %.0f",n,e);
+    sprintf(out,"%s%.0f%s%.0f%s",mathmode.Data(),n,pm.Data(),e,mathmode.Data());
   }
   else {
     int nfig = ceil(fabs(log10(e)));
-    TString form="%.";
-    form+=nfig; form+="f +/- %.";
-    form+=nfig; form+="f";
-    sprintf(out,form.Data(),n,e);
+    TString form="%s%.";
+    form+=nfig; form+="f%s%.";
+    form+=nfig; form+="f%s";
+    sprintf(out,form.Data(),mathmode.Data(),n,pm.Data(),e,mathmode.Data());
   }
   return TString(out);
 }
@@ -240,7 +244,6 @@ void cutflow_twiki()
   //then we need to translate to a one cut at a time table
   int ncuts = signal[TString(signal_list[0])].size(); //should be the same in all cases!
   cout<<"ncuts = "<<ncuts<<endl;
-  const TString pm = latexMode_ ? " \\pm " : " +/- ";
   const  TString col = latexMode_ ? " & " : " | ";
   const TString endtex = " \\\\";
 
