@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-isMC = True
+isMC = False
 
 process = cms.Process("BasicTreeMaker")
 
@@ -30,7 +30,7 @@ if isMC:
 else:
     print "is Data!"
     process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
-    process.GlobalTag.globaltag = 'GR_R_38X_V13A::All'
+    process.GlobalTag.globaltag = 'GR_R_38X_V14::All' #this Global Tag is for 386 Nov4ReReco
 
 
 #flavor history tool

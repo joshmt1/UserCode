@@ -18,10 +18,9 @@ Created for studies of inclusive hadronic SUSY searches with b tags
 Uses STL vectors for arrays of data. This seems to work fine for analysis in bare ROOT
 using a class created with MakeClass.
 
-Developed and tested with CMSSW_3_6_2
-(Works fine in CMSSW_3_6_3 too)
-
-Have also used in in 384, running over PATtuples
+Originally developed and tested with CMSSW_3_6_2
+Have also used in in 384.
+Latest incarnation is for 386.
 
   Recipe is kept here:
 https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
@@ -29,7 +28,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.18 2010/11/10 16:33:57 winstrom Exp $
+// $Id: BasicTreeMaker.cc,v 1.19 2010/11/26 13:33:36 joshmt Exp $
 //
 //
 
@@ -604,7 +603,7 @@ BasicTreeMaker::passJetId(const pat::Jet & jet) {
 void
 BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int jetIndex)
 {
-  //     std::cout<<" == fillJetInfo "<<jetAlgorithmNames_[jetIndex]<<" =="<<std::endl; //debug
+  //  std::cout<<" == fillJetInfo "<<jetAlgorithmNames_[jetIndex]<<" =="<<std::endl; //debug
  
   //  if (jetInfoFilled_) return;
 
@@ -636,7 +635,7 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     
     //fill the 'very loose' vectors with uncorrected jet info
     if ( jet.isCaloJet() ) {
-      pat::Jet uncorrectedJet = jet.correctedJet("Uncorrected"); //get the uncorrected jet (i hope)
+      pat::Jet uncorrectedJet = jet.correctedJet("Uncorrected"); //get the uncorrected jet
       if (uncorrectedJet.pt() >= 10) { //can apply tighter cuts offline
 	veryloosejetPtUncorr.push_back(uncorrectedJet.pt());
 	veryloosejetEtaUncorr.push_back(uncorrectedJet.eta());
@@ -667,6 +666,13 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     if (passTightCuts && !passLooseCuts) assert(0);
     
     //now fill ntuple!
+    /* some code used just printing some info about jet corrections during development
+       std::vector<std::string> jecs = jet.availableJECLevels();
+       for (unsigned int ijecs = 0; ijecs< jecs.size(); ijecs++)     std::cout<<jecs.at(ijecs)<<" ";
+       std::cout<<std::endl;
+       
+       std::cout<<"using jeclevel = "<<jet.currentJECLevel()<<std::endl;
+    */
 
     //failed the jet id for some reason but still at moderate pt and eta
     if (!passJetID && jet.pt() > 20 && (fabs(jet.eta())<loosejetEtaMax_)) { 
