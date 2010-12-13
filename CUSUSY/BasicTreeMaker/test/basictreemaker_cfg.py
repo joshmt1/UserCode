@@ -66,7 +66,7 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                         muonAlgorithms = cms.vstring("cleanPatMuons","selectedPatMuonsPF"),
 
 #the 'SUSY trigger' used in the cut flow is the first (valid) one listed here
-                                        triggersOfInterest = cms.vstring("HLT_HT100U","HLT_HT120U","HLT_HT140U","HLT_HT150U","HLT_HT150U_v3","HLT_HT140_J30U_Eta3_v3",
+                                        triggersOfInterest = cms.vstring("HLT_HT100U","HLT_HT120U","HLT_HT140U","HLT_HT150U","HLT_HT150U_v3","HLT_HT100U_v3","HLT_HT140_J30U_Eta3_v3",
                                                                          "HLT_HT200",
                                                                          "HLT_MET45","HLT_MET60","HLT_MET65","HLT_MET100",
                                                                          "HLT_Jet15U","HLT_Jet30U","HLT_Jet50U","HLT_Jet70U","HLT_Jet100U",
