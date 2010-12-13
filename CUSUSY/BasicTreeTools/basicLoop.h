@@ -16,7 +16,7 @@
 #include "/afs/cern.ch/user/j/joshmt/root/util/MiscUtil.cxx"
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
-// ---- this version is compatible with ntuple tag: V00-01-02 ----
+// ---- this version is compatible with ntuple tag: V00-01-04 ----
 #include <iostream>
 #include <vector>
 #include <set>
@@ -51,7 +51,7 @@ const char *leptonTypeNames_[]={"RegLep","PFLep"};
 const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1"};
 
 //in 1/pb
-const double lumi=36; //tentative number for the full dataset
+const double lumi=36.143; //Don's number for 386 Nov4ReReco
 // ========================================== end
 
 class basicLoop {
@@ -125,6 +125,7 @@ public :
   vector<int>     *loosejetGenEta;
   vector<int>     *loosejetGenPhi;
   vector<int>     *loosejetNSV;
+  vector<int>     *loosejetNTracks; //only 00-01-03
   vector<float>   *loosejetSVUnWeightedMass;
   vector<float>   *loosejetSVWeightedMass;
   vector<float>   *loosejetSVUnWeightedLifetime;
@@ -172,6 +173,7 @@ public :
    vector<int>     *loosejetGenParticlePDGId_calo;
    vector<float>   *loosejetInvisibleEnergy_calo;
    vector<int>     *loosejetNSV_calo;
+   vector<int>     *loosejetNTracks_calo;
    vector<float>   *loosejetSVUnWeightedMass_calo;
    vector<float>   *loosejetSVWeightedMass_calo;
    vector<float>   *loosejetSVUnWeightedLifetime_calo;
@@ -202,6 +204,7 @@ public :
    vector<int>     *loosejetGenParticlePDGId_PF;
    vector<float>   *loosejetInvisibleEnergy_PF;
    vector<int>     *loosejetNSV_PF;
+   vector<int>     *loosejetNTracks_PF;
    vector<float>   *loosejetSVUnWeightedMass_PF;
    vector<float>   *loosejetSVWeightedMass_PF;
    vector<float>   *loosejetSVUnWeightedLifetime_PF;
@@ -335,6 +338,7 @@ public :
    TBranch        *b_loosejetGenParticlePDGId_calo;   //!
    TBranch        *b_loosejetInvisibleEnergy_calo;   //!
    TBranch        *b_loosejetNSV_calo;   //!
+   TBranch        *b_loosejetNTracks_calo;   //!
    TBranch        *b_loosejetSVUnWeightedMass_calo;   //!
    TBranch        *b_loosejetSVWeightedMass_calo;   //!
    TBranch        *b_loosejetSVUnWeightedLifetime_calo;   //!
@@ -365,6 +369,7 @@ public :
    TBranch        *b_loosejetGenParticlePDGId_PF;   //!
    TBranch        *b_loosejetInvisibleEnergy_PF;   //!
    TBranch        *b_loosejetNSV_PF;   //!
+   TBranch        *b_loosejetNTracks_PF;   //!
    TBranch        *b_loosejetSVUnWeightedMass_PF;   //!
    TBranch        *b_loosejetSVWeightedMass_PF;   //!
    TBranch        *b_loosejetSVUnWeightedLifetime_PF;   //!
@@ -486,6 +491,7 @@ public :
    virtual void triggerTest();
 
    bool isV00_01_02();
+   bool isV00_01_03();
 
    void fillTightJetInfo();
    void InitJets();
@@ -707,6 +713,7 @@ void basicLoop::Init(TTree *tree)
    loosejetGenParticlePDGId_calo = 0;
    loosejetInvisibleEnergy_calo = 0;
    loosejetNSV_calo = 0;
+   loosejetNTracks_calo = 0;
    loosejetSVUnWeightedMass_calo = 0;
    loosejetSVWeightedMass_calo = 0;
    loosejetSVUnWeightedLifetime_calo = 0;
@@ -737,6 +744,7 @@ void basicLoop::Init(TTree *tree)
    loosejetGenParticlePDGId_PF = 0;
    loosejetInvisibleEnergy_PF = 0;
    loosejetNSV_PF = 0;
+   loosejetNTracks_PF = 0;
    loosejetSVUnWeightedMass_PF = 0;
    loosejetSVWeightedMass_PF = 0;
    loosejetSVUnWeightedLifetime_PF = 0;
@@ -848,6 +856,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("loosejetInvisibleEnergy_calo", &loosejetInvisibleEnergy_calo, &b_loosejetInvisibleEnergy_calo);
    if (isV00_01_02()) { //make backwards compatible
    fChain->SetBranchAddress("loosejetNSV_calo", &loosejetNSV_calo, &b_loosejetNSV_calo);
+   if (isV00_01_03())   fChain->SetBranchAddress("loosejetNTracks_calo", &loosejetNTracks_calo, &b_loosejetNTracks_calo);
    fChain->SetBranchAddress("loosejetSVUnWeightedMass_calo", &loosejetSVUnWeightedMass_calo, &b_loosejetSVUnWeightedMass_calo);
    fChain->SetBranchAddress("loosejetSVWeightedMass_calo", &loosejetSVWeightedMass_calo, &b_loosejetSVWeightedMass_calo);
    fChain->SetBranchAddress("loosejetSVUnWeightedLifetime_calo", &loosejetSVUnWeightedLifetime_calo, &b_loosejetSVUnWeightedLifetime_calo);
@@ -882,6 +891,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("loosejetInvisibleEnergy_PF", &loosejetInvisibleEnergy_PF, &b_loosejetInvisibleEnergy_PF);
    if (isV00_01_02()) {
    fChain->SetBranchAddress("loosejetNSV_PF", &loosejetNSV_PF, &b_loosejetNSV_PF);
+   if (isV00_01_03())   fChain->SetBranchAddress("loosejetNTracks_PF", &loosejetNTracks_PF, &b_loosejetNTracks_PF);
    fChain->SetBranchAddress("loosejetSVUnWeightedMass_PF", &loosejetSVUnWeightedMass_PF, &b_loosejetSVUnWeightedMass_PF);
    fChain->SetBranchAddress("loosejetSVWeightedMass_PF", &loosejetSVWeightedMass_PF, &b_loosejetSVWeightedMass_PF);
    fChain->SetBranchAddress("loosejetSVUnWeightedLifetime_PF", &loosejetSVUnWeightedLifetime_PF, &b_loosejetSVUnWeightedLifetime_PF);
@@ -1011,9 +1021,19 @@ bool basicLoop::isV00_01_02() {
 
   if (  (findInputName()).Contains("/V00-01-02/") ) return true;
   if (  (findInputName()).Contains("/V00-01-03/") ) return true;
+  if (  (findInputName()).Contains("/V00-01-04/") ) return true;
   return false;
 
 }
+
+bool basicLoop::isV00_01_03() {
+
+  if (  (findInputName()).Contains("/V00-01-03/") ) return true;
+  if (  (findInputName()).Contains("/V00-01-04/") ) return true;
+  return false;
+
+}
+
 
 bool basicLoop::setCutScheme(CutScheme cutscheme) {
 
@@ -1583,15 +1603,13 @@ bool basicLoop::passCut(const TString cutTag) {
 
 bool basicLoop::passPV() {
 
-  //this should be completely handled by the ntuple-maker
-  bool ntupleResult = cutResults->at( cutMap_["cutPV"]);
 
-  /*
-    I am eager to check the results of the PVSelector with these "handmade" results.
-    But eventually this redundancy should be removed.
-  */
+  //i have now understood the discrepancies between the PVSelector and the hand-calculated result
+  //the PV selector only looks at the first PV. I think this is wrong.
+  //so this function should be used instead
 
-  //let's check it, though
+  //  bool ntupleResult = cutResults->at( cutMap_["cutPV"]);
+
   bool pass=false;
   for (unsigned int ipv = 0; ipv<pv_isFake->size(); ipv++) {
     if ( pv_isFake->at(ipv) ) continue;
@@ -1601,9 +1619,21 @@ bool basicLoop::passPV() {
 
     pass=true; break;
   }
-  if (ntupleResult != pass) cout<<"PV results do not agree!"<<endl;
 
-  return ntupleResult; 
+  /*
+  if (ntupleResult != pass) {
+    cout<<"PV conflict! ntupleResult = "<<ntupleResult<<" passPV results = "<<pass<<endl;
+    for (unsigned int ipv = 0; ipv<pv_isFake->size(); ipv++) {
+      cout<<ipv<<"\t"
+	  <<pv_isFake->at(ipv) <<" "
+	  <<fabs(pv_z->at(ipv))<<" "
+	  <<fabs(pv_rho->at(ipv))<<" "
+	  <<pv_ndof->at(ipv)<<endl;
+    }
+  }
+  */
+
+  return pass; 
 }
 
 int basicLoop::countBJets() {
@@ -2125,6 +2155,7 @@ void basicLoop::InitJets() {
     loosejetGenEta = loosejetGenEta_calo;
     loosejetGenPhi = loosejetGenPhi_calo;
     loosejetNSV = loosejetNSV_calo;
+    loosejetNTracks = loosejetNTracks_calo;
     loosejetSVUnWeightedMass = loosejetSVUnWeightedMass_calo;
     loosejetSVWeightedMass = loosejetSVWeightedMass_calo;
     loosejetSVUnWeightedLifetime = loosejetSVUnWeightedLifetime_calo;
@@ -2157,6 +2188,7 @@ void basicLoop::InitJets() {
     loosejetGenEta = loosejetGenEta_PF;
     loosejetGenPhi = loosejetGenPhi_PF;
     loosejetNSV = loosejetNSV_PF;
+    loosejetNTracks = loosejetNTracks_PF;
     loosejetSVUnWeightedMass = loosejetSVUnWeightedMass_PF;
     loosejetSVWeightedMass = loosejetSVWeightedMass_PF;
     loosejetSVUnWeightedLifetime = loosejetSVUnWeightedLifetime_PF;
@@ -2264,7 +2296,7 @@ double basicLoop::getCrossSection( TString inname) {
   else if (inname.Contains("/MoreMSSM/"))                  return 1.73;
   else if (inname.Contains("/MoreMSSMv2/"))                return 2.1;
   else if (inname.Contains("/MoreMSSMv3/"))                return 2.6;
-  else if (inname.Contains("/SingleTop-tChannel/"))        return 20.44;
+  else if (inname.Contains("/SingleTop-tChannel/"))        return 20.44; //may be wrong?
   else if (inname.Contains("/SingleTop-tWChannel/"))       return 10.6;
   else if (inname.Contains("/QCD-Pt1000toInf-madgraph/"))  return 83;
   else if (inname.Contains("/QCD-Pt100to250-madgraph/"))   return 7000000;
