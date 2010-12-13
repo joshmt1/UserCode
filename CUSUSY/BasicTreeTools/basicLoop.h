@@ -2245,12 +2245,10 @@ TString basicLoop::getSampleName(TString inname) {
 double basicLoop::getCrossSection( TString inname) {
   if (inname=="") inname=findInputName();
 
-  //may need to update these
-
   //  https://twiki.cern.ch/twiki/bin/view/CMS/ProductionReProcessingSpring10
-  //  if (inname.Contains("/TTbarJets/") )                     return 165;
-  if (inname.Contains("/TTbarJets/") )                     return 157.5;
-  //if (inname.Contains("/TTbarJets/") )                     return 95; //LO only
+
+  //those marked with !!! in the comment have been synchronized with our note
+  if (inname.Contains("/TTbarJets/") )                     return 165; //!!! NNLO
   
   else if (inname.Contains("/LM0/"))                       return 38.93;
   else if (inname.Contains("/LM1/"))                       return 4.888;
@@ -2267,9 +2265,8 @@ double basicLoop::getCrossSection( TString inname) {
   else if (inname.Contains("/LM10/"))                      return 0.04778;
   else if (inname.Contains("/LM11/"))                      return 0.8236;
   else if (inname.Contains("/LM12/"))                      return 4.414;
-  else if (inname.Contains("/LM13/"))                      return 6.899;
+  else if (inname.Contains("/LM13/"))                      return 6.899; //!!! LO
   
-
   //not updated from tom
   else if (inname.Contains("/LM9t175/"))                   return 4.241;
   else if (inname.Contains("/LM9p/"))                      return 1.653;
@@ -2292,20 +2289,26 @@ double basicLoop::getCrossSection( TString inname) {
   else if (inname.Contains("/LM13/"))                      return 9.797;
   */
 
-  //this block is not updated from tom (so maybe wrong)
   else if (inname.Contains("/MoreMSSM/"))                  return 1.73;
   else if (inname.Contains("/MoreMSSMv2/"))                return 2.1;
   else if (inname.Contains("/MoreMSSMv3/"))                return 2.6;
-  else if (inname.Contains("/SingleTop-tChannel/"))        return 20.44; //may be wrong?
-  else if (inname.Contains("/SingleTop-tWChannel/"))       return 10.6;
-  else if (inname.Contains("/QCD-Pt1000toInf-madgraph/"))  return 83;
-  else if (inname.Contains("/QCD-Pt100to250-madgraph/"))   return 7000000;
-  else if (inname.Contains("/QCD-Pt250to500-madgraph/"))   return 171000;
-  else if (inname.Contains("/QCD-Pt500to1000-madgraph/"))  return 5200;
+  else if (inname.Contains("/SingleTop-tChannel/"))        return 20.43846; //!!! NLO
+  else if (inname.Contains("/SingleTop-tWChannel/"))       return 10.6; //!!! NLO
+  //QCD are all LO
+  else if (inname.Contains("/QCD-Pt1000toInf-madgraph/"))  return 83; //!!!
+  else if (inname.Contains("/QCD-Pt100to250-madgraph/"))   return 7e6; //!!!
+  else if (inname.Contains("/QCD-Pt250to500-madgraph/"))   return 171000; //!!!
+  else if (inname.Contains("/QCD-Pt500to1000-madgraph/"))  return 5200; //!!!
 
-  else if (inname.Contains("/WJets/"))                     return 31314; //from tom
+  
+  //  else if (inname.Contains("/WJets/"))                     return 31314; //from tom
+  else if (inname.Contains("/WJets/"))                     return 28000; //!!! NLO
+
+  //to synchronize with the note when we move to Fall10
   else if (inname.Contains("/ZJets/"))                     return 3048; //from tom
-  else if (inname.Contains("/Zinvisible/"))                return 4900; //from tom
+
+  else if (inname.Contains("/Zinvisible/"))                return 4500; //!!! LO
+  //tom had 4900...this might be NLO
   
   else if (inname.Contains("/DATA/"))                return -2;
 
