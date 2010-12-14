@@ -34,9 +34,13 @@ can handle this cut properly. (see note below)
 
 
 notes on the schemes:
-RA2 -- the legacy scheme. still uses some info precomputed in the ntuple. I *think* it still works.
+RA2 -- the legacy scheme. still uses some info precomputed in the ntuple.
 Sync1 -- cuts for first sync exercise. Recomputes (almost?) every cut.
 Baseline0 -- *must* recompute every cut. "Baseline" analysis cuts as laid out by me on the joint Twiki.
+
+Other notes:
+a lot of the functions are still doing computations using the tight jet list stored in the ntuple.
+This is rather dangerous. In particular, the eta range of the ntuple tight jets does not agree 100% with the kBaseline0 tight jets.
 
 */
 
@@ -535,6 +539,8 @@ public :
 
    bool passTauVeto();
 
+   bool passSSVM(int i);
+
    bool isGoodJet_Sync1(unsigned int ijet);
    bool isGoodJet(unsigned int ijet); //index here is on the loose jet list
    bool isGoodJet30(unsigned int ijet); //index here is on the loose jet list
@@ -542,11 +548,15 @@ public :
    unsigned int nGoodJets_Sync1();
    unsigned int nGoodJets();
    float jetPtOfN(unsigned int n);
+   float jetPhiOfN(unsigned int n);
+   float jetEtaOfN(unsigned int n);
    int countBJets_Sync1();
    int countBJets();
    bool passDeltaPhi_Sync1() ;
    float getHT_Sync1();
    float getHT();
+   float getMHT();
+   float getMHTphi();
 
    bool passPV();
 
@@ -557,7 +567,7 @@ public :
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
    double getMinDeltaPhiMET(unsigned int maxjets) ;
-   double getMinDeltaPhiMHT(unsigned int maxjets) ;
+   //   double getMinDeltaPhiMHT(unsigned int maxjets) ; //deprecated because MHT is now just another type of MET
    double getDeltaPhib1b2();
    double getUncorrectedHT(const double threshold);
    int getTopDecayCategory();
@@ -1556,8 +1566,7 @@ bool basicLoop::passCut(const TString cutTag) {
   else if (cutTag == "cutDeltaPhi" && //replace normal DeltaPhi cut with minDeltaPhi cut
 	   ( theDPType_ == kminDP ) ) {
     
-    if (theMETType_ == kMHT)     return ( getMinDeltaPhiMHT(3) >= 0.3 );
-    else if (theMETType_ ==kMET ||theMETType_==ktcMET ||theMETType_==kpfMET) return ( getMinDeltaPhiMET(3) >= 0.3 );
+    if (theMETType_ ==kMET ||theMETType_==ktcMET ||theMETType_==kpfMET ||theMETType_ == kMHT) return ( getMinDeltaPhiMET(3) >= 0.3 );
     else {assert(0);}
   }
   else if (cutTag == "cutDeltaPhi" && //replace normal DeltaPhi cut with DeltaPhi(MPT,MET) cut
@@ -1568,7 +1577,7 @@ bool basicLoop::passCut(const TString cutTag) {
   else if (cutTag == "cutDeltaPhi" && (theDPType_==kDPSync1)) return passDeltaPhi_Sync1();
 
   //compensate for bugs in nbSSVM variable (fixed in this code)
-  if (theCutScheme_==kRA2) {
+  if (theCutScheme_==kRA2 || theCutScheme_==kBaseline0) {
     if (cutTag == "cut1b") return nbSSVM >=1;
     if (cutTag == "cut2b") return nbSSVM >=2;
     if (cutTag == "cut3b") return nbSSVM >=3;
@@ -1576,14 +1585,6 @@ bool basicLoop::passCut(const TString cutTag) {
   else if (theCutScheme_==kSync1) {
     if (cutTag == "cut1b" || cutTag == "cut2b" || cutTag == "cut3b") {
       int nb = countBJets_Sync1();
-      if (cutTag == "cut1b") return nb >=1;
-      if (cutTag == "cut2b") return nb >=2;
-      if (cutTag == "cut3b") return nb >=3;
-    }
-  }
-  else if (theCutScheme_==kBaseline0) {
-    if (cutTag == "cut1b" || cutTag == "cut2b" || cutTag == "cut3b") {
-      int nb = countBJets();
       if (cutTag == "cut1b") return nb >=1;
       if (cutTag == "cut2b") return nb >=2;
       if (cutTag == "cut3b") return nb >=3;
@@ -1641,11 +1642,15 @@ int basicLoop::countBJets() {
 
   for (unsigned int i=0; i<loosejetPt->size(); i++) {
     if (isGoodJet30( i) ) {
-      if ( loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags->at(i) >= 1.74 
-	   || loosejetBTagDisc_simpleSecondaryVertexBJetTags->at(i) >=1.74 ) nb++;
+      if ( passSSVM(i) ) nb++;
     }
   }
   return nb;
+}
+
+bool basicLoop::passSSVM(int i) {
+  return ( loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags->at(i) >= 1.74 
+	   || loosejetBTagDisc_simpleSecondaryVertexBJetTags->at(i) >=1.74 );
 }
 
 int basicLoop::countBJets_Sync1() {
@@ -1709,6 +1714,9 @@ float basicLoop::getMET() {
   else if (theMETType_ == kpfMET) {
     return pfMET;
   }
+  else if (theMETType_ == kMHT) {
+    return getMHT();
+  }
   
   assert(0);
 
@@ -1727,6 +1735,9 @@ float basicLoop::getMETphi() {
   }
   else if (theMETType_ == kpfMET) {
     return pfMETphi;
+  }
+  else if (theMETType_ == kMHT) {
+    return getMHTphi();
   }
   
   assert(0);
@@ -1773,26 +1784,6 @@ code is now bifurcated to:
   return mindp;
 }
 
-double basicLoop::getMinDeltaPhiMHT(unsigned int maxjets) {
-  /*
-    uses tight default jets and MHT
-    FIXME -- I don't trust the MHTphi value anymore
-  */
-
-  unsigned int njets=  jetPhi.size();
-
-  if (njets < maxjets) maxjets = njets;
-
-  //get the minimum angle between the first n jets and MET
-  double mindp=99;
-  for (unsigned int i=0; i< maxjets; i++) {
-
-    double dp =  getDeltaPhi( jetPhi.at(i) , MHTphi);
-    if (dp<mindp) mindp=dp;
-
-  }
-  return mindp;
-}
 
 double basicLoop::getMinDeltaPhibMET() {
   //get the minimum angle between a b jet and MET
@@ -1810,19 +1801,28 @@ double basicLoop::getMinDeltaPhibMET() {
 
 double basicLoop::getDeltaPhib1b2() {
   //get the angle between the lead 2 b jets
-  /* uses tight jets */
+  /* legacy code uses tight jets ; kBaseline0 uses loose jets and b cuts*/
+
   std::vector<float> phis;
 
-  for (unsigned int i=0; i<jetPhi.size(); i++) {
-    if (passBCut(i) ) {
+  //careful...we're using tight jets for one case and loose jets for the other
+  unsigned int maxj = theCutScheme_==kBaseline0 ? loosejetPhi->size() : jetPhi.size();
+
+  for (unsigned int i=0; i< maxj; i++) {
+    bool isGoodB=false;
+    if (theCutScheme_==kBaseline0)  isGoodB =  isGoodJet30(i) && passSSVM(i);
+    else                            isGoodB = passBCut(i);
+     
+    if (isGoodB ) {
       
-      phis.push_back( jetPhi.at(i));
+      float thisJetPhi = theCutScheme_==kBaseline0 ? loosejetPhi->at(i) : jetPhi.at(i) ;
+      phis.push_back( thisJetPhi);
 
       if (phis.size() == 2) break;
-      
     }
   }
 
+  //this is then invariant between cut schemes and such
   return getDeltaPhi(phis.at(0),phis.at(1));
 }
 
@@ -1920,6 +1920,40 @@ double basicLoop::getMinDeltaR_bj(unsigned int bindex) {
   return minDeltaR;
 }
 
+float basicLoop::getMHT() {
+  //use isGoodJet() to recalculate it for the specified jet type
+
+  double mhtx=0;
+  double mhty=0;
+
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+    if (isGoodJet( i ) ) {
+
+      mhtx -= loosejetPt->at(i) * cos(loosejetPhi->at(i));
+      mhty -= loosejetPt->at(i) * sin(loosejetPhi->at(i));
+    }
+  }
+  
+  return sqrt(mhtx*mhtx + mhty*mhty);
+}
+
+float basicLoop::getMHTphi() {
+  //use isGoodJet() to recalculate it for the specified jet type
+
+  double mhtx=0;
+  double mhty=0;
+
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+    if (isGoodJet( i ) ) {
+
+      mhtx -= loosejetPt->at(i) * cos(loosejetPhi->at(i));
+      mhty -= loosejetPt->at(i) * sin(loosejetPhi->at(i));
+    }
+  }
+
+  return atan2(mhty,mhtx);
+}
+
 float basicLoop::getHT() {
   //use isGoodJet() to recalculate it for the specified jet type
 
@@ -2004,6 +2038,44 @@ float basicLoop::jetPtOfN(unsigned int n) {
     if (pass ) {
       ngood++;
       if (ngood==n) return  loosejetPt->at(i);
+    }
+  }
+  return 0;
+}
+
+float basicLoop::jetPhiOfN(unsigned int n) {
+  //updated to use Sync1 or Baseline0 cuts
+
+  unsigned int ngood=0;
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+
+    bool pass=false;
+    if (theCutScheme_==kSync1) pass = isGoodJet_Sync1(i);
+    else  if (theCutScheme_==kBaseline0) pass = isGoodJet(i);
+    else {assert(0);}
+
+    if (pass ) {
+      ngood++;
+      if (ngood==n) return  loosejetPhi->at(i);
+    }
+  }
+  return 0;
+}
+
+float basicLoop::jetEtaOfN(unsigned int n) {
+  //updated to use Sync1 or Baseline0 cuts
+
+  unsigned int ngood=0;
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+
+    bool pass=false;
+    if (theCutScheme_==kSync1) pass = isGoodJet_Sync1(i);
+    else  if (theCutScheme_==kBaseline0) pass = isGoodJet(i);
+    else {assert(0);}
+
+    if (pass ) {
+      ngood++;
+      if (ngood==n) return  loosejetEta->at(i);
     }
   }
   return 0;
@@ -2118,10 +2190,12 @@ void basicLoop::fillTightJetInfo() {
   //recover the nbSSVM variable (filled incorrectly in the ntuple)
   //  cout<<nbSSVM<<" ";
   nbSSVM=0;
-  for ( unsigned int i=0; i<jetPt.size(); i++) {
-    if (passBCut(i)) nbSSVM++;
+  if (theCutScheme_==kBaseline0) nbSSVM = countBJets();
+  else {
+    for ( unsigned int i=0; i<jetPt.size(); i++) {
+      if (passBCut(i)) nbSSVM++;
+    }
   }
-  //  cout<<nbSSVM<<endl;
 
 }
 
