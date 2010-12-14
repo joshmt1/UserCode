@@ -14,7 +14,7 @@ gSystem->Load("basicLoop_C.so");
 
 */
 
-const TString version = "V00-01-01/DATA/38X";
+const TString version = "V00-01-04/DATA/386";
 
 void run_cutflow_data()
 {
@@ -48,7 +48,7 @@ void run_cutflow_data()
     
     samplefiles+="/*.root";
 
-    //    if (!samplefiles.Contains("JetMET-")) continue;
+    //if (!samplefiles.Contains("JetMETTau-1")) continue;
     cout<<"About to add files in: "<<samplefiles<<endl;
 
     ch.Add(samplefiles);
@@ -56,10 +56,15 @@ void run_cutflow_data()
   }
 
   basicLoop looper(&ch,&info);
-  looper.setCutScheme(basicLoop::kSync1);
+  
+  looper.setCutScheme(basicLoop::kBaseline0);
   looper.setMETType(basicLoop::kpfMET);
+  looper.setMETRange(basicLoop::kHigh); //signal region
   looper.setJetType(basicLoop::kPF);
-  looper.setDPType(basicLoop::kDPSync1);
+  looper.setLeptonType(basicLoop::kPFLeptons);
+  
+  looper.setDPType(basicLoop::kminDP);
+  looper.setIgnoredCut("cutDeltaPhi"); //ignore this cut for preliminary sections of the note
   
   looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
   looper.cutflow();
