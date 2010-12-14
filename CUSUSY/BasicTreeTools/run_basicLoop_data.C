@@ -8,7 +8,7 @@
 Usage:
 root -b -l -q run_basicLoop_data.C++
 */
-const TString version = "V00-01-01/DATA/38X";
+const TString version = "V00-01-04/DATA/386";
 
 void run_basicLoop_data()
 {
@@ -40,16 +40,22 @@ void run_basicLoop_data()
     //    if (!samplefiles.Contains("LM13")) continue; //hack to skip some samples
 
     TChain ch("BasicTreeMaker/tree");
+    TChain info("BasicTreeMaker/infotree");
     ch.Add(samplefiles);
-    basicLoop looper(&ch);
+    info.Add(samplefiles);
+    basicLoop looper(&ch,&info);
     //important! this is where cuts are defined
-    looper.setCutScheme(basicLoop::kRA2); //this is now the only scheme!
-    looper.setMETType(basicLoop::kMET);
-    looper.setMETRange(basicLoop::kWide);
-    looper.setDPType(basicLoop::kminDP);
+    looper.setCutScheme(basicLoop::kBaseline0);
+    looper.setMETType(basicLoop::kpfMET);
+    looper.setMETRange(basicLoop::kWide); //get more events for plotting
+    looper.setJetType(basicLoop::kPF);
+    looper.setLeptonType(basicLoop::kPFLeptons);
+    looper.setDPType(basicLoop::kminDP); //apply the CU minDeltaPhi cut
 
-    looper.setIgnoredCut("cutTrigger");
-    
+    looper.setIgnoredCut("cut3Jets"); //N-1
+
+    looper.setBCut(0);  //no b tagging cut so that plots can apply it selectively
+
     looper.Loop(currentfileindex);  //go!
     currentfileindex++;
   }

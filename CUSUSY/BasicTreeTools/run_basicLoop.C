@@ -16,7 +16,7 @@ these are not needed (assuming this macro is compiled) because of the include ab
 gSystem->Load("basicLoop_C.so");
 
 */
-const TString version = "V00-01-02";
+const TString version = "V00-01-01"; //for MC stick with 01-01
 
 //const TString extrapath = "SUSYPATv8_363";
 const TString extrapath = ""; //use an empty string here unless there is good reason to do otherwise
@@ -62,20 +62,18 @@ void run_basicLoop()
     info.Add(samplefiles);
     basicLoop looper(&ch,&info);
     //important! this is where cuts are defined
-    looper.setCutScheme(basicLoop::kRA2);
+    looper.setCutScheme(basicLoop::kBaseline0);
     looper.setMETType(basicLoop::kpfMET);
-    looper.setMETRange(basicLoop::kWide);
-    looper.setDPType(basicLoop::kminDP);
-    //no b tagging cut so that plots can apply it selectively
+    looper.setMETRange(basicLoop::kWide); //get more events for plotting
+    looper.setJetType(basicLoop::kPF);
+    looper.setLeptonType(basicLoop::kPFLeptons);
+    looper.setDPType(basicLoop::kminDP); //apply the CU minDeltaPhi cut
 
-    //    looper.setCutScheme(basicLoop::kRA2minDP);
+    looper.setIgnoredCut("cutTrigger"); //ignore trigger in MC
 
-    //careful what is set here!
-    //looper.setIgnoredCut(basicLoop::cutTrigger);
-    //    looper.setIgnoredCut(basicLoop::cutHT);
-    //looper.setIgnoredCut(basicLoop::cutMET); //MET
-    //looper.setIgnoredCut(basicLoop::cutDeltaPhi); //DeltaPhi
-    
+    looper.setIgnoredCut("cut3Jets"); //N-1
+
+    looper.setBCut(0);  //no b tagging cut so that plots can apply it selectively
     looper.Loop();  //go!
   }
 
