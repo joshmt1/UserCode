@@ -314,6 +314,123 @@ void basicLoop::cutflowPlotter()
 
 }
 
+//yet another experimental plot making loop
+/*
+void basicLoop::plotNminus1()
+{
+
+   if (fChain == 0) return;
+   printState();
+
+   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+
+   std::cout<<"Got an input file name as: "<<findInputName()<<std::endl;
+   
+   double sigma = getCrossSection();
+   TString sampleName = getSampleName();
+   if (sigma<=0 && !isData_) {std::cout<<"Cross section problem! "<<sigma<<std::endl; return;}
+
+   if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
+
+   double   weight = isData_ ? 1 : lumi * sigma / double(nentries); //calculate weight
+
+   //open output file
+   TString outfilename="nminus1Plots.";
+   outfilename+=getCutDescriptionString();
+   outfilename+=".";    outfilename+=sampleName; 
+   outfilename+=".root";
+   TFile fout(outfilename,"RECREATE");
+
+   TH1::SetDefaultSumw2(); //trick to turn on Sumw2 for all histos
+
+   TString name;
+//    std::map<TString, TH1D*> H_HT;
+//    std::map<TString, TH1D*> H_NJets;
+//    std::map<TString, TH1D*> H_NElectrons;
+//    std::map<TString, TH1D*> H_NMuons;
+   std::map<TString, TH1D*> H_MET;
+//    std::map<TString, TH1D*> H_minDeltaPhi;
+//    std::map<TString, TH1D*> H_NBJets;
+   for (unsigned int i=0 ; i<cutTags_.size(); i++) {
+     if (cutRequired(cutTags_[i])  ) {
+       //       name="H_HT_"; name+="no";   name += cutTags_[i];
+       //       H_HT[name]=new TH1D(name,name,300,0,1200);
+       
+//        name="H_NJets_";  name+="no";   name += cutTags_[i];
+//        H_NJets[name]=new TH1D(name,name,10,0,10);
+
+//        name="H_NBJets_";  name+="no";   name += cutTags_[i];
+//        H_NBJets[name]=new TH1D(name,name,10,0,10);
+
+//        name="H_NElectrons_"; name+="no"; name += cutTags_[i];
+//        H_NElectrons[name]=new TH1D(name,name,10,0,10);
+
+//        name="H_NMuons_"; name+="no"; name += cutTags_[i];
+//        H_NMuons[name]=new TH1D(name,name,10,0,10);
+
+       name="H_MET_"; name+="no"; name += cutTags_[i];
+       H_MET[name]=new TH1D(name,name,100,0,400);
+
+//        name="H_minDeltaPhi_"; name+="no"; name += cutTags_[i];
+//        H_minDeltaPhi[name]=new TH1D(name,name,50,0,TMath::Pi());
+     }
+   }
+      
+
+   std::map<TString, bool> passRequiredCuts;
+
+   TDatime starttime; //default ctor is for current time
+   Long64_t nbytes = 0, nb = 0;
+   for (Long64_t jentry=0; jentry<nentries ;jentry++) {
+      Long64_t ientry = LoadTree(jentry);
+      if (ientry < 0) {assert(0);}
+      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+
+      //see what of the required cuts we pass
+      for (unsigned int i=0 ; i<cutTags_.size(); i++) {
+	if (cutRequired(cutTags_[i])  ) {
+	  passRequiredCuts[cutTags_[i]] = passCut(cutTags_[i]);
+	}
+      }
+
+      //loop over the cuts again
+      for (unsigned int i=0 ; i<cutTags_.size(); i++) {
+	TString currentCut = cutTags_[i];
+	if (cutRequired(currentCut)  ) {
+	  
+	  //see if we pass every other cut
+	  bool passedAllOthers=true;
+	  for ( std::map<TString, bool>::const_iterator icut=passRequiredCuts.begin(); icut!=passRequiredCuts.end(); ++icut) {
+	    if (icut->first != currentCut) {
+	      if (!icut->second) {
+		passedAllOthers=false;
+		break;
+	      }
+	    }
+	  } //for
+
+	  if (passedAllOthers) { //fill N-1 plots for currentCut
+	    name="H_MET_"; name+="no"; name += currentCut;
+	    H_MET[name]->Fill(getMET(),weight);
+
+	  }
+  	}
+      }
+
+   }
+   TDatime stoptime; //default ctor is for current time
+   UInt_t elapsed= stoptime.Convert() - starttime.Convert();
+
+   cout<<"events / time = "<<nentries<<" / "<<elapsed<<" = "<<double(nentries)/double(elapsed)<<" Hz"<<endl;
+ 
+
+   fout.Write();
+   fout.Close();
+
+
+}
+*/
+
 /* 
 main plot-making loop
 
@@ -354,9 +471,8 @@ void basicLoop::Loop(unsigned int dataindex)
    //   TH1::SetDefaultSumw2(); //don't use the trick because of a root bug having to do with TH2
 
    // === make some histograms ===
-   const   int offset=3;
+   const   int offset=0;
    int njets_bins=10-offset;
-   TH1D Hnjets_nocuts("Hnjets_nocuts","N of jets (no cuts)",njets_bins,offset,njets_bins+offset);
    TH1D Hnjets("Hnjets","N of jets (RA2)",njets_bins,offset,njets_bins+offset);
    TH1D Hnjets_ge1b("Hnjets_ge1b","N of jets (RA2 && >=1b)",njets_bins,offset,njets_bins+offset);
    TH1D Hnjets_ge2b("Hnjets_ge2b","N of jets (RA2 && >=2b)",njets_bins,offset,njets_bins+offset);
@@ -378,7 +494,7 @@ void basicLoop::Loop(unsigned int dataindex)
    TH1D HdeltaPhib1b2("HdeltaPhib1b2","DeltaPhi(b1,b2) (>=2b)",nbins,0,TMath::Pi());
 
    double pt_min=30;
-   double pt_max=400;
+   double pt_max=500;
    TH1D Hjetpt1("Hjetpt1","pT of lead jet",nbins,pt_min,pt_max);
    TH1D Hjetpt1_ge1b("Hjetpt1_ge1b","pT of lead jet (>=1b)",nbins,pt_min,pt_max);
    TH1D Hjetpt1_ge2b("Hjetpt1_ge2b","pT of lead jet (>=2b)",nbins,pt_min,pt_max);
@@ -478,7 +594,6 @@ void basicLoop::Loop(unsigned int dataindex)
 
    //copy and paste the block of code with the TH1/2D definitions into afile and do
    // awk '/TH/ {print $2}' afile | awk -F\( '// {astr=sprintf("%s.Sumw2();", $1); print astr;}'
-   Hnjets_nocuts.Sumw2();
    Hnjets.Sumw2();
    Hnjets_ge1b.Sumw2();
    Hnjets_ge2b.Sumw2();
@@ -566,7 +681,6 @@ void basicLoop::Loop(unsigned int dataindex)
       MHT = getMHT(); //here we overwrite an ntuple variable!
       HT = getHT(); //here we overwrite an ntuple variable!
 
-      Hnjets_nocuts.Fill( njets, weight );
       if (Cut(ientry) < 0) continue; //jmt use cut
 
       Hnbjets.Fill(nbSSVM,weight);
