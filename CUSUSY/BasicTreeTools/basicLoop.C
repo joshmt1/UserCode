@@ -314,107 +314,410 @@ void basicLoop::cutflowPlotter()
 
 }
 
-//yet another experimental plot making loop
-/*
-void basicLoop::plotNminus1()
+ //will copy and paste a lot of code from ::Loop here
+ //i want to start fresh!
+void basicLoop::Nminus1plots()
 {
+  
+  if (fChain == 0) return;
+  
+  resetIgnoredCut(); //this code is not going to allow the user to specify an ignored cut!
+  setBCut(0);
+  printState();
+  
+  Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+  
+  
+  TString inname=findInputName(); //uses fChain
+  std::cout<<"Got an input file name as: "<<inname<<std::endl;
+  
+  double sigma = getCrossSection(inname);
+  TString sampleName = getSampleName(inname);
+  if (sigma<=0 && !isData_) return;
+  
+  if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
+  
+  double   weight = isData_ ? 1 : lumi * sigma / double(nentries); //calculate weight
+  
+  //open output file
+  TString outfilename="Nminus1plots."; 
+  outfilename+=getCutDescriptionString();
+  outfilename+=".";    outfilename+=sampleName; 
+  outfilename+=".root";
+  TFile fout(outfilename,"RECREATE");
+  
+  //TH1::SetDefaultSumw2(); //turn on sumw2 for all histos
+  
+  //make some histograms (each with >=1,2,3 b tags)
+  int nbins = 100; //can always rebin
+  //HT
+  int multiplier=3;
+  double ht_min=0,ht_max=1200;
+  TH1D H_HT("H_HT","HT",nbins*multiplier,ht_min,ht_max);
+  TH1D H_HT_ge1b("H_HT_ge1b","HT (>=1b)",nbins*multiplier,ht_min,ht_max);
+  TH1D H_HT_ge2b("H_HT_ge2b","HT (>=2b)",nbins*multiplier,ht_min,ht_max);
+  TH1D H_HT_ge3b("H_HT_ge3b","HT (>=3b)",nbins*multiplier,ht_min,ht_max);
 
-   if (fChain == 0) return;
-   printState();
+   //n jets
+   int njets_bins=10;
+   TH1D Hnjets("Hnjets","N of jets (N-1)",njets_bins,0,njets_bins);
+   TH1D Hnjets_ge1b("Hnjets_ge1b","N of jets (N-1 && >=1b)",njets_bins,0,njets_bins);
+   TH1D Hnjets_ge2b("Hnjets_ge2b","N of jets (N-1 && >=2b)",njets_bins,0,njets_bins);
+   TH1D Hnjets_ge3b("Hnjets_ge3b","N of jets (N-1 && >=3b)",njets_bins,0,njets_bins);
 
-   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+   //some electron variables (do this for an IMV/IEV region only)
+//    double l_pt_min=0,l_pt_max=100;
+//    TH1D HelePt("HelePt","electron pT (N-1)",nbins,l_pt_min,l_pt_max);
+//    TH1D HeleEta("HeleEta","electron eta (N-1)",nbins,-5,5);
+//    TH1D HeleIso("HeleIso","electron isolation (N-1)",nbins,0,5);
 
-   std::cout<<"Got an input file name as: "<<findInputName()<<std::endl;
-   
-   double sigma = getCrossSection();
-   TString sampleName = getSampleName();
-   if (sigma<=0 && !isData_) {std::cout<<"Cross section problem! "<<sigma<<std::endl; return;}
+//    TH1D HelePt_ge1b("HelePt_ge1b","electron pT (N-1)",nbins,l_pt_min,l_pt_max);
+//    TH1D HeleEta_ge1b("HeleEta_ge1b","electron eta (N-1)",nbins,-5,5);
+//    TH1D HeleIso_ge1b("HeleIso_ge1b","electron isolation (N-1)",nbins,0,5);
 
-   if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
+//    TH1D HelePt_ge2b("HelePt_ge2b","electron pT (N-1)",nbins,l_pt_min,l_pt_max);
+//    TH1D HeleEta_ge2b("HeleEta_ge2b","electron eta (N-1)",nbins,-5,5);
+//    TH1D HeleIso_ge2b("HeleIso_ge2b","electron isolation (N-1)",nbins,0,5);
 
-   double   weight = isData_ ? 1 : lumi * sigma / double(nentries); //calculate weight
+//    //some muon variables (pT and isolation)
+//    TH1D HmuonPt("HmuonPt","muon pT (N-1)",nbins,l_pt_min,l_pt_max);
+//    TH1D HmuonEta("HmuonEta","muon eta (N-1)",nbins,-5,5);
+//    TH1D HmuonIso("HmuonIso","muon isolation (N-1)",nbins,0,5);
 
-   //open output file
-   TString outfilename="nminus1Plots.";
-   outfilename+=getCutDescriptionString();
-   outfilename+=".";    outfilename+=sampleName; 
-   outfilename+=".root";
-   TFile fout(outfilename,"RECREATE");
+//    TH1D HmuonPt_ge1b("HmuonPt_ge1b","muon pT (N-1)",nbins,l_pt_min,l_pt_max);
+//    TH1D HmuonEta_ge1b("HmuonEta_ge1b","muon eta (N-1)",nbins,-5,5);
+//    TH1D HmuonIso_ge1b("HmuonIso_ge1b","muon isolation (N-1)",nbins,0,5);
 
-   TH1::SetDefaultSumw2(); //trick to turn on Sumw2 for all histos
+//    TH1D HmuonPt_ge2b("HmuonPt_ge2b","muon pT (N-1)",nbins,l_pt_min,l_pt_max);
+//    TH1D HmuonEta_ge2b("HmuonEta_ge2b","muon eta (N-1)",nbins,-5,5);
+//    TH1D HmuonIso_ge2b("HmuonIso_ge2b","muon isolation (N-1)",nbins,0,5);
+   TH1D HnElectrons("HnElectrons","N of Electrons (N-1)",njets_bins,0,njets_bins);
+   TH1D HnElectrons_ge1b("HnElectrons_ge1b","N of Electrons (N-1 && >=1b)",njets_bins,0,njets_bins);
+   TH1D HnElectrons_ge2b("HnElectrons_ge2b","N of Electrons (N-1 && >=2b)",njets_bins,0,njets_bins);
+   TH1D HnElectrons_ge3b("HnElectrons_ge3b","N of Electrons (N-1 && >=3b)",njets_bins,0,njets_bins);
 
-   TString name;
-//    std::map<TString, TH1D*> H_HT;
-//    std::map<TString, TH1D*> H_NJets;
-//    std::map<TString, TH1D*> H_NElectrons;
-//    std::map<TString, TH1D*> H_NMuons;
-   std::map<TString, TH1D*> H_MET;
-//    std::map<TString, TH1D*> H_minDeltaPhi;
-//    std::map<TString, TH1D*> H_NBJets;
-   for (unsigned int i=0 ; i<cutTags_.size(); i++) {
-     if (cutRequired(cutTags_[i])  ) {
-       //       name="H_HT_"; name+="no";   name += cutTags_[i];
-       //       H_HT[name]=new TH1D(name,name,300,0,1200);
-       
-//        name="H_NJets_";  name+="no";   name += cutTags_[i];
-//        H_NJets[name]=new TH1D(name,name,10,0,10);
+   TH1D HnMuons("HnMuons","N of Muons (N-1)",njets_bins,0,njets_bins);
+   TH1D HnMuons_ge1b("HnMuons_ge1b","N of Muons (N-1 && >=1b)",njets_bins,0,njets_bins);
+   TH1D HnMuons_ge2b("HnMuons_ge2b","N of Muons (N-1 && >=2b)",njets_bins,0,njets_bins);
+   TH1D HnMuons_ge3b("HnMuons_ge3b","N of Muons (N-1 && >=3b)",njets_bins,0,njets_bins);
 
-//        name="H_NBJets_";  name+="no";   name += cutTags_[i];
-//        H_NBJets[name]=new TH1D(name,name,10,0,10);
 
-//        name="H_NElectrons_"; name+="no"; name += cutTags_[i];
-//        H_NElectrons[name]=new TH1D(name,name,10,0,10);
+   //MET
+   double met_max=500,met_min=0;
+   TH1D H_MET("H_MET","MET",nbins, met_min , met_max);
+   TH1D H_METphi("H_METphi","MET phi",nbins, -TMath::Pi() , TMath::Pi());
 
-//        name="H_NMuons_"; name+="no"; name += cutTags_[i];
-//        H_NMuons[name]=new TH1D(name,name,10,0,10);
+   TH1D H_MET_ge1b("H_MET_ge1b","MET (RA2 && >=1b)",nbins, met_min , met_max);
+   TH1D H_METphi_ge1b("H_METphi_ge1b","MET phi (>=1b)",nbins, -TMath::Pi() , TMath::Pi());
 
-       name="H_MET_"; name+="no"; name += cutTags_[i];
-       H_MET[name]=new TH1D(name,name,100,0,400);
+   TH1D H_MET_ge2b("H_MET_ge2b","MET (RA2 && >=2b)",nbins, met_min , met_max);
+   TH1D H_METphi_ge2b("H_METphi_ge2b","MET phi (>=2b)",nbins, -TMath::Pi() , TMath::Pi());
 
-//        name="H_minDeltaPhi_"; name+="no"; name += cutTags_[i];
-//        H_minDeltaPhi[name]=new TH1D(name,name,50,0,TMath::Pi());
-     }
-   }
-      
+   TH1D H_MET_ge3b("H_MET_ge3b","MET (RA2 && >=3b)",nbins, met_min , met_max);
+   TH1D H_METphi_ge3b("H_METphi_ge3b","MET phi (>=3b)",nbins, -TMath::Pi() , TMath::Pi());
 
-   std::map<TString, bool> passRequiredCuts;
+   //minDeltaPhi
+   TH1D HminDeltaPhiMETj("HminDeltaPhiMETj","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
+   TH1D HminDeltaPhiMETj_ge1b("HminDeltaPhiMETj_ge1b","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
+   TH1D HminDeltaPhiMETj_ge2b("HminDeltaPhiMETj_ge2b","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
+   TH1D HminDeltaPhiMETj_ge3b("HminDeltaPhiMETj_ge3b","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
 
+   TH1D HminDeltaPhiMETjAll("HminDeltaPhiMETjAll","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
+   TH1D HminDeltaPhiMETjAll_ge1b("HminDeltaPhiMETjAll_ge1b","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
+   TH1D HminDeltaPhiMETjAll_ge2b("HminDeltaPhiMETjAll_ge2b","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
+   TH1D HminDeltaPhiMETjAll_ge3b("HminDeltaPhiMETjAll_ge3b","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
+
+   int vnbins=8;
+   double vbins[]={0, 0.15, 0.3, 0.5, 0.7, 1, 1.5, 2, TMath::Pi()};
+   TH1D HVminDeltaPhiMETj("HVminDeltaPhiMETj","minDeltaPhi(j,MET) (RA2)",vnbins,vbins);
+   TH1D HVminDeltaPhiMETj_ge1b("HVminDeltaPhiMETj_ge1b","minDeltaPhi(j,MET) (RA2 && >=1b)",vnbins,vbins);
+   TH1D HVminDeltaPhiMETj_ge2b("HVminDeltaPhiMETj_ge2b","minDeltaPhi(j,MET) (RA2 && >=2b)",vnbins,vbins);
+   TH1D HVminDeltaPhiMETj_ge3b("HVminDeltaPhiMETj_ge3b","minDeltaPhi(j,MET) (RA2 && >=2b)",vnbins,vbins);
+   int vnbins2=2;
+   double vbins2[]={0,  0.3, TMath::Pi()};
+   TH1D HV2minDeltaPhiMETj("HV2minDeltaPhiMETj","minDeltaPhi(j,MET) (RA2)",vnbins2,vbins2);
+   TH1D HV2minDeltaPhiMETj_ge1b("HV2minDeltaPhiMETj_ge1b","minDeltaPhi(j,MET) (RA2 && >=1b)",vnbins2,vbins2);
+   TH1D HV2minDeltaPhiMETj_ge2b("HV2minDeltaPhiMETj_ge2b","minDeltaPhi(j,MET) (RA2 && >=2b)",vnbins2,vbins2);
+   TH1D HV2minDeltaPhiMETj_ge3b("HV2minDeltaPhiMETj_ge3b","minDeltaPhi(j,MET) (RA2 && >=2b)",vnbins2,vbins2);
+
+   //n b jets
+   TH1D Hnbjets("Hnbjets","N of jets (RA2)",njets_bins,0,njets_bins);
+
+   //also other angular variables (plotted after all other cuts
+   TH1D HdeltaPhiMPTMET("HdeltaPhiMPTMET","DeltaPhi(MET,MPT) (RA2)",nbins,0,TMath::Pi());
+   TH1D HdeltaPhiMPTMET_ge1b("HdeltaPhiMPTMET_ge1b","DeltaPhi(MET,MPT) (RA2 && >=1b)",nbins,0,TMath::Pi());
+   TH1D HdeltaPhiMPTMET_ge2b("HdeltaPhiMPTMET_ge2b","DeltaPhi(MET,MPT) (RA2 && >=2b)",nbins,0,TMath::Pi());
+   TH1D HdeltaPhiMPTMET_ge3b("HdeltaPhiMPTMET_ge3b","DeltaPhi(MET,MPT) (RA2 && >=3b)",nbins,0,TMath::Pi());
+   TH1D HdeltaPhib1b2_ge2b("HdeltaPhib1b2_ge2b","DeltaPhi(b1,b2) (>=2b)",nbins,0,TMath::Pi());
+   TH1D HdeltaPhib1b2_ge3b("HdeltaPhib1b2_ge3b","DeltaPhi(b1,b2) (>=3b)",nbins,0,TMath::Pi());
+
+   double pt_min=30;
+   double pt_max=700;
+   TH1D Hjetpt1("Hjetpt1","pT of lead jet",nbins,pt_min,pt_max);
+   TH1D Hjetpt1_ge1b("Hjetpt1_ge1b","pT of lead jet (>=1b)",nbins,pt_min,pt_max);
+   TH1D Hjetpt1_ge2b("Hjetpt1_ge2b","pT of lead jet (>=2b)",nbins,pt_min,pt_max);
+   TH1D Hjetpt1_ge3b("Hjetpt1_ge3b","pT of lead jet (>=3b)",nbins,pt_min,pt_max);
+
+   TH1D Hjetphi1("Hjetphi1","phi of lead jet",nbins,-TMath::Pi(),TMath::Pi());
+   TH1D Hjetphi1_ge1b("Hjetphi1_ge1b","phi of lead jet (>=1b)",nbins,-TMath::Pi(),TMath::Pi());
+   TH1D Hjetphi1_ge2b("Hjetphi1_ge2b","phi of lead jet (>=2b)",nbins,-TMath::Pi(),TMath::Pi());
+   TH1D Hjetphi1_ge3b("Hjetphi1_ge3b","phi of lead jet (>=3b)",nbins,-TMath::Pi(),TMath::Pi());
+
+   double eta_max = 2.4;
+   TH1D Hjeteta1("Hjeteta1","eta of lead jet",nbins,-eta_max,eta_max);
+   TH1D Hjeteta1_ge1b("Hjeteta1_ge1b","eta of lead jet (>=1b)",nbins,-eta_max,eta_max);
+   TH1D Hjeteta1_ge2b("Hjeteta1_ge2b","eta of lead jet (>=2b)",nbins,-eta_max,eta_max);
+   TH1D Hjeteta1_ge3b("Hjeteta1_ge3b","eta of lead jet (>=3b)",nbins,-eta_max,eta_max);
+
+   TH1D Hbjetpt1_ge1b("Hbjetpt1_ge1b","pT of lead b jet (>=1b)",nbins,pt_min,pt_max);
+   TH1D Hbjetpt1_ge2b("Hbjetpt1_ge2b","pT of lead b jet (>=2b)",nbins,pt_min,pt_max);
+   TH1D Hbjetpt1_ge3b("Hbjetpt1_ge3b","pT of lead b jet (>=3b)",nbins,pt_min,pt_max);
+
+   TH1D Hbjetphi1_ge1b("Hbjetphi1_ge1b","phi of lead b jet (>=1b)",nbins,-TMath::Pi(),TMath::Pi());
+   TH1D Hbjetphi1_ge2b("Hbjetphi1_ge2b","phi of lead b jet (>=2b)",nbins,-TMath::Pi(),TMath::Pi());
+   TH1D Hbjetphi1_ge3b("Hbjetphi1_ge3b","phi of lead b jet (>=3b)",nbins,-TMath::Pi(),TMath::Pi());
+
+   TH1D Hbjeteta1_ge1b("Hbjeteta1_ge1b","eta of lead b jet (>=1b)",nbins,-eta_max,eta_max);
+   TH1D Hbjeteta1_ge2b("Hbjeteta1_ge2b","eta of lead b jet (>=2b)",nbins,-eta_max,eta_max);
+   TH1D Hbjeteta1_ge3b("Hbjeteta1_ge3b","eta of lead b jet (>=3b)",nbins,-eta_max,eta_max);
+
+   H_HT.Sumw2();
+   H_HT_ge1b.Sumw2();
+   H_HT_ge2b.Sumw2();
+   H_HT_ge3b.Sumw2();
+   Hnjets.Sumw2();
+   Hnjets_ge1b.Sumw2();
+   Hnjets_ge2b.Sumw2();
+   Hnjets_ge3b.Sumw2();
+   HnElectrons.Sumw2();
+   HnElectrons_ge1b.Sumw2();
+   HnElectrons_ge2b.Sumw2();
+   HnElectrons_ge3b.Sumw2();
+   HnMuons.Sumw2();
+   HnMuons_ge1b.Sumw2();
+   HnMuons_ge2b.Sumw2();
+   HnMuons_ge3b.Sumw2();
+   H_MET.Sumw2();
+   H_METphi.Sumw2();
+   H_MET_ge1b.Sumw2();
+   H_METphi_ge1b.Sumw2();
+   H_MET_ge2b.Sumw2();
+   H_METphi_ge2b.Sumw2();
+   H_MET_ge3b.Sumw2();
+   H_METphi_ge3b.Sumw2();
+   HminDeltaPhiMETj.Sumw2();
+   HminDeltaPhiMETj_ge1b.Sumw2();
+   HminDeltaPhiMETj_ge2b.Sumw2();
+   HminDeltaPhiMETj_ge3b.Sumw2();
+   HminDeltaPhiMETjAll.Sumw2();
+   HminDeltaPhiMETjAll_ge1b.Sumw2();
+   HminDeltaPhiMETjAll_ge2b.Sumw2();
+   HminDeltaPhiMETjAll_ge3b.Sumw2();
+   HVminDeltaPhiMETj.Sumw2();
+   HVminDeltaPhiMETj_ge1b.Sumw2();
+   HVminDeltaPhiMETj_ge2b.Sumw2();
+   HVminDeltaPhiMETj_ge3b.Sumw2();
+   HV2minDeltaPhiMETj.Sumw2();
+   HV2minDeltaPhiMETj_ge1b.Sumw2();
+   HV2minDeltaPhiMETj_ge2b.Sumw2();
+   HV2minDeltaPhiMETj_ge3b.Sumw2();
+   Hnbjets.Sumw2();
+   HdeltaPhiMPTMET.Sumw2();
+   HdeltaPhiMPTMET_ge1b.Sumw2();
+   HdeltaPhiMPTMET_ge2b.Sumw2();
+   HdeltaPhiMPTMET_ge3b.Sumw2();
+   HdeltaPhib1b2_ge2b.Sumw2();
+   HdeltaPhib1b2_ge3b.Sumw2();
+   Hjetpt1.Sumw2();
+   Hjetpt1_ge1b.Sumw2();
+   Hjetpt1_ge2b.Sumw2();
+   Hjetpt1_ge3b.Sumw2();
+   Hjetphi1.Sumw2();
+   Hjetphi1_ge1b.Sumw2();
+   Hjetphi1_ge2b.Sumw2();
+   Hjetphi1_ge3b.Sumw2();
+   Hjeteta1.Sumw2();
+   Hjeteta1_ge1b.Sumw2();
+   Hjeteta1_ge2b.Sumw2();
+   Hjeteta1_ge3b.Sumw2();
+   Hbjetpt1_ge1b.Sumw2();
+   Hbjetpt1_ge2b.Sumw2();
+   Hbjetpt1_ge3b.Sumw2();
+   Hbjetphi1_ge1b.Sumw2();
+   Hbjetphi1_ge2b.Sumw2();
+   Hbjetphi1_ge3b.Sumw2();
+   Hbjeteta1_ge1b.Sumw2();
+   Hbjeteta1_ge2b.Sumw2();
+   Hbjeteta1_ge3b.Sumw2();
+
+
+   //keep track of performance
    TDatime starttime; //default ctor is for current time
+
+   //event loop
    Long64_t nbytes = 0, nb = 0;
    for (Long64_t jentry=0; jentry<nentries ;jentry++) {
+     if (jentry%1000000==0) cout<<int(100*double(jentry)/double(nentries))<<endl;
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) {assert(0);}
       nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
-      //see what of the required cuts we pass
-      for (unsigned int i=0 ; i<cutTags_.size(); i++) {
-	if (cutRequired(cutTags_[i])  ) {
-	  passRequiredCuts[cutTags_[i]] = passCut(cutTags_[i]);
-	}
-      }
+      //calculate things
+      HT = getHT();
+      int njets = nGoodJets(); //update to use baseline0
+      double minDeltaPhi_j_MET = getMinDeltaPhiMET(3);
+      double minDeltaPhi_j_MET_All = getMinDeltaPhiMET(99);
+      double dp_MPTMET = getDeltaPhiMPTMET();
+      double deltaPhi_b1b2 =-99; //to be calculated later
 
-      //loop over the cuts again
-      for (unsigned int i=0 ; i<cutTags_.size(); i++) {
-	TString currentCut = cutTags_[i];
-	if (cutRequired(currentCut)  ) {
-	  
-	  //see if we pass every other cut
-	  bool passedAllOthers=true;
-	  for ( std::map<TString, bool>::const_iterator icut=passRequiredCuts.begin(); icut!=passRequiredCuts.end(); ++icut) {
-	    if (icut->first != currentCut) {
-	      if (!icut->second) {
-		passedAllOthers=false;
-		break;
+      double leadJetPt= jetPtOfN(1);
+      double leadJetPhi= jetPhiOfN(1);
+      double leadJetEta= jetEtaOfN(1);
+
+      int nelectrons=countEleSync1();
+      int nmuons=countMuSync1();
+
+      //HT
+      setIgnoredCut("cutHT");
+      if (Cut(ientry) >= 0) {
+	H_HT.Fill(HT,weight);
+	if (nbSSVM >=1)  H_HT_ge1b.Fill(HT,weight);
+	if (nbSSVM >=2)  H_HT_ge2b.Fill(HT,weight);
+	if (nbSSVM >=3)  H_HT_ge3b.Fill(HT,weight);
+      }
+      resetIgnoredCut();
+
+      //n jets
+      setIgnoredCut("cut3Jets");
+      if (Cut(ientry) >= 0) {
+	Hnjets.Fill(njets,weight);
+	if (nbSSVM >=1)  Hnjets_ge1b.Fill(njets,weight);
+	if (nbSSVM >=2)  Hnjets_ge2b.Fill(njets,weight);
+	if (nbSSVM >=3)  Hnjets_ge3b.Fill(njets,weight);
+      }
+      resetIgnoredCut();
+
+      //electron veto
+      setIgnoredCut("cutEleVeto");
+      if (Cut(ientry) >= 0) {
+	HnElectrons.Fill( nelectrons,weight);
+	if (nbSSVM >=1)  HnElectrons_ge1b.Fill(nelectrons,weight);
+	if (nbSSVM >=2)  HnElectrons_ge2b.Fill(nelectrons,weight);
+	if (nbSSVM >=3)  HnElectrons_ge3b.Fill(nelectrons,weight);
+      }
+      resetIgnoredCut();
+
+      //mu veto
+      setIgnoredCut("cutMuVeto");
+      if (Cut(ientry) >= 0) {
+	HnMuons.Fill( nmuons,weight);
+	if (nbSSVM >=1)  HnMuons_ge1b.Fill(nmuons,weight);
+	if (nbSSVM >=2)  HnMuons_ge2b.Fill(nmuons,weight);
+	if (nbSSVM >=3)  HnMuons_ge3b.Fill(nmuons,weight);
+      }
+      resetIgnoredCut();
+
+      //MET
+      setIgnoredCut("cutMET");
+      if (Cut(ientry) >= 0) {
+	H_MET.Fill(getMET(),weight);
+	if (nbSSVM >=1)  H_MET_ge1b.Fill(getMET(),weight);
+	if (nbSSVM >=2)  H_MET_ge2b.Fill(getMET(),weight);
+	if (nbSSVM >=3)  H_MET_ge3b.Fill(getMET(),weight);
+      }
+      resetIgnoredCut();
+
+      //minDeltaPhi
+      setIgnoredCut("cutDeltaPhi");
+      if (Cut(ientry) >= 0) {
+	HminDeltaPhiMETj.Fill( minDeltaPhi_j_MET,weight);
+	HminDeltaPhiMETjAll.Fill( minDeltaPhi_j_MET_All,weight);
+	HVminDeltaPhiMETj.Fill( minDeltaPhi_j_MET,weight);
+	HV2minDeltaPhiMETj.Fill( minDeltaPhi_j_MET,weight);
+
+	if (nbSSVM >=1)  HminDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
+	if (nbSSVM >=2)  HminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,weight);
+	if (nbSSVM >=3)  HminDeltaPhiMETj_ge3b.Fill(minDeltaPhi_j_MET,weight);
+
+	if (nbSSVM >=1)  HminDeltaPhiMETjAll_ge1b.Fill(minDeltaPhi_j_MET_All,weight);
+	if (nbSSVM >=2)  HminDeltaPhiMETjAll_ge2b.Fill(minDeltaPhi_j_MET_All,weight);
+	if (nbSSVM >=3)  HminDeltaPhiMETjAll_ge3b.Fill(minDeltaPhi_j_MET_All,weight);
+
+	if (nbSSVM >=1)  HVminDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
+	if (nbSSVM >=2)  HVminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,weight);
+	if (nbSSVM >=3)  HVminDeltaPhiMETj_ge3b.Fill(minDeltaPhi_j_MET,weight);
+
+	if (nbSSVM >=1)  HV2minDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
+	if (nbSSVM >=2)  HV2minDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,weight);
+	if (nbSSVM >=3)  HV2minDeltaPhiMETj_ge3b.Fill(minDeltaPhi_j_MET,weight);
+      }
+      resetIgnoredCut();
+
+      //finally, apply all cuts
+      if (Cut(ientry) >= 0) {
+
+	Hnbjets.Fill(nbSSVM, weight);
+	HdeltaPhiMPTMET.Fill(dp_MPTMET,weight);
+	H_METphi.Fill(getMETphi(),weight);
+	Hjetpt1.Fill(leadJetPt,weight);
+	Hjetphi1.Fill(leadJetPhi,weight);
+	Hjeteta1.Fill(leadJetEta,weight);
+
+	if (nbSSVM >=1)  {
+	  H_METphi_ge1b.Fill(getMETphi(),weight);
+	  HdeltaPhiMPTMET_ge1b.Fill(dp_MPTMET,weight);
+	  Hjetpt1_ge1b.Fill(leadJetPt,weight);
+	  Hjetphi1_ge1b.Fill(leadJetPhi,weight);
+	  Hjeteta1_ge1b.Fill(leadJetEta,weight);
+
+	  double bjetpt1=0,bjetphi1=-99,bjeteta1=-6;
+	  int nbjetsfound=0;
+	  //now rewriting this for kBaseline0
+	  for (unsigned int ib = 0; ib< loosejetPhi->size(); ib++) {
+	    if ( isGoodJet30(ib) && passSSVM(ib)) { //refind the b jets
+	      nbjetsfound++;
+	      if (nbjetsfound==1) { //if this is the *lead* b jet
+		bjetpt1=loosejetPt->at(ib);
+		bjetphi1=loosejetPhi->at(ib);
+		bjeteta1=loosejetEta->at(ib);
+		break; //only interested in the lead b jet at the moment
 	      }
 	    }
-	  } //for
-
-	  if (passedAllOthers) { //fill N-1 plots for currentCut
-	    name="H_MET_"; name+="no"; name += currentCut;
-	    H_MET[name]->Fill(getMET(),weight);
-
 	  }
-  	}
+	  Hbjetpt1_ge1b.Fill(bjetpt1,weight);
+	  Hbjetphi1_ge1b.Fill(bjetphi1,weight);
+	  Hbjeteta1_ge1b.Fill(bjeteta1,weight);
+
+	
+	  if (nbSSVM >=2)  {
+	    H_METphi_ge2b.Fill(getMETphi(),weight);
+	    HdeltaPhiMPTMET_ge2b.Fill(dp_MPTMET,weight);
+	    Hjetpt1_ge2b.Fill(leadJetPt,weight);
+	    Hjetphi1_ge2b.Fill(leadJetPhi,weight);
+	    Hjeteta1_ge2b.Fill(leadJetEta,weight);
+	    
+	    Hbjetpt1_ge2b.Fill(bjetpt1,weight);
+	    Hbjetphi1_ge2b.Fill(bjetphi1,weight);
+	    Hbjeteta1_ge2b.Fill(bjeteta1,weight);
+
+	    deltaPhi_b1b2 = getDeltaPhib1b2(); //now updated for kBaseline0
+	    HdeltaPhib1b2_ge2b.Fill(deltaPhi_b1b2,weight);
+	    
+	    if (nbSSVM >=3)  {
+	      H_METphi_ge3b.Fill(getMETphi(),weight);
+	      HdeltaPhiMPTMET_ge3b.Fill(dp_MPTMET,weight);
+	      Hjetpt1_ge3b.Fill(leadJetPt,weight);
+	      Hjetphi1_ge3b.Fill(leadJetPhi,weight);
+	      Hjeteta1_ge3b.Fill(leadJetEta,weight);
+	      
+	      Hbjetpt1_ge3b.Fill(bjetpt1,weight);
+	      Hbjetphi1_ge3b.Fill(bjetphi1,weight);
+	      Hbjeteta1_ge3b.Fill(bjeteta1,weight);
+	      
+	      HdeltaPhib1b2_ge3b.Fill(deltaPhi_b1b2,weight); //variable is filled in nbSSVM>=2 block
+	    }
+	  }
+	}
       }
 
    }
@@ -422,14 +725,12 @@ void basicLoop::plotNminus1()
    UInt_t elapsed= stoptime.Convert() - starttime.Convert();
 
    cout<<"events / time = "<<nentries<<" / "<<elapsed<<" = "<<double(nentries)/double(elapsed)<<" Hz"<<endl;
- 
-
    fout.Write();
    fout.Close();
 
 
 }
-*/
+
 
 /* 
 main plot-making loop
