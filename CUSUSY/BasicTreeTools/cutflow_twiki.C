@@ -20,11 +20,12 @@ TCanvas * Ccutflow;
 
 //global settings that change what the output of the code is
 
-const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoDeltaPhi_NoTrigger";
+//const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoDeltaPhi_NoTrigger";
+const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoTrigger";
 //mode 1 is print cut flow table (B & S) ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
 //mode 4 is like 1 but B only, 5 is like 1 but S only
-const int mode_ = 5;
-const bool latexMode_ = true; //otherwise TWiki
+const int mode_ = 4;
+const bool latexMode_ = false; //otherwise TWiki
 const TString pm = latexMode_ ? " \\pm " : " +/- ";
 
 //utility function for making output more readable
@@ -253,9 +254,12 @@ void cutflow_twiki()
   if (mode_==1 ||mode_==4) { //print background names
     for (int ibackground=0 ; ibackground<nbackground; ibackground++)  {
       cout<< background_list[ibackground];
-      if (!(mode_==4 && latexMode_ && ibackground==nbackground-1))    cout<<col;
-      else if ( mode_==4 && latexMode_ && ibackground==nbackground-1) cout<<endtex;
+      cout<<col;
     }
+    //after the individual backgrounds, print the background total
+    cout<<"Total Background";
+    if (!(mode_==4 && latexMode_ ))    cout<<col;
+    else if ( mode_==4 && latexMode_ ) cout<<endtex;
   }
   if (mode_ !=4) { //print signal names
     for (int isignal=0 ; isignal<nsignal; isignal++)   {
@@ -276,20 +280,26 @@ void cutflow_twiki()
     double background_total_err=0;
 
     for (int ibackground=0 ; ibackground<nbackground; ibackground++) {
-      bool lastInRow = ibackground==nbackground-1;
+      //      bool lastInRow = ibackground==nbackground-1;
 
       if (mode_==1 || mode_==4)
 	cout<< format_nevents(background[background_list[ibackground]].at(i) ,backgrounderr[background_list[ibackground]].at(i));
       //in latex mode, the final column marker of a line in not there
-      if (mode_==1 )  cout<< col;
-      else if (mode_==4 && !(latexMode_&& lastInRow)) cout<<col;
-      else if (mode_==4 && latexMode_ && lastInRow) cout<<endtex;
+      cout<<col;
       background_total += background[background_list[ibackground]].at(i);
       background_total_err += pow(backgrounderr[background_list[ibackground]].at(i),2);
     }
 
     //now that we've summed the squares, take the square root
     background_total_err = sqrt(background_total_err);
+
+    //before printing the signal, if we're in mode 1 or 4, then print the background total!
+    if (mode_==1 || mode_==4) {
+      cout<<format_nevents( background_total, background_total_err);
+      if (mode_==1 )  cout<< col;
+      else if (mode_==4 && !latexMode_) cout<<col;
+      else if (mode_==4 && latexMode_ ) cout<<endtex;
+    }
 
     //what we print depends on the mode
     for (int isignal=0 ; isignal<nsignal; isignal++) {
