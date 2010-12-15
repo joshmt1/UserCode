@@ -16,7 +16,7 @@ these are not needed (assuming this macro is compiled) because of the include ab
 gSystem->Load("basicLoop_C.so");
 
 */
-const TString version = "V00-00-04";
+const TString version = "V00-01-01";
 
 void run_ABCDLoop()
 {
@@ -47,23 +47,30 @@ void run_ABCDLoop()
 
     cout<<"About to start on files: "<<samplefiles<<endl;
 
-    if (samplefiles.Contains("MoreMSSM")) continue; //hack to skip some samples
-    if ( !(samplefiles.Contains("QCD")
-	   || samplefiles.Contains("LM") 
-	   || samplefiles.Contains("TTbar")) ) continue; //hack to skip some samples
+    if(!(samplefiles.Contains("LM13")
+	 || samplefiles.Contains("TTbar")
+	 || samplefiles.Contains("Zinv")
+	 || samplefiles.Contains("WJets")
+	 || samplefiles.Contains("ZJets")
+	 || samplefiles.Contains("SingleTop")
+	 || samplefiles.Contains("QCD")) ) continue; //hack to skip some samples   
 
     TChain ch("BasicTreeMaker/tree");
+    TChain info("BasicTreeMaker/infotree");
     ch.Add(samplefiles);
-    basicLoop looper(&ch);
+    info.Add(samplefiles);
+    basicLoop looper(&ch,&info);
+    
     //important! this is where cuts are defined
-    looper.setCutScheme(basicLoop::kRA2); //usually this is kRA2MET
+    looper.setCutScheme(basicLoop::kRA2); //usually this is kRA2
+    looper.setMETType(basicLoop::kpfMET);
+    looper.setJetType(basicLoop::kPF);
     looper.setBCut(0);
+    
     //careful what is set here!
-    //    looper.setIgnoredCut(basicLoop::cutMET); //MET
-    looper.setIgnoredCut(basicLoop::cutMHT); //for kRA2
-    //looper.setIgnoredCut(3); //njets
-    looper.setIgnoredCut(basicLoop::cutDeltaPhi); //DeltaPhi
-
+    looper.setIgnoredCut("cutMET"); //for kRA2
+    looper.setIgnoredCut("cutDeltaPhi");
+    
     looper.ABCDtree();  //go!
   }
 
