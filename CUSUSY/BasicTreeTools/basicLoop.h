@@ -493,6 +493,7 @@ public :
    virtual void triggerPlot();
    virtual void triggerPlotData();
    virtual void triggerTest();
+   virtual void Nminus1plots();
 
    bool isV00_01_02();
    bool isV00_01_03();
@@ -1435,7 +1436,7 @@ bool basicLoop::passHLT() { //do I pass the OR of what is in triggerList_
        itrig!=triggerList_.end(); ++itrig) {
 
     if ( passTrigger->at( itrig->second) ) {
-      lastTriggerPass_ = itrig->first; //may want to remove this code sooner or later
+      //      lastTriggerPass_ = itrig->first; //may want to remove this code sooner or later
       if (!printedHLT_) {
 	cout<<"Pass: "<<itrig->first<<" "<<hltPrescale->at(itrig->second)<<endl;
 	printedHLT_=true;
@@ -1609,7 +1610,11 @@ bool basicLoop::passPV() {
   //the PV selector only looks at the first PV. I think this is wrong.
   //so this function should be used instead
 
-  //  bool ntupleResult = cutResults->at( cutMap_["cutPV"]);
+  //update...Don endorses the PVSelector method.
+  bool ntupleResult = cutResults->at( cutMap_["cutPV"]);
+  return ntupleResult;
+
+  //never run the code down here!
 
   bool pass=false;
   for (unsigned int ipv = 0; ipv<pv_isFake->size(); ipv++) {
