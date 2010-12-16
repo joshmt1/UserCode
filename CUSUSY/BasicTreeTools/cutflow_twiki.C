@@ -24,8 +24,8 @@ TCanvas * Ccutflow;
 const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoTrigger";
 //mode 1 is print cut flow table (B & S) ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
 //mode 4 is like 1 but B only, 5 is like 1 but S only
-const int mode_ = 4;
-const bool latexMode_ = false; //otherwise TWiki
+const int mode_ = 5;
+const bool latexMode_ = true; //otherwise TWiki
 const TString pm = latexMode_ ? " \\pm " : " +/- ";
 
 //utility function for making output more readable
@@ -283,9 +283,8 @@ void cutflow_twiki()
       //      bool lastInRow = ibackground==nbackground-1;
 
       if (mode_==1 || mode_==4)
-	cout<< format_nevents(background[background_list[ibackground]].at(i) ,backgrounderr[background_list[ibackground]].at(i));
-      //in latex mode, the final column marker of a line in not there
-      cout<<col;
+	cout<< format_nevents(background[background_list[ibackground]].at(i) ,backgrounderr[background_list[ibackground]].at(i))<<col;
+
       background_total += background[background_list[ibackground]].at(i);
       background_total_err += pow(backgrounderr[background_list[ibackground]].at(i),2);
     }
