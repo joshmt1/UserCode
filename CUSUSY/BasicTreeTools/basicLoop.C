@@ -72,11 +72,12 @@ void basicLoop::cutflow()
       else if (cutRequired(cutTags_[i]) && !passCut(cutTags_[i]) ) break;
 
       //optional code to dump events to file
-      /*
-      if (cutTags_[i] == "cutJetPt1") {
-	cout<<"run lumi event = "<<runNumber<<" "<<lumiSection<<" "<<eventNumber<<endl;
-      }
-      */
+      
+      //if (cutTags_[i] == "cutDeltaPhi") {
+      //cout<<"run lumi event = "<<runNumber<<" "<<lumiSection<<" "<<eventNumber<<endl;
+      //	cout<<runNumber<<":"<<eventNumber<<":"<<lumiSection<<endl;
+      // }
+      
     }
     
   }
@@ -443,7 +444,7 @@ void basicLoop::Nminus1plots()
    //n b jets
    TH1D Hnbjets("Hnbjets","N of jets (RA2)",njets_bins,0,njets_bins);
 
-   //also other angular variables (plotted after all other cuts
+   //also other angular variables (plotted after all other cuts)
    TH1D HdeltaPhiMPTMET("HdeltaPhiMPTMET","DeltaPhi(MET,MPT) (RA2)",nbins,0,TMath::Pi());
    TH1D HdeltaPhiMPTMET_ge1b("HdeltaPhiMPTMET_ge1b","DeltaPhi(MET,MPT) (RA2 && >=1b)",nbins,0,TMath::Pi());
    TH1D HdeltaPhiMPTMET_ge2b("HdeltaPhiMPTMET_ge2b","DeltaPhi(MET,MPT) (RA2 && >=2b)",nbins,0,TMath::Pi());
@@ -1157,6 +1158,7 @@ void basicLoop::screendump()
   specifyEvent(143962, 2, 732462);
   specifyEvent(143962, 2, 810194);
   */
+  specifyEvent(148862, 75, 120899194); //event that fails my cuts but not Don
 
   /* LM0 events */
   /*
@@ -1176,7 +1178,7 @@ void basicLoop::screendump()
       if (ientry < 0) break;
       nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
-      if (false) {
+      if (true) {
 	if (eventIsSpecified() ) {
 	  nfound++;
 	  cout<<"--- record for event: ("<<jentry <<") run,ls,ev = "<<runNumber<<sp<<lumiSection<<sp<<eventNumber<<endl;
@@ -1192,10 +1194,10 @@ void basicLoop::screendump()
 	  }
 	  
 	  if (true) {
-	    cout<<" jet info (pT, Eta, hadFrac, isGood) n good jets = "<<nGoodJets_Sync1()<<endl;
+	    cout<<" jet info (pT, Eta, hadFrac, isGood) n good jets = "<<nGoodJets()<<endl;
 	    for (unsigned int ijet=0; ijet<loosejetPt->size(); ijet++) {
-	      TString jetisgood = isGoodJet_Sync1(ijet) ? "Good" : "notGood";
-	      cout<<"\tjet "<<ijet<<": "<<loosejetPt->at(ijet)<<sp<<loosejetEta->at(ijet)<<sp<<loosejetEnergyFracHadronic->at(ijet)<<sp<<jetisgood<<endl;
+	      TString jetisgood = isGoodJet(ijet) ? "Good" : "notGood";
+	      cout<<"\tjet "<<ijet<<": "<<loosejetPt->at(ijet)<<sp<<loosejetEta->at(ijet)<<sp<<loosejetPassLooseID->at(ijet)<<sp<<jetisgood<<endl;
 	    }
 	  }
 	}
@@ -1203,7 +1205,7 @@ void basicLoop::screendump()
       }
 
       //in case we just want to dump every event number
-      if (true) {
+      if (false) {
 	if (runNumber==143962) {
 	  cout<<"run ls event "<<runNumber<<" "<<lumiSection<<" "<<eventNumber<<endl;
 	}
@@ -1370,6 +1372,7 @@ void basicLoop::triggerPlotData()
 
 }
 
+//note that this function is now crippled because I don't fill lastTriggerPass_
 void basicLoop::triggerTest()
 {
    if (fChain == 0) return;

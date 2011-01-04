@@ -52,7 +52,7 @@ const char *METRangeNames_[]={"med",  "high", "wide"}; //'no cut' is not given, 
 const char *jetTypeNames_[]={"calo","PF"}; //no JPT in ntuple for now
 const char *leptonTypeNames_[]={"RegLep","PFLep"};
 
-const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1"};
+const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1", "minDPinv"};
 
 //in 1/pb
 const double lumi=36.143; //Don's number for 386 Nov4ReReco
@@ -71,9 +71,15 @@ public :
   jetType theJetType_;
   enum leptonType {kNormal=0, kPFLeptons};
   leptonType theLeptonType_;
-  enum dpType {kDeltaPhi=0, kminDP, kMPT, kDPSync1};
+  enum dpType {kDeltaPhi=0, kminDP, kMPT, kDPSync1, kminDPinv};
   dpType theDPType_;
   unsigned int nBcut_;
+  //these are an extension of the ele/mu veto
+  //If the cutEleVeto or cutMuVeto is set, then there must be exactly this number of e/mu in the event
+  //by default, init to 0 (veto)
+  //setting to 1 inverts the veto
+  int ne_;
+  int nmu_;
 
   bool isData_; //set in ctor
 
@@ -513,6 +519,8 @@ public :
    void setIgnoredCut(const TString cutTag);
    void resetIgnoredCut() ;
    void setBCut(unsigned int nb);
+   void setEleReq(int ne); //change Cut suffix to Req because it is an == requirement, not >=
+   void setMuonReq(int nmu);
    TString getCutDescriptionString();
    TString getBCutDescriptionString();
 
@@ -561,7 +569,8 @@ public :
 
    bool passPV();
 
-   bool passHLT(); bool printedHLT_; TString lastTriggerPass_;
+   bool passHLT(); //bool printedHLT_; 
+   TString lastTriggerPass_; //not really filled...but keep it in so that basicLoop.C compiles
    bool passHLT(const TString & triggerName);
    int getHLTPrescale(const TString & triggerName);
 
@@ -593,8 +602,10 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
      theLeptonType_(kNormal),
      theDPType_(kminDP),
      nBcut_(0),
+     ne_(0),
+     nmu_(0),
      isData_(false),
-     printedHLT_(false),
+     //     printedHLT_(false),
      lastTriggerPass_("")
 //====================== end
 
@@ -1126,6 +1137,7 @@ doing it this way is a dirty hack, but it is so much easier than implementing a 
     cutNames_.clear();
     cutTags_.clear();
     //now the tags
+    // important...this is the correct order
     cutTags_.push_back("cutInclusive");cutNames_[ cutTags_.back()] = "Inclusive";
     cutTags_.push_back("cutTrigger"); cutNames_[cutTags_.back()]="Trigger";
     cutTags_.push_back("cutPV"); cutNames_[cutTags_.back()]="PV";
@@ -1145,6 +1157,32 @@ doing it this way is a dirty hack, but it is so much easier than implementing a 
     cutTags_.push_back("cut1b"); cutNames_[cutTags_.back()]=">=1b";
     cutTags_.push_back("cut2b"); cutNames_[cutTags_.back()]=">=2b";
     cutTags_.push_back("cut3b"); cutNames_[cutTags_.back()]=">=3b";
+    
+
+    //modified order (for comparisons with Don)
+    /*
+    cout<<"Using modified Baseline0 cut order!"<<endl;
+    cutTags_.push_back("cutInclusive");cutNames_[ cutTags_.back()] = "Inclusive";
+    cutTags_.push_back("cutTrigger"); cutNames_[cutTags_.back()]="Trigger";
+    cutTags_.push_back("cutPV"); cutNames_[cutTags_.back()]="PV";
+    cutTags_.push_back("cut3Jets"); cutNames_[cutTags_.back()]=">=3Jets";
+    cutTags_.push_back("cutHT"); cutNames_[cutTags_.back()]="HT";
+
+    cutTags_.push_back("cutJetPt1");  cutNames_[cutTags_.back()]="JetPt1";
+    cutTags_.push_back("cutJetPt2");  cutNames_[cutTags_.back()]="JetPt2";
+    cutTags_.push_back("cutJetPt3");  cutNames_[cutTags_.back()]="JetPt3";
+
+    cutTags_.push_back("cutMET");  cutNames_[cutTags_.back()]="MET";
+    cutTags_.push_back("cutDeltaPhi"); cutNames_[cutTags_.back()]="DeltaPhi";
+
+    cutTags_.push_back("cut1b"); cutNames_[cutTags_.back()]=">=1b";
+    cutTags_.push_back("cut2b"); cutNames_[cutTags_.back()]=">=2b";
+    cutTags_.push_back("cut3b"); cutNames_[cutTags_.back()]=">=3b";
+
+    cutTags_.push_back("cutEleVeto");  cutNames_[cutTags_.back()]="EleVeto";
+    cutTags_.push_back("cutMuVeto");  cutNames_[cutTags_.back()]="MuVeto";
+    cutTags_.push_back("cutTauVeto");  cutNames_[cutTags_.back()]="TauVeto";
+    */
   }
 
   //debug
@@ -1243,7 +1281,8 @@ bool basicLoop::passMuVetoSync1() {
   //in principle I can add a special argument to countMuSync1 to return as soon as it gets to 1,
   //but let's leave that optimization for later
 
-  return (countMuSync1() == 0);
+  //using nmu_ allows for inverting the veto
+  return (countMuSync1() == nmu_);
 }
 
 int basicLoop::countMuSync1() {
@@ -1292,7 +1331,8 @@ bool basicLoop::passTauVeto() {
 bool basicLoop::passEleVetoSync1() {
   //see comments in muon section
 
-  return (countEleSync1() == 0);
+  //using ne_ allows for inverting the veto
+  return (countEleSync1() == ne_);
 }
 
 int basicLoop::countEleSync1() {
@@ -1437,10 +1477,10 @@ bool basicLoop::passHLT() { //do I pass the OR of what is in triggerList_
 
     if ( passTrigger->at( itrig->second) ) {
       //      lastTriggerPass_ = itrig->first; //may want to remove this code sooner or later
-      if (!printedHLT_) {
-	cout<<"Pass: "<<itrig->first<<" "<<hltPrescale->at(itrig->second)<<endl;
-	printedHLT_=true;
-      }
+      //      if (!printedHLT_) {
+      //	cout<<"Pass: "<<itrig->first<<" "<<hltPrescale->at(itrig->second)<<endl;
+      //	printedHLT_=true;
+      //      }
       return true;
     }
   }
@@ -1539,7 +1579,7 @@ bool basicLoop::passCut(const TString cutTag) {
     else if ( theMETType_ == kMHT)    mymet=MHT;
     else {assert(0);}
 
-    if (theMETRange_ == kMedium) return (mymet>=50 && mymet<150);
+    if (theMETRange_ == kMedium) return (mymet>=50 && mymet<100); //redefining kMedium as 50-100!
     //on the next line we are redoing the default that is stored in the ntuple. I think this is ok
     else if (theMETRange_ == kHigh) return (mymet >=150);
     else if (theMETRange_ == kWide) return (mymet >=50);
@@ -1568,6 +1608,12 @@ bool basicLoop::passCut(const TString cutTag) {
 	   ( theDPType_ == kminDP ) ) {
     
     if (theMETType_ ==kMET ||theMETType_==ktcMET ||theMETType_==kpfMET ||theMETType_ == kMHT) return ( getMinDeltaPhiMET(3) >= 0.3 );
+    else {assert(0);}
+  }
+  else if (cutTag == "cutDeltaPhi" && //replace normal DeltaPhi cut with minDeltaPhi cut
+	   ( theDPType_ == kminDPinv ) ) { //this is the *inverted* minDeltaPhi cut (for control region)
+    
+    if (theMETType_ ==kMET ||theMETType_==ktcMET ||theMETType_==kpfMET ||theMETType_ == kMHT) return ( getMinDeltaPhiMET(3) < 0.3 );
     else {assert(0);}
   }
   else if (cutTag == "cutDeltaPhi" && //replace normal DeltaPhi cut with DeltaPhi(MPT,MET) cut
@@ -2431,6 +2477,14 @@ void basicLoop::setLeptonType(leptonType leptontype) {
 
 }
 
+void basicLoop::setEleReq(int ne) {
+  ne_ = ne;
+}
+
+void basicLoop::setMuonReq(int nmu) {
+  nmu_ = nmu;
+}
+
 void basicLoop::setMETRange(METRange metrange) {
 
   theMETRange_ = metrange;
@@ -2502,6 +2556,10 @@ TString basicLoop::getCutDescriptionString() {
   cuts += METRangeNames_[theMETRange_];
   cuts += "_";
   cuts += leptonTypeNames_[theLeptonType_];
+  cuts += ne_; 
+  cuts += "e";
+  cuts += nmu_; 
+  cuts += "mu";
   cuts += "_";
   cuts+= dpTypeNames_[theDPType_];
   for (unsigned int icut=0; icut<ignoredCut_.size() ; icut++) {
@@ -2526,6 +2584,8 @@ void basicLoop::printState() {
   cout<<"Cut scheme set to:    "<<CutSchemeNames_[theCutScheme_]<<endl;
   cout<<"jet type set to:      "<<jetTypeNames_[theJetType_]<<endl;
   cout<<"lepton type set to:   "<<leptonTypeNames_[theLeptonType_]<<endl;
+  cout<<"Requiring exactly     "<<ne_<<" electrons"<<endl;
+  cout<<"Requiring exactly     "<<nmu_<<" muons"<<endl;
   cout<<"MET type set to:      "<<METTypeNames_[theMETType_]<<endl;
   cout<<"MET range set to:     "<<METRangeNames_[theMETRange_]<<endl;
   cout<<"DeltaPhi type set to: "<<dpTypeNames_[theDPType_]<<endl;
