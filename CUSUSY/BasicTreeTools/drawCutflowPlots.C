@@ -36,8 +36,11 @@ bool customrange_active=false;
 double customrange_low=0;
 double customrange_high=0;
 
+int rebin_=0;
+
 bool logy_=false;
 bool dostack_=false;
+bool doleg_=true;
 
 void setPlotRange(double low,double high) {
   customrange_low=low;
@@ -57,13 +60,26 @@ void setStackMode(bool dostack) {
   dostack_=dostack;
 }
 
+void setRebin(int rebin) {
+  rebin_=rebin;
+}
+
+void resetRebin() {
+  setRebin(0);
+}
+
+void drawLegend(bool doleg) {
+  doleg_=doleg;
+}
+
+
 TFile* fdata=0;
 TH1D* hdata=0;
-void loadSamples(TString filestub, TString cutdesc) {
+void loadSamples(TString filestub) {
   if (filestub == loaded_) return;
   else if (loaded_ != "") {cout<<"quit root and try again"<<endl; return;}
   loaded_=filestub;
-  const TString cutdesc = "Baseline0_PF_pfMEThigh_PFLep_minDP_NoTrigger_NoMET";
+  const TString cutdesc = "Baseline0_PF_pfMEThigh_PFLep_minDP";
 
   samples_.push_back("QCD");
   samples_.push_back("TTbarJets");
@@ -113,8 +129,10 @@ void loadSamples(TString filestub, TString cutdesc) {
   dname+=cutdesc;
   dname+=".data.root";
   if (dname.Contains("_NoTrigger"))   dname.ReplaceAll("_NoTrigger","");
-  fdata = new TFile(dname);
-  if (fdata->IsZombie()) cout<<"Problem with data file! "<<dname<<endl;
+  if (dostack_) {
+    fdata = new TFile(dname);
+    if (fdata->IsZombie()) cout<<"Problem with data file! "<<dname<<endl;
+  }
 
 }
 
@@ -126,7 +144,7 @@ void drawNormalized(const TString hname, const TString xtitle, const TString yti
 
   gROOT->SetStyle("CMS");
 
-  if (dostack_)  loadSamples("plots");
+  if (dostack_)  loadSamples("Nminus1plots");
   else   loadSamples("cutflowPlots");
   
   cnorm= new TCanvas("cnorm","normalized",600,400);
@@ -156,6 +174,7 @@ void drawNormalized(const TString hname, const TString xtitle, const TString yti
     if (customrange_active) {
       hh.find(hname,files_[samples_[isample]])->GetXaxis()->SetRangeUser(customrange_low,customrange_high);
     }
+    if (rebin_!=0)    hh.find(hname,files_[samples_[isample]])->Rebin(rebin_);
 
     if (!dostack_) {
       //set line color instead of fill color for this type of plot
@@ -194,32 +213,32 @@ void drawNormalized(const TString hname, const TString xtitle, const TString yti
       thestack->GetHistogram()->GetXaxis()->SetRangeUser(customrange_low,customrange_high);
     }
 
-    cout<<fdata<<endl;
     hdata = (TH1D*) fdata->Get(hname);
     hdata->UseCurrentStyle();
     hdata->SetMarkerColor(kBlack);
     hdata->SetLineWidth(2);
     hdata->SetMarkerStyle(kFullCircle);
     hdata->SetMarkerSize(1);
+    if (rebin_!=0)  hdata->Rebin(rebin_);
     hdata->Draw("SAME");
+    cout<<hdata->GetMaximum()<<"\t"<<thestack->GetMaximum()<<endl;
+    if (hdata->GetMaximum() > thestack->GetMaximum()) {
+      thestack->SetMaximum( hdata->GetMaximum());
+    }
   }
 
-  leg->Draw();
+  if (doleg_)  leg->Draw();
 
-  if (!dostack_) {
-    //amazingly, \includegraphics cannot handle an extra dot in the filename. so avoid it.
-    cnorm->SaveAs(hname+"-drawNormalized.eps"); //for me
-    //  cnorm->Print(hname+".drawNormalized.C");    //for formal purposes
-    cnorm->SaveAs(hname+"-drawNormalized.pdf"); //for pdftex
-    cnorm->SaveAs(hname+"-drawNormalized.png"); //for twiki
-  }
-  else {
-    //amazingly, \includegraphics cannot handle an extra dot in the filename. so avoid it.
-    cnorm->SaveAs(hname+"-drawStack.eps"); //for me
-    //  cnorm->Print(hname+".drawStack.C");    //for formal purposes
-    cnorm->SaveAs(hname+"-drawStack.pdf"); //for pdftex
-    cnorm->SaveAs(hname+"-drawStack.png"); //for twiki
-  }
+  TString savename = hname;
+  if (logy_) savename += "-logY";
+  if (!dostack_)    savename += "-drawNormalized";
+  else savename += "-drawStack";
+
+  //amazingly, \includegraphics cannot handle an extra dot in the filename. so avoid it.
+  cnorm->SaveAs(savename+".eps"); //for me
+  //  cnorm->Print(savename+".C");    //for formal purposes
+  cnorm->SaveAs(savename+".pdf"); //for pdftex
+  cnorm->SaveAs(savename+".png"); //for twiki
 
 }
 
@@ -235,8 +254,14 @@ void plotStuff()
 
   resetPlotRange();
   drawNormalized("H_MET_cutMuVeto","E^{miss}_{T} [GeV]","Arbitrary units");
+
+  setRebin(2);
+  drawNormalized("H_minDeltaPhi_cutMET","#Delta #phi_{min}","Arbitrary units");
+  resetRebin();
+
   setPlotRange(0,5);
   drawNormalized("H_NBJets_cutMET","# of b-tagged jets","Arbitrary units");
+  drawNormalized("H_NBJets_cutDeltaPhi","# of b-tagged jets","Arbitrary units");
 
 }
 
@@ -252,6 +277,70 @@ void plotOtherStuff()
   drawNormalized("H_MET_ge1b","MET [GeV]","Events");
   drawNormalized("H_MET_ge2b","MET [GeV]","Events");
 
+  //
+  setStackMode(true); //once per session
+  //
+  setPlotRange(150,1200);
+  setRebin(10);
+  drawNormalized("H_HT","HT (GeV)","Events");
 
+  setPlotRange(0,8);
+  resetRebin();
+  drawNormalized("Hnjets","# of jets","Events");
+  drawNormalized("Hnjets_ge1b","# of jets","Events");
+  drawNormalized("Hnjets_ge2b","# of jets","Events");
+
+  setPlotRange(0,3);
+  drawNormalized("HnElectrons","# of electrons","Events");
+  drawNormalized("HnElectrons_ge1b","# of electrons","Events");
+  drawNormalized("HnElectrons_ge2b","# of electrons","Events");
+
+  drawNormalized("HnMuons","# of muons","Events");
+  drawNormalized("HnMuons_ge1b","# of muons","Events");
+  drawNormalized("HnMuons_ge2b","# of muons","Events");
+
+  setPlotRange(0,260);
+  setLogY(true);
+  drawNormalized("H_MET","E_{T}^{miss}","Events");
+  drawNormalized("H_MET_ge1b","E_{T}^{miss}","Events");
+  drawNormalized("H_MET_ge2b","E_{T}^{miss}","Events");
+
+  setLogY(false);
+  resetPlotRange();
+  setRebin(10);
+  drawNormalized("H_METphi","#phi of E_{T}^{miss}","Events");
+
+
+  setRebin(2);
+  setLogY(true);
+  drawLegend(false);
+  drawNormalized("HminDeltaPhiMETj","min(#Delta#phi[ jets 1..3, E_{T}^{miss} ] )","Events");
+
+  drawNormalized("HminDeltaPhiMETj_ge1b","min(#Delta#phi[ jets 1..3, E_{T}^{miss} ] )","Events");
+  setLogY(false);
+  drawLegend(true);
+  drawNormalized("HminDeltaPhiMETj_ge1b","min(#Delta#phi[ jets 1..3, E_{T}^{miss} ] )","Events");
+
+  setPlotRange(0,4);
+  resetRebin();
+  drawNormalized("Hnbjets","# of b-tagged jets","Events");
+
+
+  resetPlotRange();
+  setRebin(4);
+  drawNormalized("Hjetpt1","p_{T} of lead jet","Events");
+  drawNormalized("Hjetpt1_ge1b","p_{T} of lead jet","Events");
+  drawNormalized("Hjetpt1_ge2b","p_{T} of lead jet","Events");
+
+  drawNormalized("Hjetphi1","#phi of lead jet","Events");
+  drawNormalized("Hjetphi1_ge1b","#phi of lead jet","Events");
+  drawNormalized("Hjetphi1_ge2b","#phi of lead jet","Events"); //why are 2 events at the same phi?
+
+  drawNormalized("Hjeteta1","#eta of lead jet","Events");
+  drawNormalized("Hjeteta1_ge1b","#eta of lead jet","Events");
+  drawNormalized("Hjeteta1_ge2b","#eta of lead jet","Events");
+
+  drawNormalized("Hbjetpt1_ge1b","p_{T} of lead b-tagged jet","Events");
+  drawNormalized("Hbjetpt1_ge2b","p_{T} of lead b-tagged jet","Events");
 
 }
