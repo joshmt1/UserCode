@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.9 2010/10/27 16:04:03 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.10 2010/11/10 16:33:56 winstrom Exp $
 //
 //
 
@@ -45,6 +45,7 @@ private:
   void fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int jetIndex);
   void fillMetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int il);
+  void fillTauInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int il);
   void fillTrackInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillTriggerInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
@@ -87,6 +88,7 @@ private:
   bool doPrescale_;
 
   std::vector<std::string> btagAlgorithmNames_;
+  std::vector<std::string> tauidAlgorithmNames_;
   std::vector<std::string> triggersOfInterest_;
 
   //  SUSYEventSelector* susyCutFlow_;
@@ -105,6 +107,7 @@ private:
 
   std::vector<std::string> eleAlgorithmNames_; //the real collection names
   std::vector<std::string> muonAlgorithmNames_; //the real collection names
+  std::vector<std::string> tauAlgorithmNames_; //the real collection names
 
   JetIDSelectionFunctor                jetIdLoose_;
   JetIDSelectionFunctor                jetIdTight_;
@@ -165,6 +168,7 @@ private:
   //muon info for all *AllGlobalMuons*
   std::map< std::string, std::vector<float> > muonPt;
   std::map< std::string, std::vector<float> > muonEta;
+  std::map< std::string, std::vector<float> > muonPhi;
   std::map< std::string, std::vector<float> > muonTrackIso;
   std::map< std::string, std::vector<float> > muonEcalIso;
   std::map< std::string, std::vector<float> > muonHcalIso;
@@ -186,6 +190,7 @@ private:
   //electron info for *all* electrons (!)
   std::map< std::string, std::vector<float> > eleEt;
   std::map< std::string, std::vector<float> > eleEta;
+  std::map< std::string, std::vector<float> > elePhi;
   std::map< std::string, std::vector<float> > eleTrackIso;
   std::map< std::string, std::vector<float> > eleEcalIso;
   std::map< std::string, std::vector<float> > eleHcalIso;
@@ -199,6 +204,14 @@ private:
   std::map< std::string, std::vector<bool> > elePassID;
 
   std::map< std::string, int > nElectrons; //good electrons
+
+  //tau info all *all* taus
+  std::map< std::string, std::vector<float> > tauPt;
+  std::map< std::string, std::vector<float> > tauEta;
+  std::map< std::string, std::vector<float> > tauPhi;
+  std::map< std::string, std::vector<float> > tauTaNC;
+  std::map< std::string,  std::map < std::string, std::vector<bool> > > tauID;
+  //againstElectron againstMuon byIsolation byTaNC byTaNCfrHalfPercent byTaNCfrQuarterPercent 
 
   /*
 all jet quantities must because a map<string, whatever> where the

@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-isMC = False
+isMC = True
 
 process = cms.Process("BasicTreeMaker")
 
@@ -12,8 +12,8 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 process.source = cms.Source("PoolSource",
     # replace 'myfile.root' with the source file you want to use
     fileNames = cms.untracked.vstring(
-#    'file:/cu1/joshmt/AOD/Fall10-QCD_TuneD6T_HT-1000_7TeV-madgraph-C473857E-99DA-DF11-8531-00163691DC86.SUSYPAT.root'
-    'INPUT'
+#   'file:/cu1/joshmt/AOD/Fall10-QCD_TuneD6T_HT-1000_7TeV-madgraph-C473857E-99DA-DF11-8531-00163691DC86.SUSYPAT.root'
+   'INPUT'
 #    'file:/cu1/joshmt/DonPAT/data/PAT_38X_jetmettau_sep17rereco_sep11_9_1_wJJ.root'
 #    'file:/cu1/joshmt/DonPAT/MoreMSSM_PAT_10_1_osg.root'
 #    'file:/cu1/joshmt/DonPAT/WJets-SUSYPAT-FEEFD640-9277-DF11-948C-001731EB1E20.root'
@@ -54,9 +54,10 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                                                      "simpleSecondaryVertexHighEffBJetTags",#"simpleSecondaryVertexNegativeBJetTags",
                                                                      "simpleSecondaryVertexHighPurBJetTags",#),
                                                                      "simpleSecondaryVertexBJetTags"), #for older samples
+                                        tauidAlgorithms = cms.vstring("againstElectron", "againstMuon", "byIsolation",
+                                                                      "byTaNCfrOnePercent","byTaNCfrHalfPercent", "byTaNCfrQuarterPercent"),
 #first the names of various collections
                                         pvTag = cms.InputTag(pvString),
-#i am still having problems with JPT jets, so leave them out
                                         jetAlgorithms = cms.vstring( "cleanPatJetsAK5Calo","cleanPatJetsAK5JPT","selectedPatJetsPF" ), #real collection names
                                         jetNames      = cms.vstring( "calo","JPT","PF" ), #for TTree use
                                         metAlgorithms = cms.vstring( "patMETsAK5Calo", "patMETsTC","patMETsPF"),
@@ -64,6 +65,7 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
 #careful...the lepton code is pretty sensitive to the input here
                                         eleAlgorithms = cms.vstring("cleanPatElectrons","selectedPatElectronsPF"),
                                         muonAlgorithms = cms.vstring("cleanPatMuons","selectedPatMuonsPF"),
+                                        tauAlgorithms = cms.vstring("cleanPatTaus","selectedPatTausPF"),
 
 #the 'SUSY trigger' used in the cut flow is the first (valid) one listed here
                                         triggersOfInterest = cms.vstring("HLT_HT100U","HLT_HT120U","HLT_HT140U","HLT_HT150U","HLT_HT150U_v3","HLT_HT100U_v3","HLT_HT140_J30U_Eta3_v3",

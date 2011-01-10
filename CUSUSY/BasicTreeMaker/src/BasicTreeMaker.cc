@@ -20,7 +20,7 @@ using a class created with MakeClass.
 
 Originally developed and tested with CMSSW_3_6_2
 Have also used in in 384.
-Latest incarnation is for 386.
+Latest incarnation is for 386 (also tested in 387)
 
   Recipe is kept here:
 https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
@@ -28,7 +28,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.19 2010/11/26 13:33:36 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.20 2010/12/10 13:20:07 joshmt Exp $
 //
 //
 
@@ -83,6 +83,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 #include "PhysicsTools/SelectorUtils/interface/MuonVPlusJetsIDSelectionFunctor.h"
 
 #include "DataFormats/PatCandidates/interface/MET.h"
+#include "DataFormats/PatCandidates/interface/Tau.h"
 
 #include "DataFormats/VertexReco/interface/Vertex.h"
 
@@ -102,6 +103,7 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   doPrescale_(true),
 
   btagAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("btagAlgorithms")),
+  tauidAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("tauidAlgorithms")),
   triggersOfInterest_(iConfig.getParameter<std::vector<std::string> >("triggersOfInterest")),
 
   pvSelector_      (iConfig.getParameter<edm::ParameterSet>("pvSelector") ),
@@ -115,6 +117,7 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
 
   eleAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("eleAlgorithms")),
   muonAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("muonAlgorithms")),
+  tauAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("tauAlgorithms")),
 
   jetIdLoose_      (iConfig.getParameter<edm::ParameterSet>("jetIdLoose") ),
   jetIdTight_      (iConfig.getParameter<edm::ParameterSet>("jetIdTight") ),
@@ -438,6 +441,31 @@ BasicTreeMaker::fillTrackInfo(const edm::Event& iEvent, const edm::EventSetup& i
 }
 
 void
+BasicTreeMaker::fillTauInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int il) {
+  std::string tauTag=tauAlgorithmNames_[il];
+
+  std::cout<<" == "<<tauTag<<" =="<<std::endl;
+
+  edm::Handle<edm::View<pat::Tau> > tauHandle;
+  iEvent.getByLabel(tauTag,tauHandle);
+  const edm::View<pat::Tau> & taus = *tauHandle;
+  for (edm::View<pat::Tau>::const_iterator itau = taus.begin(); itau!=taus.end(); ++itau) {
+    //    std::cout<<itau->pt()<<"\t"<<itau->eta()<<"\t"<<itau->phi()<<std::endl;
+
+    tauPt[tauTag].push_back( itau->pt() );
+    tauEta[tauTag].push_back( itau->eta());
+    tauPhi[tauTag].push_back( itau->phi());
+    tauTaNC[tauTag].push_back(itau->tauID("byTaNC")); //hard-code this one because it is the only float (rest are bool)
+    for (unsigned int ialg=0; ialg<tauidAlgorithmNames_.size(); ialg++) {
+      tauID[tauTag][tauidAlgorithmNames_[ialg]].push_back( itau->tauID(tauidAlgorithmNames_[ialg]) );
+      //      std::cout<<tauidAlgorithmNames_[ialg]<<" = "<<itau->tauID(tauidAlgorithmNames_[ialg])<<std::endl;
+    }
+
+  }
+  
+}
+
+void
 BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int il) {
 
   const bool debug=false;
@@ -466,6 +494,7 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
     //record pT and eta of all that pass 
     muonPt[muTag].push_back( imuon->pt() );
     muonEta[muTag].push_back( imuon->eta());
+    muonPhi[muTag].push_back( imuon->phi());
     if (debug) {
       std::cout<<"muon pT: "<<imuon->pt()<<" "<<imuon->innerTrack()->pt()<<std::endl;
       std::cout<<"muon isolation pairs: "<< //these are confirmed match in 384 running over a data PATtuple
@@ -538,6 +567,7 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
 
     eleEt[eTag].push_back( ielectron->et() );
     eleEta[eTag].push_back( ielectron->eta());
+    elePhi[eTag].push_back( ielectron->phi());
     //std::cout<<"--elec 3--"<<std::endl;
     eleTrackIso[eTag].push_back( ielectron->dr03TkSumPt() );
     eleEcalIso[eTag].push_back( ielectron->dr03EcalRecHitSumEt() );
@@ -603,7 +633,8 @@ BasicTreeMaker::passJetId(const pat::Jet & jet) {
 void
 BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int jetIndex)
 {
-  //  std::cout<<" == fillJetInfo "<<jetAlgorithmNames_[jetIndex]<<" =="<<std::endl; //debug
+  const bool debug=false;
+  if (debug)  std::cout<<" == fillJetInfo "<<jetAlgorithmNames_[jetIndex]<<" =="<<std::endl; //debug
  
   //  if (jetInfoFilled_) return;
 
@@ -634,14 +665,16 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     const pat::Jet & jet = jets[jj];
     
     //fill the 'very loose' vectors with uncorrected jet info
-    if ( jet.isCaloJet() ) {
-      pat::Jet uncorrectedJet = jet.correctedJet("Uncorrected"); //get the uncorrected jet
-      if (uncorrectedJet.pt() >= 10) { //can apply tighter cuts offline
-	veryloosejetPtUncorr.push_back(uncorrectedJet.pt());
-	veryloosejetEtaUncorr.push_back(uncorrectedJet.eta());
-	veryloosejetPhiUncorr.push_back(uncorrectedJet.phi());
-      }
-    }
+//     if ( jet.isCaloJet() ) {
+//       pat::Jet uncorrectedJet = jet.correctedJet("Uncorrected"); //get the uncorrected jet
+//       if (uncorrectedJet.pt() >= 10) { //can apply tighter cuts offline
+// 	veryloosejetPtUncorr.push_back(uncorrectedJet.pt());
+// 	veryloosejetEtaUncorr.push_back(uncorrectedJet.eta());
+// 	veryloosejetPhiUncorr.push_back(uncorrectedJet.phi());
+//       }
+//     }
+
+    //std::cout<<"about to get jet id"<<std::endl;
     
     //MHT is calculated using loose jet cuts
     //HT is calculated using regular jet cuts
@@ -661,6 +694,18 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     // === make cuts ===
     bool passLooseCuts = (jet.pt() > loosejetPtMin_) && (fabs(jet.eta())<loosejetEtaMax_);
     bool passTightCuts = (jet.pt() > jetPtMin_) && (fabs(jet.eta())<jetEtaMax_) && passJetID;
+
+    if (debug && jet.isPFJet()) {
+      std::cout<<"jet "<<ii
+	       <<" "<<jet.pt()<<" "<<jet.phi()<<" "<<jet.eta()<<" "<<passJetID<<std::endl;
+      pat::Jet ujet = jet.correctedJet("Uncorrected");
+      std::cout<< (ujet.neutralHadronEnergy() + ujet.HFHadronEnergy() ) / ujet.energy() 
+	       << " "<<ujet.neutralEmEnergyFraction() 
+	       << " "<<ujet.numberOfDaughters() 
+	       << " "<<ujet.chargedHadronEnergyFraction()
+	       << " "<<ujet.chargedMultiplicity() 
+	       << " "<<ujet.chargedEmEnergyFraction()<<std::endl;
+    }
     
     //let's enforce that the tight cuts are always a subset of the loose cuts
     if (passTightCuts && !passLooseCuts) assert(0);
@@ -1021,6 +1066,7 @@ BasicTreeMaker::resetTreeVariables() {
     nMuons[muonAlgorithmNames_[il]]=0;
     muonPt[muonAlgorithmNames_[il]].clear();
     muonEta[muonAlgorithmNames_[il]].clear();
+    muonPhi[muonAlgorithmNames_[il]].clear();
     muonTrackIso[muonAlgorithmNames_[il]].clear();
     muonEcalIso[muonAlgorithmNames_[il]].clear();
     muonHcalIso[muonAlgorithmNames_[il]].clear();
@@ -1042,6 +1088,7 @@ BasicTreeMaker::resetTreeVariables() {
     nElectrons[eleAlgorithmNames_[il]]=0;
     eleEt[eleAlgorithmNames_[il]].clear();
     eleEta[eleAlgorithmNames_[il]].clear();
+    elePhi[eleAlgorithmNames_[il]].clear();
     eleTrackIso[eleAlgorithmNames_[il]].clear();
     eleEcalIso[eleAlgorithmNames_[il]].clear();
     eleHcalIso[eleAlgorithmNames_[il]].clear();
@@ -1053,6 +1100,16 @@ BasicTreeMaker::resetTreeVariables() {
     eleIDLoose[eleAlgorithmNames_[il]].clear();
     eleIDRobustTight[eleAlgorithmNames_[il]].clear();
     elePassID[eleAlgorithmNames_[il]].clear();
+  }
+  for (unsigned int il=0; il<tauAlgorithmNames_.size(); il++) {
+    tauPt[tauAlgorithmNames_[il]].clear();
+    tauEta[tauAlgorithmNames_[il]].clear();
+    tauPhi[tauAlgorithmNames_[il]].clear();
+    tauTaNC[tauAlgorithmNames_[il]].clear();
+
+    for (unsigned int ialg=0; ialg<tauidAlgorithmNames_.size(); ialg++) {
+      tauID[tauAlgorithmNames_[il]][tauidAlgorithmNames_[ialg]].clear();
+    }
   }
 
   pv_isFake.clear();
@@ -1140,6 +1197,10 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   for (unsigned int i=0; i<eleAlgorithmNames_.size(); i++) {
     fillLeptonInfo(iEvent,iSetup, i);
   }
+  //fill tau
+  for (unsigned int i=0; i<tauAlgorithmNames_.size(); i++) {
+    fillTauInfo(iEvent,iSetup, i);
+  }
 
   //the next step in the cut flow is DeltaPhi
   bool dphi1cut = DeltaPhi_JetMHT1 > 0.3;//dphi1Min_;
@@ -1216,6 +1277,7 @@ BasicTreeMaker::beginJob()
   //tree that is filled only once per job
   infotree_->Branch("SUSY_cutNames",&cutNames);
   infotree_->Branch("btagAlgorithms",&btagAlgorithmNames_);
+  infotree_->Branch("tauidAlgorithms",&tauidAlgorithmNames_);
   infotree_->Branch("triggerList",&triggersOfInterest_);
 
   //tree that is filled for each event
@@ -1336,6 +1398,31 @@ BasicTreeMaker::beginJob()
   tree_->Branch("trackEta",&trackEta);
   tree_->Branch("trackPhi",&trackPhi);
 
+  for (unsigned int il=0; il<tauAlgorithmNames_.size(); il++) {
+    string tail="_";
+    //string itail="_"; //only need this for integer fields
+    if (tauAlgorithmNames_[il].find( "PF")!=string::npos) {
+      tail+="PF";
+      //      itail+="PF/I";
+    }
+    else {
+      tail="";
+      //      itail="/I";
+    }
+
+    tree_->Branch( (string("tauPt")+tail).c_str(),&tauPt[tauAlgorithmNames_[il]]);
+    tree_->Branch( (string("tauEta")+tail).c_str(),&tauEta[tauAlgorithmNames_[il]]);
+    tree_->Branch( (string("tauPhi")+tail).c_str(),&tauPhi[tauAlgorithmNames_[il]]);
+    tree_->Branch( (string("tauTaNC")+tail).c_str(),&tauTaNC[tauAlgorithmNames_[il]]);
+
+    for (unsigned int ialg=0; ialg<tauidAlgorithmNames_.size(); ialg++) {
+      string bname = "tauID_";
+      bname += tauidAlgorithmNames_[ialg];
+      bname += tail;
+      tree_->Branch(bname.c_str(),&tauID[tauAlgorithmNames_[il]][tauidAlgorithmNames_[ialg]]);
+    }
+  }
+
   for (unsigned int il=0; il<muonAlgorithmNames_.size(); il++) {
     string tail="_";
     string itail="_";
@@ -1353,6 +1440,7 @@ BasicTreeMaker::beginJob()
 
     tree_->Branch( (string("muonPt")+tail).c_str(),&muonPt[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonEta")+tail).c_str(),&muonEta[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonPhi")+tail).c_str(),&muonPhi[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonTrackIso")+tail).c_str(),&muonTrackIso[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonEcalIso")+tail).c_str(),&muonEcalIso[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonHcalIso")+tail).c_str(),&muonHcalIso[muonAlgorithmNames_[il]]);
@@ -1372,6 +1460,7 @@ BasicTreeMaker::beginJob()
 
     tree_->Branch((string("eleEt")+tail).c_str(),&eleEt[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleEta")+tail).c_str(),&eleEta[eleAlgorithmNames_[il]]);
+    tree_->Branch((string("elePhi")+tail).c_str(),&elePhi[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleTrackIso")+tail).c_str(),&eleTrackIso[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleEcalIso")+tail).c_str(),&eleEcalIso[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleHcalIso")+tail).c_str(),&eleHcalIso[eleAlgorithmNames_[il]]);
