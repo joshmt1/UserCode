@@ -30,7 +30,7 @@ if isMC:
 else:
     print "is Data!"
     process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
-    process.GlobalTag.globaltag = 'GR_R_38X_V14::All' #this Global Tag is for 386 Nov4ReReco
+    process.GlobalTag.globaltag = 'GR_R_38X_V15::All' #this Global Tag is for the latest 387
 
 
 #flavor history tool
