@@ -2372,6 +2372,7 @@ double basicLoop::getCrossSection( TString inname) {
   if (inname=="") inname=findInputName();
 
   //  https://twiki.cern.ch/twiki/bin/view/CMS/ProductionReProcessingSpring10
+  const double bf = 0.32442;
 
   //those marked with !!! in the comment have been synchronized with our note
   if (inname.Contains("/TTbarJets/") )                     return 165; //!!! NNLO
@@ -2418,7 +2419,6 @@ double basicLoop::getCrossSection( TString inname) {
   else if (inname.Contains("/MoreMSSM/"))                  return 1.73;
   else if (inname.Contains("/MoreMSSMv2/"))                return 2.1;
   else if (inname.Contains("/MoreMSSMv3/"))                return 2.6;
-  const double bf = 0.32442;
   else if (inname.Contains("/SingleTop-sChannel/"))        return bf*4.6; //!!! NNNLO
   else if (inname.Contains("/SingleTop-tChannel/"))        return bf*64.6; //!!! NLO
   else if (inname.Contains("/SingleTop-tWChannel/"))       return 10.6; //!!! NLO
