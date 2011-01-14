@@ -24,21 +24,27 @@ TCanvas * Ccutflow;
 const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoTrigger";
 //mode 1 is print cut flow table (B & S) ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
 //mode 4 is like 1 but B only, 5 is like 1 but S only
-const int mode_ = 5;
+//mode 6 is print S/B table
+//mode 7 prints signal efficiency table (%)
+const int mode_ = 7;
 const bool latexMode_ = true; //otherwise TWiki
 const TString pm = latexMode_ ? " \\pm " : " +/- ";
 
 //utility function for making output more readable
 TString format_nevents(double n,double e) {
 
-  TString mathmode = latexMode_ ? "$" : "";
+  const bool moreDigits = true;
+  const int eCutoff = moreDigits ? 10 : 1;
+  const int extraDigits = moreDigits ? 1:0;
 
+  TString mathmode = latexMode_ ? "$" : "";
+  
   char out[100];
-  if (e>=1  ||  e < 0.00001) {
+  if (e >= eCutoff || e < 0.00001) { //show whole numbers only
     sprintf(out,"%s%.0f%s%.0f%s",mathmode.Data(),n,pm.Data(),e,mathmode.Data());
   }
   else {
-    int nfig = ceil(fabs(log10(e)));
+    int nfig = ceil(fabs(log10(e))) + extraDigits;
     TString form="%s%.";
     form+=nfig; form+="f%s%.";
     form+=nfig; form+="f%s";
@@ -114,6 +120,8 @@ void cutflow_twiki()
   TString modeDescription="";
   if (mode_==2) modeDescription="S/sqrt(S+B)";
   else if (mode_==3) modeDescription="S/sqrt(B)";
+  else if (mode_==6) modeDescription="S/B";
+  else if (mode_==7) modeDescription="Signal Efficiency";
 
   int icolor=1;
 
@@ -198,11 +206,13 @@ void cutflow_twiki()
     if (!file.good()) {cout<<"bad file! "<<filename<<endl; return;}
     int ibin=1;
     while (file>>cutdesc>>nevt>>nevterr ) {
-      background[TString(background_list[i])].push_back(nevt);
-      backgrounderr[TString(background_list[i])].push_back(nevterr);
+      double scale = 1;
+      if (filename.Contains("QCD")) scale = 2.8; //dirty hack!
+      background[TString(background_list[i])].push_back(nevt*scale);
+      backgrounderr[TString(background_list[i])].push_back(nevterr*scale);
       if (mode_==1) {
-	Hcutflow[TString(background_list[i])]->SetBinContent(ibin,nevt);
-	Hcutflow[TString(background_list[i])]->SetBinError(ibin,nevterr);
+	Hcutflow[TString(background_list[i])]->SetBinContent(ibin,nevt*scale);
+	Hcutflow[TString(background_list[i])]->SetBinError(ibin,nevterr*scale);
 	ibin++;
       }
     }
@@ -217,7 +227,7 @@ void cutflow_twiki()
     filename+="."; filename+=signal_list[i];
     filename += ".dat";
 
-    if (mode_==2 ||mode_ ==3) {
+    if (mode_==2 ||mode_ ==3 ||mode_==6) {
       Hcutflow[TString(signal_list[i])] = new TH1D("H"+TString(signal_list[i]),TString(signal_list[i]),cutnames.size(),0,cutnames.size());
       cout<<"Created histogram name = "<<Hcutflow[TString(signal_list[i])]->GetName()<<endl;
       Hcutflow[TString(signal_list[i])]->SetLineColor(icolor); 
@@ -309,6 +319,12 @@ void cutflow_twiki()
 	if (!(latexMode_ && lastInRow)) cout<< col; //get rid of trailing & in latex mode
 	else cout<<endtex;
       }
+      else if (mode_==7) {
+	cout<< setprecision (3)<<100*signal[signal_list[isignal]].at(i) / signal[signal_list[isignal]].at(0);
+	if (i>0) cout<< setprecision (3)<<" ("<<100*signal[signal_list[isignal]].at(i) / signal[signal_list[isignal]].at(i-1)<<")";
+	if (!(latexMode_ && lastInRow)) cout<< col; //get rid of trailing & in latex mode
+	else cout<<endtex;
+      }
       else if (mode_==2) {
 	if (signal[signal_list[isignal]].at(i)+ background_total >0) {
 	  cout<<signal[signal_list[isignal]].at(i)/sqrt(signal[signal_list[isignal]].at(i)+ background_total);
@@ -320,6 +336,14 @@ void cutflow_twiki()
       else if (mode_==3) {
 	if ( background_total >0) {
 	  cout<<signal[signal_list[isignal]].at(i)/sqrt(background_total);
+	  if (latexMode_&&lastInRow) cout<<endtex;
+	  else cout  << col;
+	}
+	else  cout<<" - "<<endl;
+      }
+      else if (mode_==6) { //identical code to mode_==3, but with sqrt removed
+	if ( background_total >0) {
+	  cout<<signal[signal_list[isignal]].at(i)/background_total;
 	  if (latexMode_&&lastInRow) cout<<endtex;
 	  else cout  << col;
 	}
@@ -339,6 +363,10 @@ void cutflow_twiki()
 	if ( background_total >0) 
 	  Hcutflow[signal_list[isignal]]->SetBinContent(i+1,signal[signal_list[isignal]].at(i)/sqrt(background_total) );
       }
+      else if (mode_==6) { //again, copying and pasting what is done for mode 3, but with sqrt removed
+	if ( background_total >0) 
+	  Hcutflow[signal_list[isignal]]->SetBinContent(i+1,signal[signal_list[isignal]].at(i)/background_total );
+      }
       
     }
     
@@ -346,13 +374,13 @@ void cutflow_twiki()
   }
 
   //at this point we've got our table and we don't want to continue;
-  if (mode_==4 || mode_==5) return;
+  if (mode_==4 || mode_==5 ||mode_==7) return;
 
   Ccutflow = new TCanvas("Ccutflow");
   //  if (mode_==1)  Ccutflow->SetLogy();
   THStack mystack("mystack","Cut Flow Steps"); //only used for mode 1
   float legx1=0.6,legy1=0.6,legx2=0.9,legy2=0.9;
-  if (mode_==2 || mode_==3) {
+  if (mode_==2 || mode_==3 || mode_==6) {
     legx1=0.1; legx2=0.3;
   }
   TLegend leg(legx1,legy1,legx2,legy2);
