@@ -28,7 +28,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.20 2010/12/10 13:20:07 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.21 2011/01/10 10:05:22 joshmt Exp $
 //
 //
 
@@ -444,7 +444,7 @@ void
 BasicTreeMaker::fillTauInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int il) {
   std::string tauTag=tauAlgorithmNames_[il];
 
-  std::cout<<" == "<<tauTag<<" =="<<std::endl;
+  //  std::cout<<" == "<<tauTag<<" =="<<std::endl;
 
   edm::Handle<edm::View<pat::Tau> > tauHandle;
   iEvent.getByLabel(tauTag,tauHandle);
