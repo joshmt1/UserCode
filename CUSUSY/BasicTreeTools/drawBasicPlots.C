@@ -1,3 +1,5 @@
+//NOTE -- this code has now been largely replaced by drawCutflowPlots.C
+//originally they were for different purposes, but that code has been generalized to replace this code
 {
 
   //======
