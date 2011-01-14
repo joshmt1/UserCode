@@ -21,7 +21,7 @@ TCanvas * Ccutflow;
 //global settings that change what the output of the code is
 
 //const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoDeltaPhi_NoTrigger";
-const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoTrigger";
+const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP";
 //mode 1 is print cut flow table (B & S) ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
 //mode 4 is like 1 but B only, 5 is like 1 but S only
 //mode 6 is print S/B table
@@ -33,7 +33,7 @@ const TString pm = latexMode_ ? " \\pm " : " +/- ";
 //utility function for making output more readable
 TString format_nevents(double n,double e) {
 
-  const bool moreDigits = true;
+  const bool moreDigits = false;
   const int eCutoff = moreDigits ? 10 : 1;
   const int extraDigits = moreDigits ? 1:0;
 
@@ -131,12 +131,14 @@ void cutflow_twiki()
 
   int nbackground = 6;
   char *background_list[]={"QCD","TTbarJets","SingleTop","Zinvisible","WJets","ZJets"};
-  int nsignal = 5;//16; //oops, where did LM3 go?
+  int nsignal = 2;//5;//16; //oops, where did LM3 go?
   //  char *signal_list[]={"LM0", "LM1", "LM2", "LM4", "LM5", "LM6","LM7", "LM8","LM9","LM9p", "LM9t175", "LM10", "LM11", "LM12","LM13","mMSSM"};
-  char *signal_list[]={"LM0", "LM1", "LM9","LM13","mMSSMv3"};
+  //  char *signal_list[]={"LM0", "LM1", "LM9","LM13","mMSSMv3"};
+  char *signal_list[]={ "LM9","LM13"};
 
   //combine single top into one category
   std::vector<TString> singletopnames;
+  singletopnames.push_back("SingleTop-sChannel");
   singletopnames.push_back("SingleTop-tChannel");
   singletopnames.push_back("SingleTop-tWChannel");
   combineSamples("SingleTop",singletopnames);
