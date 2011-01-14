@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Thu Oct 28 18:03:08 2010 by ROOT version 5.22/00d
+// Fri Jan 14 12:05:44 2011 by ROOT version 5.22/00d
 // from TTree tree/tree
-// found on file: /cu1/joshmt/BasicNtuples/V00-01-02/QCD-Pt1000toInf-madgraph/BasicNtuple_1_1_zmJ.root
+// found on file: /cu1/joshmt/BasicNtuples/V00-01-05/QCD-Pt100to250-madgraph/BasicNtuple_10_1_Vkj.root
 //////////////////////////////////////////////////////////
 
 #ifndef basicLoop_h
@@ -182,8 +182,8 @@ public :
    vector<int>     *loosejetGenPhi_calo;
    vector<int>     *loosejetGenParticlePDGId_calo;
    vector<float>   *loosejetInvisibleEnergy_calo;
-   vector<int>     *loosejetNSV_calo;
    vector<int>     *loosejetNTracks_calo;
+   vector<int>     *loosejetNSV_calo;
    vector<float>   *loosejetSVUnWeightedMass_calo;
    vector<float>   *loosejetSVWeightedMass_calo;
    vector<float>   *loosejetSVUnWeightedLifetime_calo;
@@ -198,6 +198,37 @@ public :
    vector<float>   *badjetPt_calo;
    vector<float>   *badjetEta_calo;
    vector<float>   *badjetPhi_calo;
+   vector<int>     *tightJetIndex_JPT;
+   vector<int>     *looseJetIndex_JPT;
+   vector<float>   *loosejetPt_JPT;
+   vector<float>   *loosejetEt_JPT;
+   vector<float>   *loosejetEta_JPT;
+   vector<float>   *loosejetPhi_JPT;
+   vector<bool>    *loosejetPassLooseID_JPT;
+   vector<bool>    *loosejetPassTightID_JPT;
+   vector<float>   *loosejetEnergyFracHadronic_JPT;
+   vector<int>     *loosejetFlavor_JPT;
+   vector<int>     *loosejetGenPt_JPT;
+   vector<int>     *loosejetGenEta_JPT;
+   vector<int>     *loosejetGenPhi_JPT;
+   vector<int>     *loosejetGenParticlePDGId_JPT;
+   vector<float>   *loosejetInvisibleEnergy_JPT;
+   vector<int>     *loosejetNTracks_JPT;
+   vector<int>     *loosejetNSV_JPT;
+   vector<float>   *loosejetSVUnWeightedMass_JPT;
+   vector<float>   *loosejetSVWeightedMass_JPT;
+   vector<float>   *loosejetSVUnWeightedLifetime_JPT;
+   vector<float>   *loosejetSVWeightedLifetime_JPT;
+   vector<float>   *loosejetSVUnWeightedCosTheta_JPT;
+   vector<float>   *loosejetSVWeightedCosTheta_JPT;
+   vector<float>   *loosejetBTagDisc_trackCountingHighPurBJetTags_JPT;
+   vector<float>   *loosejetBTagDisc_trackCountingHighEffBJetTags_JPT;
+   vector<float>   *loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_JPT;
+   vector<float>   *loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_JPT;
+   vector<float>   *loosejetBTagDisc_simpleSecondaryVertexBJetTags_JPT;
+   vector<float>   *badjetPt_JPT;
+   vector<float>   *badjetEta_JPT;
+   vector<float>   *badjetPhi_JPT;
    vector<int>     *tightJetIndex_PF;
    vector<int>     *looseJetIndex_PF;
    vector<float>   *loosejetPt_PF;
@@ -213,8 +244,8 @@ public :
    vector<int>     *loosejetGenPhi_PF;
    vector<int>     *loosejetGenParticlePDGId_PF;
    vector<float>   *loosejetInvisibleEnergy_PF;
-   vector<int>     *loosejetNSV_PF;
    vector<int>     *loosejetNTracks_PF;
+   vector<int>     *loosejetNSV_PF;
    vector<float>   *loosejetSVUnWeightedMass_PF;
    vector<float>   *loosejetSVWeightedMass_PF;
    vector<float>   *loosejetSVUnWeightedLifetime_PF;
@@ -257,9 +288,30 @@ public :
    vector<float>   *trackPt;
    vector<float>   *trackEta;
    vector<float>   *trackPhi;
+   vector<float>   *tauPt;
+   vector<float>   *tauEta;
+   vector<float>   *tauPhi;
+   vector<float>   *tauTaNC;
+   vector<bool>    *tauID_againstElectron;
+   vector<bool>    *tauID_againstMuon;
+   vector<bool>    *tauID_byIsolation;
+   vector<bool>    *tauID_byTaNCfrOnePercent;
+   vector<bool>    *tauID_byTaNCfrHalfPercent;
+   vector<bool>    *tauID_byTaNCfrQuarterPercent;
+   vector<float>   *tauPt_PF;
+   vector<float>   *tauEta_PF;
+   vector<float>   *tauPhi_PF;
+   vector<float>   *tauTaNC_PF;
+   vector<bool>    *tauID_againstElectron_PF;
+   vector<bool>    *tauID_againstMuon_PF;
+   vector<bool>    *tauID_byIsolation_PF;
+   vector<bool>    *tauID_byTaNCfrOnePercent_PF;
+   vector<bool>    *tauID_byTaNCfrHalfPercent_PF;
+   vector<bool>    *tauID_byTaNCfrQuarterPercent_PF;
    vector<bool>    *muonIsGlobalMuonPromptTight;
    vector<float>   *muonPt;
    vector<float>   *muonEta;
+   vector<float>   *muonPhi;
    vector<float>   *muonTrackIso;
    vector<float>   *muonEcalIso;
    vector<float>   *muonHcalIso;
@@ -275,6 +327,7 @@ public :
    Int_t           nMuons;
    vector<float>   *eleEt;
    vector<float>   *eleEta;
+   vector<float>   *elePhi;
    vector<float>   *eleTrackIso;
    vector<float>   *eleEcalIso;
    vector<float>   *eleHcalIso;
@@ -287,6 +340,7 @@ public :
    vector<bool>    *muonIsGlobalMuonPromptTight_PF;
    vector<float>   *muonPt_PF;
    vector<float>   *muonEta_PF;
+   vector<float>   *muonPhi_PF;
    vector<float>   *muonTrackIso_PF;
    vector<float>   *muonEcalIso_PF;
    vector<float>   *muonHcalIso_PF;
@@ -302,6 +356,7 @@ public :
    Int_t           nMuons_PF;
    vector<float>   *eleEt_PF;
    vector<float>   *eleEta_PF;
+   vector<float>   *elePhi_PF;
    vector<float>   *eleTrackIso_PF;
    vector<float>   *eleEcalIso_PF;
    vector<float>   *eleHcalIso_PF;
@@ -347,8 +402,8 @@ public :
    TBranch        *b_loosejetGenPhi_calo;   //!
    TBranch        *b_loosejetGenParticlePDGId_calo;   //!
    TBranch        *b_loosejetInvisibleEnergy_calo;   //!
-   TBranch        *b_loosejetNSV_calo;   //!
    TBranch        *b_loosejetNTracks_calo;   //!
+   TBranch        *b_loosejetNSV_calo;   //!
    TBranch        *b_loosejetSVUnWeightedMass_calo;   //!
    TBranch        *b_loosejetSVWeightedMass_calo;   //!
    TBranch        *b_loosejetSVUnWeightedLifetime_calo;   //!
@@ -363,6 +418,37 @@ public :
    TBranch        *b_badjetPt_calo;   //!
    TBranch        *b_badjetEta_calo;   //!
    TBranch        *b_badjetPhi_calo;   //!
+   TBranch        *b_tightJetIndex_JPT;   //!
+   TBranch        *b_looseJetIndex_JPT;   //!
+   TBranch        *b_loosejetPt_JPT;   //!
+   TBranch        *b_loosejetEt_JPT;   //!
+   TBranch        *b_loosejetEta_JPT;   //!
+   TBranch        *b_loosejetPhi_JPT;   //!
+   TBranch        *b_loosejetPassLooseID_JPT;   //!
+   TBranch        *b_loosejetPassTightID_JPT;   //!
+   TBranch        *b_loosejetEnergyFracHadronic_JPT;   //!
+   TBranch        *b_loosejetFlavor_JPT;   //!
+   TBranch        *b_loosejetGenPt_JPT;   //!
+   TBranch        *b_loosejetGenEta_JPT;   //!
+   TBranch        *b_loosejetGenPhi_JPT;   //!
+   TBranch        *b_loosejetGenParticlePDGId_JPT;   //!
+   TBranch        *b_loosejetInvisibleEnergy_JPT;   //!
+   TBranch        *b_loosejetNTracks_JPT;   //!
+   TBranch        *b_loosejetNSV_JPT;   //!
+   TBranch        *b_loosejetSVUnWeightedMass_JPT;   //!
+   TBranch        *b_loosejetSVWeightedMass_JPT;   //!
+   TBranch        *b_loosejetSVUnWeightedLifetime_JPT;   //!
+   TBranch        *b_loosejetSVWeightedLifetime_JPT;   //!
+   TBranch        *b_loosejetSVUnWeightedCosTheta_JPT;   //!
+   TBranch        *b_loosejetSVWeightedCosTheta_JPT;   //!
+   TBranch        *b_loosejetBTagDisc_trackCountingHighPurBJetTags_JPT;   //!
+   TBranch        *b_loosejetBTagDisc_trackCountingHighEffBJetTags_JPT;   //!
+   TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_JPT;   //!
+   TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_JPT;   //!
+   TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexBJetTags_JPT;   //!
+   TBranch        *b_badjetPt_JPT;   //!
+   TBranch        *b_badjetEta_JPT;   //!
+   TBranch        *b_badjetPhi_JPT;   //!
    TBranch        *b_tightJetIndex_PF;   //!
    TBranch        *b_looseJetIndex_PF;   //!
    TBranch        *b_loosejetPt_PF;   //!
@@ -378,8 +464,8 @@ public :
    TBranch        *b_loosejetGenPhi_PF;   //!
    TBranch        *b_loosejetGenParticlePDGId_PF;   //!
    TBranch        *b_loosejetInvisibleEnergy_PF;   //!
-   TBranch        *b_loosejetNSV_PF;   //!
    TBranch        *b_loosejetNTracks_PF;   //!
+   TBranch        *b_loosejetNSV_PF;   //!
    TBranch        *b_loosejetSVUnWeightedMass_PF;   //!
    TBranch        *b_loosejetSVWeightedMass_PF;   //!
    TBranch        *b_loosejetSVUnWeightedLifetime_PF;   //!
@@ -422,9 +508,30 @@ public :
    TBranch        *b_trackPt;   //!
    TBranch        *b_trackEta;   //!
    TBranch        *b_trackPhi;   //!
+   TBranch        *b_tauPt;   //!
+   TBranch        *b_tauEta;   //!
+   TBranch        *b_tauPhi;   //!
+   TBranch        *b_tauTaNC;   //!
+   TBranch        *b_tauID_againstElectron;   //!
+   TBranch        *b_tauID_againstMuon;   //!
+   TBranch        *b_tauID_byIsolation;   //!
+   TBranch        *b_tauID_byTaNCfrOnePercent;   //!
+   TBranch        *b_tauID_byTaNCfrHalfPercent;   //!
+   TBranch        *b_tauID_byTaNCfrQuarterPercent;   //!
+   TBranch        *b_tauPt_PF;   //!
+   TBranch        *b_tauEta_PF;   //!
+   TBranch        *b_tauPhi_PF;   //!
+   TBranch        *b_tauTaNC_PF;   //!
+   TBranch        *b_tauID_againstElectron_PF;   //!
+   TBranch        *b_tauID_againstMuon_PF;   //!
+   TBranch        *b_tauID_byIsolation_PF;   //!
+   TBranch        *b_tauID_byTaNCfrOnePercent_PF;   //!
+   TBranch        *b_tauID_byTaNCfrHalfPercent_PF;   //!
+   TBranch        *b_tauID_byTaNCfrQuarterPercent_PF;   //!
    TBranch        *b_muonIsGlobalMuonPromptTight;   //!
    TBranch        *b_muonPt;   //!
    TBranch        *b_muonEta;   //!
+   TBranch        *b_muonPhi;   //!
    TBranch        *b_muonTrackIso;   //!
    TBranch        *b_muonEcalIso;   //!
    TBranch        *b_muonHcalIso;   //!
@@ -440,6 +547,7 @@ public :
    TBranch        *b_nMuons;   //!
    TBranch        *b_eleEt;   //!
    TBranch        *b_eleEta;   //!
+   TBranch        *b_elePhi;   //!
    TBranch        *b_eleTrackIso;   //!
    TBranch        *b_eleEcalIso;   //!
    TBranch        *b_eleHcalIso;   //!
@@ -452,6 +560,7 @@ public :
    TBranch        *b_muonIsGlobalMuonPromptTight_PF;   //!
    TBranch        *b_muonPt_PF;   //!
    TBranch        *b_muonEta_PF;   //!
+   TBranch        *b_muonPhi_PF;   //!
    TBranch        *b_muonTrackIso_PF;   //!
    TBranch        *b_muonEcalIso_PF;   //!
    TBranch        *b_muonHcalIso_PF;   //!
@@ -467,6 +576,7 @@ public :
    TBranch        *b_nMuons_PF;   //!
    TBranch        *b_eleEt_PF;   //!
    TBranch        *b_eleEta_PF;   //!
+   TBranch        *b_elePhi_PF;   //!
    TBranch        *b_eleTrackIso_PF;   //!
    TBranch        *b_eleEcalIso_PF;   //!
    TBranch        *b_eleHcalIso_PF;   //!
@@ -503,6 +613,7 @@ public :
 
    bool isV00_01_02();
    bool isV00_01_03();
+   bool isV00_01_05();
 
    void fillTightJetInfo();
    void InitJets();
@@ -610,7 +721,6 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
 //====================== end
 
 {
-
    // ========================================== begin
   //don't do the default root thing of loading a default tree
   if (tree == 0 || infotree==0) {
@@ -624,6 +734,7 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
 
    Init(tree);
 
+   // ========================================== begin
    specifiedEvents_.clear();
 
    triggerList_.clear();
@@ -684,7 +795,6 @@ Int_t basicLoop::GetEntry(Long64_t entry)
    return n;
   // ========================================== end
 }
-
 Long64_t basicLoop::LoadTree(Long64_t entry)
 {
 // Set the environment to read one entry
@@ -734,8 +844,8 @@ void basicLoop::Init(TTree *tree)
    loosejetGenPhi_calo = 0;
    loosejetGenParticlePDGId_calo = 0;
    loosejetInvisibleEnergy_calo = 0;
-   loosejetNSV_calo = 0;
    loosejetNTracks_calo = 0;
+   loosejetNSV_calo = 0;
    loosejetSVUnWeightedMass_calo = 0;
    loosejetSVWeightedMass_calo = 0;
    loosejetSVUnWeightedLifetime_calo = 0;
@@ -750,6 +860,37 @@ void basicLoop::Init(TTree *tree)
    badjetPt_calo = 0;
    badjetEta_calo = 0;
    badjetPhi_calo = 0;
+   tightJetIndex_JPT = 0;
+   looseJetIndex_JPT = 0;
+   loosejetPt_JPT = 0;
+   loosejetEt_JPT = 0;
+   loosejetEta_JPT = 0;
+   loosejetPhi_JPT = 0;
+   loosejetPassLooseID_JPT = 0;
+   loosejetPassTightID_JPT = 0;
+   loosejetEnergyFracHadronic_JPT = 0;
+   loosejetFlavor_JPT = 0;
+   loosejetGenPt_JPT = 0;
+   loosejetGenEta_JPT = 0;
+   loosejetGenPhi_JPT = 0;
+   loosejetGenParticlePDGId_JPT = 0;
+   loosejetInvisibleEnergy_JPT = 0;
+   loosejetNTracks_JPT = 0;
+   loosejetNSV_JPT = 0;
+   loosejetSVUnWeightedMass_JPT = 0;
+   loosejetSVWeightedMass_JPT = 0;
+   loosejetSVUnWeightedLifetime_JPT = 0;
+   loosejetSVWeightedLifetime_JPT = 0;
+   loosejetSVUnWeightedCosTheta_JPT = 0;
+   loosejetSVWeightedCosTheta_JPT = 0;
+   loosejetBTagDisc_trackCountingHighPurBJetTags_JPT = 0;
+   loosejetBTagDisc_trackCountingHighEffBJetTags_JPT = 0;
+   loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_JPT = 0;
+   loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_JPT = 0;
+   loosejetBTagDisc_simpleSecondaryVertexBJetTags_JPT = 0;
+   badjetPt_JPT = 0;
+   badjetEta_JPT = 0;
+   badjetPhi_JPT = 0;
    tightJetIndex_PF = 0;
    looseJetIndex_PF = 0;
    loosejetPt_PF = 0;
@@ -765,8 +906,8 @@ void basicLoop::Init(TTree *tree)
    loosejetGenPhi_PF = 0;
    loosejetGenParticlePDGId_PF = 0;
    loosejetInvisibleEnergy_PF = 0;
-   loosejetNSV_PF = 0;
    loosejetNTracks_PF = 0;
+   loosejetNSV_PF = 0;
    loosejetSVUnWeightedMass_PF = 0;
    loosejetSVWeightedMass_PF = 0;
    loosejetSVUnWeightedLifetime_PF = 0;
@@ -787,9 +928,30 @@ void basicLoop::Init(TTree *tree)
    trackPt = 0;
    trackEta = 0;
    trackPhi = 0;
+   tauPt = 0;
+   tauEta = 0;
+   tauPhi = 0;
+   tauTaNC = 0;
+   tauID_againstElectron = 0;
+   tauID_againstMuon = 0;
+   tauID_byIsolation = 0;
+   tauID_byTaNCfrOnePercent = 0;
+   tauID_byTaNCfrHalfPercent = 0;
+   tauID_byTaNCfrQuarterPercent = 0;
+   tauPt_PF = 0;
+   tauEta_PF = 0;
+   tauPhi_PF = 0;
+   tauTaNC_PF = 0;
+   tauID_againstElectron_PF = 0;
+   tauID_againstMuon_PF = 0;
+   tauID_byIsolation_PF = 0;
+   tauID_byTaNCfrOnePercent_PF = 0;
+   tauID_byTaNCfrHalfPercent_PF = 0;
+   tauID_byTaNCfrQuarterPercent_PF = 0;
    muonIsGlobalMuonPromptTight = 0;
    muonPt = 0;
    muonEta = 0;
+   muonPhi = 0;
    muonTrackIso = 0;
    muonEcalIso = 0;
    muonHcalIso = 0;
@@ -804,6 +966,7 @@ void basicLoop::Init(TTree *tree)
    muonHcalVeto = 0;
    eleEt = 0;
    eleEta = 0;
+   elePhi = 0;
    eleTrackIso = 0;
    eleEcalIso = 0;
    eleHcalIso = 0;
@@ -815,6 +978,7 @@ void basicLoop::Init(TTree *tree)
    muonIsGlobalMuonPromptTight_PF = 0;
    muonPt_PF = 0;
    muonEta_PF = 0;
+   muonPhi_PF = 0;
    muonTrackIso_PF = 0;
    muonEcalIso_PF = 0;
    muonHcalIso_PF = 0;
@@ -829,6 +993,7 @@ void basicLoop::Init(TTree *tree)
    muonHcalVeto_PF = 0;
    eleEt_PF = 0;
    eleEta_PF = 0;
+   elePhi_PF = 0;
    eleTrackIso_PF = 0;
    eleEcalIso_PF = 0;
    eleHcalIso_PF = 0;
@@ -1015,6 +1180,30 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("qScale", &qScale, &b_qScale);
    fChain->SetBranchAddress("topDecayCode", &topDecayCode, &b_topDecayCode);
    fChain->SetBranchAddress("flavorHistory", &flavorHistory, &b_flavorHistory);
+
+   if (isV00_01_05()) {
+   fChain->SetBranchAddress("tauPt", &tauPt, &b_tauPt);
+   fChain->SetBranchAddress("tauEta", &tauEta, &b_tauEta);
+   fChain->SetBranchAddress("tauPhi", &tauPhi, &b_tauPhi);
+   fChain->SetBranchAddress("tauTaNC", &tauTaNC, &b_tauTaNC);
+   fChain->SetBranchAddress("tauID_againstElectron", &tauID_againstElectron, &b_tauID_againstElectron);
+   fChain->SetBranchAddress("tauID_againstMuon", &tauID_againstMuon, &b_tauID_againstMuon);
+   fChain->SetBranchAddress("tauID_byIsolation", &tauID_byIsolation, &b_tauID_byIsolation);
+   fChain->SetBranchAddress("tauID_byTaNCfrOnePercent", &tauID_byTaNCfrOnePercent, &b_tauID_byTaNCfrOnePercent);
+   fChain->SetBranchAddress("tauID_byTaNCfrHalfPercent", &tauID_byTaNCfrHalfPercent, &b_tauID_byTaNCfrHalfPercent);
+   fChain->SetBranchAddress("tauID_byTaNCfrQuarterPercent", &tauID_byTaNCfrQuarterPercent, &b_tauID_byTaNCfrQuarterPercent);
+   fChain->SetBranchAddress("tauPt_PF", &tauPt_PF, &b_tauPt_PF);
+   fChain->SetBranchAddress("tauEta_PF", &tauEta_PF, &b_tauEta_PF);
+   fChain->SetBranchAddress("tauPhi_PF", &tauPhi_PF, &b_tauPhi_PF);
+   fChain->SetBranchAddress("tauTaNC_PF", &tauTaNC_PF, &b_tauTaNC_PF);
+   fChain->SetBranchAddress("tauID_againstElectron_PF", &tauID_againstElectron_PF, &b_tauID_againstElectron_PF);
+   fChain->SetBranchAddress("tauID_againstMuon_PF", &tauID_againstMuon_PF, &b_tauID_againstMuon_PF);
+   fChain->SetBranchAddress("tauID_byIsolation_PF", &tauID_byIsolation_PF, &b_tauID_byIsolation_PF);
+   fChain->SetBranchAddress("tauID_byTaNCfrOnePercent_PF", &tauID_byTaNCfrOnePercent_PF, &b_tauID_byTaNCfrOnePercent_PF);
+   fChain->SetBranchAddress("tauID_byTaNCfrHalfPercent_PF", &tauID_byTaNCfrHalfPercent_PF, &b_tauID_byTaNCfrHalfPercent_PF);
+   fChain->SetBranchAddress("tauID_byTaNCfrQuarterPercent_PF", &tauID_byTaNCfrQuarterPercent_PF, &b_tauID_byTaNCfrQuarterPercent_PF);
+   }
+
    Notify();
 }
 
@@ -1044,6 +1233,7 @@ bool basicLoop::isV00_01_02() {
   if (  (findInputName()).Contains("/V00-01-02/") ) return true;
   if (  (findInputName()).Contains("/V00-01-03/") ) return true;
   if (  (findInputName()).Contains("/V00-01-04/") ) return true;
+  if (  (findInputName()).Contains("/V00-01-05/") ) return true;
   return false;
 
 }
@@ -1052,10 +1242,15 @@ bool basicLoop::isV00_01_03() {
 
   if (  (findInputName()).Contains("/V00-01-03/") ) return true;
   if (  (findInputName()).Contains("/V00-01-04/") ) return true;
+  if (  (findInputName()).Contains("/V00-01-05/") ) return true;
   return false;
 
 }
 
+bool basicLoop::isV00_01_05() {
+  if (  (findInputName()).Contains("/V00-01-05/") ) return true;
+  return false;
+}
 
 bool basicLoop::setCutScheme(CutScheme cutscheme) {
 
@@ -2350,6 +2545,7 @@ TString basicLoop::getSampleName(TString inname) {
   else if (inname.Contains("/MoreMSSM/"))                  return "mMSSM";
   else if (inname.Contains("/MoreMSSMv2/"))                return "mMSSMv2";
   else if (inname.Contains("/MoreMSSMv3/"))                return "mMSSMv3";
+  else if (inname.Contains("/SingleTop-sChannel/"))        return "SingleTop-sChannel";
   else if (inname.Contains("/SingleTop-tChannel/"))        return "SingleTop-tChannel";
   else if (inname.Contains("/SingleTop-tWChannel/"))       return "SingleTop-tWChannel";
   else if (inname.Contains("/QCD-Pt1000toInf-madgraph/"))  return "QCD1000";
