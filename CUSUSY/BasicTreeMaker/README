@@ -1,6 +1,8 @@
 Release notes
 --
 
+V00-01-05 - add tau info
+
 V00-01-04 - update for compatibility with JEC changes in CMSSW 386. Not backwards compatible!
 
 V00-01-03 / low20101110 - added nTracks and fixed on SV variable definition
