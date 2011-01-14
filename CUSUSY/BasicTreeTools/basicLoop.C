@@ -55,6 +55,9 @@ void basicLoop::cutflow()
   }
 
   cout<<"Running..."<<endl;  
+  
+  //keep track of performance
+  TDatime starttime; //default ctor is for current time
   for (Long64_t jentry=0; jentry<nentries;jentry++) {
     Long64_t ientry = LoadTree(jentry);
     if (ientry < 0) break;
@@ -82,6 +85,9 @@ void basicLoop::cutflow()
     
   }
   cout<<endl;
+  TDatime stoptime; //default ctor is for current time
+  UInt_t elapsed= stoptime.Convert() - starttime.Convert();
+  cout<<"events / time = "<<nentries<<" / "<<elapsed<<" = "<<double(nentries)/double(elapsed)<<" Hz"<<endl;
 
   TString samplename=  getSampleName(findInputName());
   TString outfilename="cutflow."; 
@@ -458,6 +464,30 @@ void basicLoop::Nminus1plots()
    TH1D HV2minDeltaPhiMETj_ge2b("HV2minDeltaPhiMETj_ge2b","minDeltaPhi(j,MET) (RA2 && >=2b)",vnbins2,vbins2);
    TH1D HV2minDeltaPhiMETj_ge3b("HV2minDeltaPhiMETj_ge3b","minDeltaPhi(j,MET) (RA2 && >=2b)",vnbins2,vbins2);
 
+   // ratio of passing minDeltaPhi
+   TH1D   HminDeltaPhiRatio("HminDeltaPhiRatio","pass minDeltaPhi / fail minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiRatio_ge1b("HminDeltaPhiRatio_ge1b","pass minDeltaPhi / fail minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiRatio_ge2b("HminDeltaPhiRatio_ge2b","pass minDeltaPhi / fail minDeltaPhi",nbins, met_min,met_max);
+
+   TH1D   HminDeltaPhiAllRatio("HminDeltaPhiAllRatio","pass minDeltaPhiAll / fail minDeltaPhiAll",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiAllRatio_ge1b("HminDeltaPhiAllRatio_ge1b","pass minDeltaPhiAll / fail minDeltaPhiAll",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiAllRatio_ge2b("HminDeltaPhiAllRatio_ge2b","pass minDeltaPhiAll / fail minDeltaPhiAll",nbins, met_min,met_max);
+
+   //histograms just used for calculations
+   TH1D   HminDeltaPhiPass("HminDeltaPhiPass","pass minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiPass_ge1b("HminDeltaPhiPass_ge1b","pass minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiPass_ge2b("HminDeltaPhiPass_ge2b","pass minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiFail("HminDeltaPhiFail","fail minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiFail_ge1b("HminDeltaPhiFail_ge1b","fail minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiFail_ge2b("HminDeltaPhiFail_ge2b","fail minDeltaPhi",nbins, met_min,met_max);
+
+   TH1D   HminDeltaPhiAllPass("HminDeltaPhiAllPass","pass minDeltaPhiAll",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiAllPass_ge1b("HminDeltaPhiAllPass_ge1b","pass minDeltaPhiAll",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiAllPass_ge2b("HminDeltaPhiAllPass_ge2b","pass minDeltaPhiAll",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiAllFail("HminDeltaPhiAllFail","fail minDeltaPhiAll",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiAllFail_ge1b("HminDeltaPhiAllFail_ge1b","fail minDeltaPhiAll",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiAllFail_ge2b("HminDeltaPhiAllFail_ge2b","fail minDeltaPhiAll",nbins, met_min,met_max);
+
    //n b jets
    TH1D Hnbjets("Hnbjets","N of jets (RA2)",njets_bins,0,njets_bins);
 
@@ -568,7 +598,18 @@ void basicLoop::Nminus1plots()
    Hbjeteta1_ge2b.Sumw2();
    Hbjeteta1_ge3b.Sumw2();
 
-
+   HminDeltaPhiRatio.Sumw2();
+   HminDeltaPhiRatio_ge1b.Sumw2();
+   HminDeltaPhiRatio_ge2b.Sumw2();
+   
+   //histograms just used for calculations
+   HminDeltaPhiPass.Sumw2();
+   HminDeltaPhiPass_ge1b.Sumw2();
+   HminDeltaPhiPass_ge2b.Sumw2();
+   HminDeltaPhiFail.Sumw2();
+   HminDeltaPhiFail_ge1b.Sumw2();
+   HminDeltaPhiFail_ge2b.Sumw2();
+      
    //keep track of performance
    TDatime starttime; //default ctor is for current time
 
@@ -671,6 +712,39 @@ void basicLoop::Nminus1plots()
       }
       resetIgnoredCut();
 
+      //without minDeltaPhi and without MET
+      //this is for plotting the ratio of (pass minDeltaPhi) / (fail minDeltaPhi)
+      setIgnoredCut("cutDeltaPhi");
+      setIgnoredCut("cutMET");
+      if (Cut(ientry) >= 0) {
+
+	bool passMinDeltaPhi = minDeltaPhi_j_MET > 0.3;
+	bool passMinDeltaPhiAll = minDeltaPhi_j_MET_All > 0.3;
+
+	if (passMinDeltaPhi) {
+	  HminDeltaPhiPass.Fill(getMET(),weight);
+	  if (nbSSVM >=1)  HminDeltaPhiPass_ge1b.Fill(getMET(),weight);
+	  if (nbSSVM >=2)  HminDeltaPhiPass_ge2b.Fill(getMET(),weight);
+ 	}
+	else {
+	  HminDeltaPhiFail.Fill(getMET(),weight);
+	  if (nbSSVM >=1)  HminDeltaPhiFail_ge1b.Fill(getMET(),weight);
+	  if (nbSSVM >=2)  HminDeltaPhiFail_ge2b.Fill(getMET(),weight);
+	}
+
+	if (passMinDeltaPhiAll) {
+	  HminDeltaPhiAllPass.Fill(getMET(),weight);
+	  if (nbSSVM >=1)  HminDeltaPhiAllPass_ge1b.Fill(getMET(),weight);
+	  if (nbSSVM >=2)  HminDeltaPhiAllPass_ge2b.Fill(getMET(),weight);
+ 	}
+	else {
+	  HminDeltaPhiAllFail.Fill(getMET(),weight);
+	  if (nbSSVM >=1)  HminDeltaPhiAllFail_ge1b.Fill(getMET(),weight);
+	  if (nbSSVM >=2)  HminDeltaPhiAllFail_ge2b.Fill(getMET(),weight);
+	}
+      }
+      resetIgnoredCut();
+
       //finally, apply all cuts
       if (Cut(ientry) >= 0) {
 
@@ -741,8 +815,16 @@ void basicLoop::Nminus1plots()
    }
    TDatime stoptime; //default ctor is for current time
    UInt_t elapsed= stoptime.Convert() - starttime.Convert();
-
    cout<<"events / time = "<<nentries<<" / "<<elapsed<<" = "<<double(nentries)/double(elapsed)<<" Hz"<<endl;
+
+   HminDeltaPhiRatio.Divide(&HminDeltaPhiPass,&HminDeltaPhiFail);
+   HminDeltaPhiRatio_ge1b.Divide(&HminDeltaPhiPass_ge1b,&HminDeltaPhiFail_ge1b);
+   HminDeltaPhiRatio_ge2b.Divide(&HminDeltaPhiPass_ge2b,&HminDeltaPhiFail_ge2b);
+
+   HminDeltaPhiAllRatio.Divide(&HminDeltaPhiAllPass,&HminDeltaPhiAllFail);
+   HminDeltaPhiAllRatio_ge1b.Divide(&HminDeltaPhiAllPass_ge1b,&HminDeltaPhiAllFail_ge1b);
+   HminDeltaPhiAllRatio_ge2b.Divide(&HminDeltaPhiAllPass_ge2b,&HminDeltaPhiAllFail_ge2b);
+
    fout.Write();
    fout.Close();
 
