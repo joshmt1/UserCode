@@ -14,7 +14,7 @@ gSystem->Load("basicLoop_C.so");
 
 */
 
-const TString version = "V00-01-01";
+const TString version = "V00-01-01"; //01 for most samples
 
 //const TString extrapath = "SUSYPATv8_363"; //pass an empty string unless you need something else
 const TString extrapath = "";
@@ -48,7 +48,7 @@ void run_cutflow()
     cout<<"About to start on files: "<<samplefiles<<endl;
 
     if (samplefiles.Contains("DATA")) continue; //skip data (use run_cutflow_data.C)
-    //    if (!(samplefiles.Contains("LM") || samplefiles.Contains("TTbar"))) continue; //hack to skip some samples
+    //if (!(samplefiles.Contains("MSSM") )) continue; //hack to skip some samples
     
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
@@ -66,11 +66,18 @@ void run_cutflow()
     looper.setCutScheme(basicLoop::kBaseline0);
     looper.setMETType(basicLoop::kpfMET);
     looper.setMETRange(basicLoop::kHigh); //signal region
+    //looper.setMETRange(basicLoop::kMedium); //50-100 GeV region
     looper.setJetType(basicLoop::kPF);
     looper.setLeptonType(basicLoop::kPFLeptons);
+    //looper.setLeptonType(basicLoop::kNormal);
+
     looper.setDPType(basicLoop::kminDP);
+    //    looper.setIgnoredCut("cutDeltaPhi"); //ignore this cut for preliminary sections of the note
 
     looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
+
+    //    looper.setMuonReq(1); //inverted muon veto
+
     looper.cutflow();
   }
 

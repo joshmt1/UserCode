@@ -48,7 +48,7 @@ void run_cutflow_data()
     
     samplefiles+="/*.root";
 
-    //if (!samplefiles.Contains("JetMETTau-1")) continue;
+    //if (!samplefiles.Contains("MultiJet")) continue;
     cout<<"About to add files in: "<<samplefiles<<endl;
 
     ch.Add(samplefiles);
@@ -59,14 +59,20 @@ void run_cutflow_data()
   
   looper.setCutScheme(basicLoop::kBaseline0);
   looper.setMETType(basicLoop::kpfMET);
-  looper.setMETRange(basicLoop::kHigh); //signal region
+  //  looper.setMETRange(basicLoop::kHigh); //signal region
+  looper.setMETRange(basicLoop::kMedium); //50 - 100 GeV region
   looper.setJetType(basicLoop::kPF);
-  looper.setLeptonType(basicLoop::kPFLeptons);
+  looper.setLeptonType(basicLoop::kPFLeptons); //PF leptons
+  //looper.setLeptonType(basicLoop::kNormal); //normal (not PF) leptons
   
   looper.setDPType(basicLoop::kminDP);
-  looper.setIgnoredCut("cutDeltaPhi"); //ignore this cut for preliminary sections of the note
+  //  looper.setIgnoredCut("cutDeltaPhi"); //was ignoring this cut for preliminary sections of the note
   
   looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
+
+  //looper.setMuonReq(1); //inverted muon veto
+
   looper.cutflow();
+  //  looper.screendump();
   
 }
