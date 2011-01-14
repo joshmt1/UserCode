@@ -2385,7 +2385,7 @@ double basicLoop::getCrossSection( TString inname) {
   else if (inname.Contains("/LM6/"))                       return 0.3104;
   else if (inname.Contains("/LM7/"))                       return 1.209;
   else if (inname.Contains("/LM8/"))                       return 0.7300;
-  else if (inname.Contains("/LM9/"))                       return 7.134;
+  else if (inname.Contains("/LM9/"))                       return 7.134; //!!! LO
   else if (inname.Contains("/LM9t175/"))                   return 4.241;
   else if (inname.Contains("/LM9p/"))                      return 1.653;
   else if (inname.Contains("/LM10/"))                      return 0.04778;
@@ -2418,20 +2418,21 @@ double basicLoop::getCrossSection( TString inname) {
   else if (inname.Contains("/MoreMSSM/"))                  return 1.73;
   else if (inname.Contains("/MoreMSSMv2/"))                return 2.1;
   else if (inname.Contains("/MoreMSSMv3/"))                return 2.6;
-  else if (inname.Contains("/SingleTop-tChannel/"))        return 20.43846; //!!! NLO
+  const double bf = 0.32442;
+  else if (inname.Contains("/SingleTop-sChannel/"))        return bf*4.6; //!!! NNNLO
+  else if (inname.Contains("/SingleTop-tChannel/"))        return bf*64.6; //!!! NLO
   else if (inname.Contains("/SingleTop-tWChannel/"))       return 10.6; //!!! NLO
   //QCD are all LO
-  else if (inname.Contains("/QCD-Pt1000toInf-madgraph/"))  return 83; //!!!
   else if (inname.Contains("/QCD-Pt100to250-madgraph/"))   return 7e6; //!!!
   else if (inname.Contains("/QCD-Pt250to500-madgraph/"))   return 171000; //!!!
   else if (inname.Contains("/QCD-Pt500to1000-madgraph/"))  return 5200; //!!!
+  else if (inname.Contains("/QCD-Pt1000toInf-madgraph/"))  return 83; //!!!
 
-  
-  //  else if (inname.Contains("/WJets/"))                     return 31314; //from tom
-  else if (inname.Contains("/WJets/"))                     return 28000; //!!! NLO
+  else if (inname.Contains("/WJets/"))                     return 31314; //!!! NNLO
 
-  //to synchronize with the note when we move to Fall10
-  else if (inname.Contains("/ZJets/"))                     return 3048; //from tom
+  //also known as DYJetsToLL with m_ll > 50
+  else if (inname.Contains("/ZJets/"))                     return 3048; //!!! NNLO
+  //i don't think we've processed DY->ll (10<m_ll<50)
 
   else if (inname.Contains("/Zinvisible/"))                return 4500; //!!! LO
   //tom had 4900...this might be NLO
