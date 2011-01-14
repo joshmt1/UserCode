@@ -47,7 +47,7 @@ This is rather dangerous. In particular, the eta range of the ntuple tight jets 
 //avoid spaces and funny characters!
 const char *CutSchemeNames_[]={"RA2", "Sync1", "Baseline0"};
 const char *METTypeNames_[]={"MHT", "MET",  "tcMET", "pfMET"};
-const char *METRangeNames_[]={"med",  "high", "wide"}; //'no cut' is not given, because the cut can always be skipped!
+const char *METRangeNames_[]={"med",  "high", "wide", "medhigh"}; //'no cut' is not given, because the cut can always be skipped!
 
 const char *jetTypeNames_[]={"calo","PF"}; //no JPT in ntuple for now
 const char *leptonTypeNames_[]={"RegLep","PFLep"};
@@ -65,7 +65,7 @@ public :
   CutScheme theCutScheme_;
   enum METType {kMHT=0, kMET, ktcMET, kpfMET};
   METType theMETType_;
-  enum METRange {kMedium=0, kHigh, kWide};
+  enum METRange {kMedium=0, kHigh, kWide, kMedhigh};
   METRange theMETRange_;
   enum jetType {kCalo=0, kPF};
   jetType theJetType_;
@@ -1583,6 +1583,7 @@ bool basicLoop::passCut(const TString cutTag) {
     //on the next line we are redoing the default that is stored in the ntuple. I think this is ok
     else if (theMETRange_ == kHigh) return (mymet >=150);
     else if (theMETRange_ == kWide) return (mymet >=50);
+    else if (theMETRange_ == kMedhigh) return (mymet>=100 && mymet<150);
     else {assert(0);}
   }
   

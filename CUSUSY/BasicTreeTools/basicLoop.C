@@ -150,6 +150,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   double myMET;
   double myMHT;
   double minDeltaPhiMET;
+  double minDeltaPhiMETAll;
   double minDeltaPhiMHT;
   double minDeltaRbj;
   double DeltaPhiMPTMET;
@@ -159,6 +160,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   ABCDtree.Branch("MET",&myMET,"MET/D");
   ABCDtree.Branch("MHT",&myMHT,"MHT/D");
   ABCDtree.Branch("minDeltaPhiMET",&minDeltaPhiMET,"minDeltaPhiMET/D");
+  ABCDtree.Branch("minDeltaPhiMETAll",&minDeltaPhiMETAll,"minDeltaPhiMETAll/D");
   ABCDtree.Branch("minDeltaPhiMHT",&minDeltaPhiMHT,"minDeltaPhiMHT/D");
   ABCDtree.Branch("minDeltaRbj",&minDeltaRbj,"minDeltaRbj/D");
   ABCDtree.Branch("DeltaPhiMPTMET",&DeltaPhiMPTMET,"DeltaPhiMPTMET/D");
@@ -173,8 +175,9 @@ void basicLoop::ABCDtree(unsigned int dataindex)
 
     if (Cut(ientry) < 0) continue; //jmt use cut
     myMET = getMET();
-    myMHT = MHT;
+    myMHT = getMHT();
     minDeltaPhiMET = getMinDeltaPhiMET(3);
+    minDeltaPhiMETAll = getMinDeltaPhiMET(99);
     minDeltaRbj = getOverallMinDeltaR_bj();
     DeltaPhiMPTMET = getDeltaPhiMPTMET();
 
@@ -188,6 +191,8 @@ void basicLoop::ABCDtree(unsigned int dataindex)
 
 /*
 experimental new loop -- for use with Baseline0 cut scheme
+
+this is the code used for the normalized distributions in the AN
 */
 void basicLoop::cutflowPlotter()
 //no data index -- data must be passed in as one big chain!
@@ -226,6 +231,8 @@ void basicLoop::cutflowPlotter()
    std::map<TString, TH1D*> H_MET;
    std::map<TString, TH1D*> H_minDeltaPhi;
    std::map<TString, TH1D*> H_NBJets;
+   std::map<TString, TH1D*> H_topDecayCategory;
+
    for (unsigned int i=0 ; i<cutTags_.size(); i++) {
      if (cutRequired(cutTags_[i])  ) {
        //name will indicate that the histogram is *after* the cut in the name
@@ -249,6 +256,10 @@ void basicLoop::cutflowPlotter()
 
        name="H_minDeltaPhi_"; name += cutTags_[i];
        H_minDeltaPhi[name]=new TH1D(name,name,50,0,TMath::Pi());
+
+       //only useful for top, obviously
+       name="H_topDecayCategory_"; name += cutTags_[i];
+       H_topDecayCategory[name]=new TH1D(name,name,nTopCategories-1,0.5,nTopCategories-0.5);
      }
    }
       
@@ -273,6 +284,8 @@ void basicLoop::cutflowPlotter()
       int nmuons = countMuSync1();
       float met = getMET() ;
       float minDeltaPhi = getMinDeltaPhiMET(3);
+
+      int topcat = isData_ ? -99 : getTopDecayCategory(); //no sense in looking at MC truth in the data
 
       //don't call the Cut method but rather do the cut flow step by step
       //just like in ::cutflow()  
@@ -299,6 +312,9 @@ void basicLoop::cutflowPlotter()
 
 	  name="H_minDeltaPhi_";	  name += cutTags_[i];
 	  H_minDeltaPhi[name]->Fill(minDeltaPhi,weight);
+
+	  name="H_topDecayCategory_";	  name += cutTags_[i];
+	  H_topDecayCategory[name]->Fill(topcat,weight);
 	}
 	else if (cutRequired(cutTags_[i]) && !passCut(cutTags_[i]) ) break;
       }
@@ -317,6 +333,7 @@ void basicLoop::cutflowPlotter()
 
  //will copy and paste a lot of code from ::Loop here
  //i want to start fresh!
+//This is the code used for the N-1 and other stacked plots in the AN
 void basicLoop::Nminus1plots()
 {
   
@@ -423,10 +440,10 @@ void basicLoop::Nminus1plots()
    TH1D HminDeltaPhiMETj_ge2b("HminDeltaPhiMETj_ge2b","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
    TH1D HminDeltaPhiMETj_ge3b("HminDeltaPhiMETj_ge3b","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
 
-   TH1D HminDeltaPhiMETjAll("HminDeltaPhiMETjAll","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
-   TH1D HminDeltaPhiMETjAll_ge1b("HminDeltaPhiMETjAll_ge1b","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
-   TH1D HminDeltaPhiMETjAll_ge2b("HminDeltaPhiMETjAll_ge2b","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
-   TH1D HminDeltaPhiMETjAll_ge3b("HminDeltaPhiMETjAll_ge3b","minDeltaPhi(j123,MET) (N-1)",nbins,0,TMath::Pi());
+   TH1D HminDeltaPhiMETjAll("HminDeltaPhiMETjAll","minDeltaPhi(all jets,MET) (N-1)",nbins,0,TMath::Pi());
+   TH1D HminDeltaPhiMETjAll_ge1b("HminDeltaPhiMETjAll_ge1b","minDeltaPhi(all jets,MET) (N-1)",nbins,0,TMath::Pi());
+   TH1D HminDeltaPhiMETjAll_ge2b("HminDeltaPhiMETjAll_ge2b","minDeltaPhi(all jets,MET) (N-1)",nbins,0,TMath::Pi());
+   TH1D HminDeltaPhiMETjAll_ge3b("HminDeltaPhiMETjAll_ge3b","minDeltaPhi(all jets,MET) (N-1)",nbins,0,TMath::Pi());
 
    int vnbins=8;
    double vbins[]={0, 0.15, 0.3, 0.5, 0.7, 1, 1.5, 2, TMath::Pi()};
@@ -738,6 +755,8 @@ main plot-making loop
 
 this code is quite old and may not be plotting the correct quantities in the Sync1 or Baseline0 schemes
 [now largely fixed for Baseline0]
+
+I'm not using this loop for making plots for the AN
 */
 void basicLoop::Loop(unsigned int dataindex)
 {
