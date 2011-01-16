@@ -153,6 +153,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   TFile fout(outfilename,"RECREATE");
   
   // == make ABCD tree ==
+  double myHT;
   double myMET;
   double myMHT;
   double minDeltaPhiMET;
@@ -163,6 +164,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
 
   TTree ABCDtree("ABCDtree","ABCD tree");
   ABCDtree.Branch("weight",&weight,"weight/D");
+  ABCDtree.Branch("HT",&myHT,"HT/D");
   ABCDtree.Branch("MET",&myMET,"MET/D");
   ABCDtree.Branch("MHT",&myMHT,"MHT/D");
   ABCDtree.Branch("minDeltaPhiMET",&minDeltaPhiMET,"minDeltaPhiMET/D");
@@ -180,6 +182,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
     nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
     if (Cut(ientry) < 0) continue; //jmt use cut
+    myHT = getHT();
     myMET = getMET();
     myMHT = getMHT();
     minDeltaPhiMET = getMinDeltaPhiMET(3);
