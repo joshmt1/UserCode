@@ -178,7 +178,7 @@ void loadSamples(TString filestub) {
   sampleLabel_["TTbarJets"]="t#bar{t}";
   sampleLabel_["SingleTop"] = "Single-Top";
   sampleLabel_["WJets"] = "W#rightarrowl#nu";
-  sampleLabel_["ZJets"] = "Z#rightarrowl^{+}l^{-}";
+  sampleLabel_["ZJets"] = "Z/#gamma*#rightarrowl^{+}l^{-}";
   sampleLabel_["Zinvisible"] = "Z#rightarrow#nu#nu";
 
   sampleMarkerStyle_["LM13"] = kFullStar;
