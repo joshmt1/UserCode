@@ -31,7 +31,7 @@ void basicLoop::exampleLoop()
 print a cut flow table
 lumi is set in basicLoop.h
 */
-void basicLoop::cutflow()
+void basicLoop::cutflow(bool writeFiles)
 {
   printState();
 
@@ -50,18 +50,29 @@ void basicLoop::cutflow()
   LoadTree(0);
   nb = GetEntry(0);   nbytes += nb; //use member function GetEntry instead of fChain->
 
+  std::vector<TString> textfilenames; //for the writeFiles option
+  std::vector<ofstream*> textfiles;   //for the writeFiles option
+  //end of stuff for writeFiles option
   for (unsigned int i=0 ; i<cutTags_.size(); i++) {
     npass.push_back(0);
+    if (writeFiles) {
+      TString textfilename="cutflow."; 
+      textfilename+=getCutDescriptionString();
+      textfilename+=".";    textfilename+=getSampleName(findInputName());
+      textfilename+=".";
+      textfilename+=cutTags_[i];
+      textfilenames.push_back(textfilename);
+      textfiles.push_back( new ofstream(textfilename.Data()));
+    }
   }
 
   cout<<"Running..."<<endl;  
   
-  //keep track of performance
-  TDatime starttime; //default ctor is for current time
+  startTimer();  //keep track of performance
   for (Long64_t jentry=0; jentry<nentries;jentry++) {
     Long64_t ientry = LoadTree(jentry);
     if (ientry < 0) break;
-    if (jentry%1000000==0) cout<<int(100*double(jentry)/double(nentries))<<endl;
+    if (jentry%1000000==0) checkTimer(jentry,nentries);
     nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
     //cout<<"== "<<jentry<<endl;
@@ -75,9 +86,11 @@ void basicLoop::cutflow()
       else if (cutRequired(cutTags_[i]) && !passCut(cutTags_[i]) ) break;
 
       //optional code to dump events to file
-      
+      if (writeFiles)     *textfiles[i] <<runNumber<<" "<<lumiSection<<" "<<eventNumber<<endl;
+      //the structure of this code means we will dump files for cuts that are not required.
+      //that's a bit wasteful but i'm not going to worry about it
+
       //if (cutTags_[i] == "cutDeltaPhi") {
-      //cout<<"run lumi event = "<<runNumber<<" "<<lumiSection<<" "<<eventNumber<<endl;
       //	cout<<runNumber<<":"<<eventNumber<<":"<<lumiSection<<endl;
       // }
       
@@ -85,9 +98,7 @@ void basicLoop::cutflow()
     
   }
   cout<<endl;
-  TDatime stoptime; //default ctor is for current time
-  UInt_t elapsed= stoptime.Convert() - starttime.Convert();
-  cout<<"events / time = "<<nentries<<" / "<<elapsed<<" = "<<double(nentries)/double(elapsed)<<" Hz"<<endl;
+  stopTimer(nentries);
 
   TString samplename=  getSampleName(findInputName());
   TString outfilename="cutflow."; 
@@ -115,6 +126,12 @@ void basicLoop::cutflow()
   }
   
   file.close();
+  if (writeFiles) {
+    for (unsigned int i=0 ; i<cutTags_.size(); i++) {
+      textfiles[i]->close(); //i might be leaking the pointers here, but i don't care
+    }
+  }
+
 }
 
 /*
@@ -274,7 +291,7 @@ void basicLoop::cutflowPlotter()
       
 
    //keep track of performance
-   TDatime starttime; //default ctor is for current time
+   startTimer();
    Long64_t nbytes = 0, nb = 0;
    for (Long64_t jentry=0; jentry<nentries ;jentry++) {
       Long64_t ientry = LoadTree(jentry);
@@ -329,10 +346,7 @@ void basicLoop::cutflowPlotter()
       }
      
    }
-   TDatime stoptime; //default ctor is for current time
-   UInt_t elapsed= stoptime.Convert() - starttime.Convert();
-
-   cout<<"events / time = "<<nentries<<" / "<<elapsed<<" = "<<double(nentries)/double(elapsed)<<" Hz"<<endl;
+   stopTimer(nentries);
  
 
    fout.Write();
@@ -604,7 +618,11 @@ void basicLoop::Nminus1plots()
    HminDeltaPhiRatio.Sumw2();
    HminDeltaPhiRatio_ge1b.Sumw2();
    HminDeltaPhiRatio_ge2b.Sumw2();
-   
+
+   HminDeltaPhiAllRatio.Sumw2();
+   HminDeltaPhiAllRatio_ge1b.Sumw2();
+   HminDeltaPhiAllRatio_ge2b.Sumw2();
+  
    //histograms just used for calculations
    HminDeltaPhiPass.Sumw2();
    HminDeltaPhiPass_ge1b.Sumw2();
@@ -612,14 +630,19 @@ void basicLoop::Nminus1plots()
    HminDeltaPhiFail.Sumw2();
    HminDeltaPhiFail_ge1b.Sumw2();
    HminDeltaPhiFail_ge2b.Sumw2();
-      
-   //keep track of performance
-   TDatime starttime; //default ctor is for current time
 
+   HminDeltaPhiAllPass.Sumw2();
+   HminDeltaPhiAllPass_ge1b.Sumw2();
+   HminDeltaPhiAllPass_ge2b.Sumw2();
+   HminDeltaPhiAllFail.Sumw2();
+   HminDeltaPhiAllFail_ge1b.Sumw2();
+   HminDeltaPhiAllFail_ge2b.Sumw2();
+  
+   startTimer();   //keep track of performance
    //event loop
    Long64_t nbytes = 0, nb = 0;
    for (Long64_t jentry=0; jentry<nentries ;jentry++) {
-     if (jentry%1000000==0) cout<<int(100*double(jentry)/double(nentries))<<endl;
+     if (jentry%1000000==0) checkTimer(jentry,nentries);
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) {assert(0);}
       nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
@@ -816,9 +839,7 @@ void basicLoop::Nminus1plots()
       }
 
    }
-   TDatime stoptime; //default ctor is for current time
-   UInt_t elapsed= stoptime.Convert() - starttime.Convert();
-   cout<<"events / time = "<<nentries<<" / "<<elapsed<<" = "<<double(nentries)/double(elapsed)<<" Hz"<<endl;
+   stopTimer(nentries);
 
    HminDeltaPhiRatio.Divide(&HminDeltaPhiPass,&HminDeltaPhiFail);
    HminDeltaPhiRatio_ge1b.Divide(&HminDeltaPhiPass_ge1b,&HminDeltaPhiFail_ge1b);

@@ -12,6 +12,7 @@
 #include <TChain.h>
 #include <TFile.h>
 // ========================================== begin
+#include <TDatime.h>
 //this file is in CVS here: http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/UserCode/joshmt/MiscUtil.cxx?view=log
 #include "/afs/cern.ch/user/j/joshmt/root/util/MiscUtil.cxx"
 //this code will have to be regenerated when changing the ntuple structure
@@ -98,6 +99,9 @@ public :
   std::set<jmt::eventID> specifiedEvents_;
 
   enum TopDecayCategory {kTTbarUnknown=0,kAllLeptons=1,kAllHadronic=2,kOneElectron=3,kOneMuon=4,kOneTauE=5,kOneTauMu=6,kOneTauHadronic=7,kAllTau=8,kTauPlusLepton=9, nTopCategories=10};
+
+  TDatime* starttime_;
+  TString specialCutDescription_;
 
   //tight jet info
   //no longer in ntuple, so we will create them on the fly for each event
@@ -620,6 +624,10 @@ public :
 
    void printState();
 
+   void startTimer();
+   void checkTimer(const Long64_t ndone, const Long64_t ntotal);
+   void stopTimer(const Long64_t ntotal);
+
    //   int getCutFlow(TString cut);
    bool setCutScheme(CutScheme cutscheme);
    void setMETType(METType mettype);
@@ -637,11 +645,12 @@ public :
 
    void specifyEvent(ULong64_t run, ULong64_t lumisection, ULong64_t event);
    bool eventIsSpecified();
+   void setSpecialCutDescription(TString cutDesc) {specialCutDescription_=cutDesc;}
 
    float getMET(); //return MET determined by theMETType_
    float getMETphi(); //return MET determined by theMETType_
    
-   void cutflow();
+   void cutflow(bool writeFiles=false);
    void cutflowPlotter();
    bool cutRequired(TString cutTag) ;
    bool passCut(TString cutTag) ;
@@ -716,6 +725,8 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
      ne_(0),
      nmu_(0),
      isData_(false),
+     starttime_(0),
+     specialCutDescription_(""),
      //     printedHLT_(false),
      lastTriggerPass_("")
 //====================== end
@@ -742,12 +753,11 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
    if (infotree!=0) {
      std::set<TString> triggersForCut;
      triggersForCut.insert("HLT_HT100U");
-     triggersForCut.insert("HLT_HT120U");
+     //     triggersForCut.insert("HLT_HT120U");
      triggersForCut.insert("HLT_HT140U");
-     triggersForCut.insert("HLT_HT150U");
+     //     triggersForCut.insert("HLT_HT150U");
      triggersForCut.insert("HLT_HT150U_v3");
-     triggersForCut.insert("HLT_HT200");
-
+     triggersForCut.insert("HLT_HT200");  //for old samples
      Long64_t ninfo = infotree->GetEntries();
      if (ninfo > 0) {
        std::vector<std::string> * triggerList=0;
@@ -2231,11 +2241,12 @@ float basicLoop::getHT_Sync1() {
   return ht;
 }
 
+const bool doJetID_=true; //this should be *true* unless you're doing something special!
 bool basicLoop::isGoodJet(unsigned int ijet) {
 
   if ( loosejetPt->at(ijet) <50) return false;
   if ( fabs(loosejetEta->at(ijet)) > 2.4) return false;
-  if ( !(loosejetPassLooseID->at(ijet)) ) return false;
+  if (doJetID_ && !(loosejetPassLooseID->at(ijet)) ) return false;
 
   return true;
 }
@@ -2244,7 +2255,7 @@ bool basicLoop::isGoodJet30(unsigned int ijet) {
 
   if ( loosejetPt->at(ijet) <30) return false;
   if ( fabs(loosejetEta->at(ijet)) > 2.4) return false;
-  if ( !(loosejetPassLooseID->at(ijet)) ) return false;
+  if (doJetID_ && !(loosejetPassLooseID->at(ijet)) ) return false;
 
   return true;
 }
@@ -2747,7 +2758,14 @@ bool basicLoop::eventIsSpecified() {
 TString basicLoop::getCutDescriptionString() {
 
   TString cuts = CutSchemeNames_[theCutScheme_];
-  cuts += "_";
+  if (specialCutDescription_ != "") {
+    cuts += ".";
+    cuts += specialCutDescription_;
+    cuts += ".";
+  }
+  else {
+    cuts += "_";
+  }
   cuts += jetTypeNames_[theJetType_];
   cuts += "_";
   cuts += METTypeNames_[theMETType_];
@@ -2793,6 +2811,31 @@ void basicLoop::printState() {
   }
   
 }
+
+void basicLoop::startTimer() {
+  starttime_ = new TDatime();
+}
+
+void basicLoop::checkTimer(const Long64_t ndone, const Long64_t ntotal) {
+  if (ndone==0) return;
+  double fracdone = double(ndone)/double(ntotal);
+
+  TDatime timenow;
+  UInt_t elapsed= timenow.Convert() - starttime_->Convert();
+
+  cout<<int(100*fracdone) << " ["<<(1-fracdone)*double(elapsed)/fracdone<<" seconds remaining]"<<endl;
+
+}
+
+void basicLoop::stopTimer(const Long64_t ntotal) {
+  TDatime stoptime; //default ctor is for current time
+  UInt_t elapsed= stoptime.Convert() - starttime_->Convert();
+  cout<<"events / time = "<<ntotal<<" / "<<elapsed<<" = "<<double(ntotal)/double(elapsed)<<" Hz"<<endl;
+
+  delete starttime_;
+  starttime_=0;
+}
+
 
 // ========================================== end
 
