@@ -56,7 +56,8 @@ const char *leptonTypeNames_[]={"RegLep","PFLep"};
 const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1", "minDPinv"};
 
 //in 1/pb
-const double lumi=36.143; //Don's number for 386 Nov4ReReco
+//const double lumi=36.143; //Don's number for 386 Nov4ReReco
+const double lumi=36.146; //386 Nov4ReReco Datasets - PATIFIED WITH 387
 // ========================================== end
 
 class basicLoop {
@@ -697,6 +698,7 @@ public :
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
    double getMinDeltaPhiMET(unsigned int maxjets) ;
+   double getMinDeltaPhiMET30(unsigned int maxjets) ;
    //   double getMinDeltaPhiMHT(unsigned int maxjets) ; //deprecated because MHT is now just another type of MET
    double getDeltaPhib1b2();
    double getUncorrectedHT(const double threshold);
@@ -2041,6 +2043,34 @@ code is now bifurcated to:
   return mindp;
 }
 
+double basicLoop::getMinDeltaPhiMET30(unsigned int maxjets) {
+  /*
+code is now bifurcated to:
+    use tight jets of the default type;
+    unless we are using kBaseline0, in which case we use isGoodJet() to find the good jets
+  */
+
+  double mindp=99;
+
+  if (theCutScheme_==kBaseline0) {
+    unsigned int ngood=0;
+    //get the minimum angle between the first n jets and MET
+    for (unsigned int i=0; i< loosejetPhi->size(); i++) {
+
+      if (isGoodJet30(i)) {
+	++ngood;
+	double dp =  getDeltaPhi( loosejetPhi->at(i) , getMETphi());
+	if (dp<mindp) mindp=dp;
+	if (ngood >= maxjets) break;
+      }
+    }
+  }
+  else {
+    assert(0);
+  }
+
+  return mindp;
+}
 
 double basicLoop::getMinDeltaPhibMET() {
   //get the minimum angle between a b jet and MET
