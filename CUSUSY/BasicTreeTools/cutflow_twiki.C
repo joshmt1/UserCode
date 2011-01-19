@@ -21,12 +21,13 @@ TCanvas * Ccutflow;
 //global settings that change what the output of the code is
 
 //const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoDeltaPhi_NoTrigger";
-const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP";
+//const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP";
+const TString filestub_ ="Baseline0.highprecision.PF_pfMEThigh_PFLep0e0mu_minDP";
 //mode 1 is print cut flow table (B & S) ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
 //mode 4 is like 1 but B only, 5 is like 1 but S only
 //mode 6 is print S/B table
 //mode 7 prints signal efficiency table (%)
-const int mode_ = 7;
+const int mode_ = 4;
 const bool latexMode_ = true; //otherwise TWiki
 const TString pm = latexMode_ ? " \\pm " : " +/- ";
 
@@ -209,7 +210,7 @@ void cutflow_twiki()
     int ibin=1;
     while (file>>cutdesc>>nevt>>nevterr ) {
       double scale = 1;
-      if (filename.Contains("QCD")) scale = 2.8; //dirty hack!
+      //      if (filename.Contains("QCD")) scale = 2.8; //dirty hack!
       background[TString(background_list[i])].push_back(nevt*scale);
       backgrounderr[TString(background_list[i])].push_back(nevterr*scale);
       if (mode_==1) {
