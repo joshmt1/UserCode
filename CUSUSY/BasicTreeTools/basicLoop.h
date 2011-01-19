@@ -14,7 +14,7 @@
 // ========================================== begin
 #include <TDatime.h>
 //this file is in CVS here: http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/UserCode/joshmt/MiscUtil.cxx?view=log
-#include "/afs/cern.ch/user/j/joshmt/root/util/MiscUtil.cxx"
+#include "MiscUtil.cxx"
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
 // ---- this version is compatible with ntuple tag: V00-01-04 ----
@@ -53,11 +53,11 @@ const char *METRangeNames_[]={"med",  "high", "wide", "medhigh"}; //'no cut' is 
 const char *jetTypeNames_[]={"calo","PF"}; //no JPT in ntuple for now
 const char *leptonTypeNames_[]={"RegLep","PFLep"};
 
-const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1", "minDPinv"};
+const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1", "minDPinv", "minDPAll30"};
 
 //in 1/pb
-//const double lumi=36.143; //Don's number for 386 Nov4ReReco
-const double lumi=36.146; //386 Nov4ReReco Datasets - PATIFIED WITH 387
+const double lumi=36.143; //Don's number for 386 Nov4ReReco
+//const double lumi=36.146; //386 Nov4ReReco Datasets - PATIFIED WITH 387
 // ========================================== end
 
 class basicLoop {
@@ -73,7 +73,7 @@ public :
   jetType theJetType_;
   enum leptonType {kNormal=0, kPFLeptons};
   leptonType theLeptonType_;
-  enum dpType {kDeltaPhi=0, kminDP, kMPT, kDPSync1, kminDPinv};
+  enum dpType {kDeltaPhi=0, kminDP, kMPT, kDPSync1, kminDPinv, kminDPAll30};
   dpType theDPType_;
   unsigned int nBcut_;
   //these are an extension of the ele/mu veto
@@ -650,7 +650,13 @@ public :
 
    float getMET(); //return MET determined by theMETType_
    float getMETphi(); //return MET determined by theMETType_
+   float getGenMET(); //return MET determined by theMETType_
+   float getGenMETphi(); //return MET determined by theMETType_
    
+   float getJetInvisibleEnergyHT(); //could add a pT cut as an argument
+   float getJetInvisibleEnergyMHT(); //could add a pT cut as an argument
+   float getLargestJetPtRecoError();
+
    void cutflow(bool writeFiles=false);
    void cutflowPlotter();
    bool cutRequired(TString cutTag) ;
@@ -699,6 +705,7 @@ public :
    double getMinDeltaPhibMET() ;
    double getMinDeltaPhiMET(unsigned int maxjets) ;
    double getMinDeltaPhiMET30(unsigned int maxjets) ;
+   double getMaxDeltaPhiMET30(unsigned int maxjets) ;
    //   double getMinDeltaPhiMHT(unsigned int maxjets) ; //deprecated because MHT is now just another type of MET
    double getDeltaPhib1b2();
    double getUncorrectedHT(const double threshold);
@@ -1819,6 +1826,12 @@ bool basicLoop::passCut(const TString cutTag) {
     else {assert(0);}
   }
   else if (cutTag == "cutDeltaPhi" && //replace normal DeltaPhi cut with minDeltaPhi cut
+	   ( theDPType_ == kminDPAll30 ) ) {
+    
+    if (theMETType_ ==kMET ||theMETType_==ktcMET ||theMETType_==kpfMET ||theMETType_ == kMHT) return ( getMinDeltaPhiMET30(99) >= 0.3 );
+    else {assert(0);}
+  }
+  else if (cutTag == "cutDeltaPhi" && //replace normal DeltaPhi cut with minDeltaPhi cut
 	   ( theDPType_ == kminDPinv ) ) { //this is the *inverted* minDeltaPhi cut (for control region)
     
     if (theMETType_ ==kMET ||theMETType_==ktcMET ||theMETType_==kpfMET ||theMETType_ == kMHT) return ( getMinDeltaPhiMET(3) < 0.3 );
@@ -1867,7 +1880,6 @@ bool basicLoop::passPV() {
   //update...Don endorses the PVSelector method.
   bool ntupleResult = cutResults->at( cutMap_["cutPV"]);
   return ntupleResult;
-
   //never run the code down here!
 
   bool pass=false;
@@ -2004,6 +2016,51 @@ float basicLoop::getMETphi() {
   return 0;
 }
 
+float basicLoop::getGenMET() {
+  //for just one number i am happy to do this by value
+
+  //adjust for global MET type
+  if (theMETType_== kMET) {
+    return caloGenMET;
+  }
+  else if (theMETType_ == ktcMET) {
+    return tcGenMET;
+  }
+  else if (theMETType_ == kpfMET) {
+    return pfGenMET;
+  }
+  else if (theMETType_ == kMHT) {
+    assert(0); //not implemented
+  }
+  
+  assert(0);
+
+  return 0;
+}
+
+float basicLoop::getGenMETphi() {
+  //for just one number i am happy to do this by value
+
+  //adjust for global MET type
+  if (theMETType_== kMET) {
+    return caloGenMETphi;
+  }
+  else if (theMETType_ == ktcMET) {
+    return tcGenMETphi;
+  }
+  else if (theMETType_ == kpfMET) {
+    return pfGenMETphi;
+  }
+  else if (theMETType_ == kMHT) {
+    assert(0); //not implemented
+  }
+  
+  assert(0);
+
+  return 0;
+}
+
+
 double basicLoop::getMinDeltaPhiMET(unsigned int maxjets) {
   /*
 code is now bifurcated to:
@@ -2041,6 +2098,29 @@ code is now bifurcated to:
   }
 
   return mindp;
+}
+
+double basicLoop::getMaxDeltaPhiMET30(unsigned int maxjets) {
+  double maxdp=-99;
+
+  if (theCutScheme_==kBaseline0) {
+    unsigned int ngood=0;
+    //get the maximum angle between the first n jets and MET
+    for (unsigned int i=0; i< loosejetPhi->size(); i++) {
+
+      if (isGoodJet30(i)) {
+	++ngood;
+	double dp =  getDeltaPhi( loosejetPhi->at(i) , getMETphi());
+	if (dp>maxdp) maxdp=dp;
+	if (ngood >= maxjets) break;
+      }
+    }
+  }
+  else {
+    assert(0);
+  }
+
+  return maxdp;
 }
 
 double basicLoop::getMinDeltaPhiMET30(unsigned int maxjets) {
@@ -2290,6 +2370,41 @@ bool basicLoop::isGoodJet30(unsigned int ijet) {
   return true;
 }
 
+float basicLoop::getJetInvisibleEnergyHT() {
+  //scalar sum of the MC truth jet invisible energy
+
+  //i am applying no jet cuts here!
+
+  float totalInvisibleEnergy=0;
+  for (unsigned int ij=0; ij< loosejetInvisibleEnergy->size(); ++ij ) {
+    if ( loosejetInvisibleEnergy->at(ij) > 0) { //need to guard against unmatched jets
+      totalInvisibleEnergy += loosejetInvisibleEnergy->at(ij);
+    }
+  }
+  return totalInvisibleEnergy;
+}
+
+float basicLoop::getJetInvisibleEnergyMHT() {
+  float x=0,y=0;
+
+  for (unsigned int ij=0; ij< loosejetInvisibleEnergy->size(); ++ij ) {
+    if ( loosejetInvisibleEnergy->at(ij) > 0) { //need to guard against unmatched jets
+      x -= loosejetInvisibleEnergy->at(ij) * cos(loosejetGenPhi->at(ij));
+      y -= loosejetInvisibleEnergy->at(ij) * sin(loosejetGenPhi->at(ij));
+    }
+  }
+  return sqrt(x*x + y*y);
+}
+
+float basicLoop::getLargestJetPtRecoError() {
+  float biggest=0;
+  for (unsigned int ij=0; ij<loosejetPt->size(); ++ij) {
+    float residual = loosejetGenPt->at(ij) > 0 ? loosejetPt->at(ij) - loosejetGenPt->at(ij) : 0;
+    if ( fabs(residual) > fabs(biggest) ) biggest = residual;
+  }
+  return biggest;
+}
+
 bool basicLoop::isGoodJet_Sync1(unsigned int ijet) {
 
   if ( loosejetPt->at(ijet) <50) return false;
@@ -2490,6 +2605,8 @@ void basicLoop::fillTightJetInfo() {
 //when new jet variables are added to the ntuple then need to update this!
 void basicLoop::InitJets() {
 
+  //i have never updated this for JPT jets, but I think it is irrelevant at the moment
+
   if (theJetType_==kCalo ) {
     tightJetIndex = tightJetIndex_calo;
     looseJetIndex = looseJetIndex_calo;
@@ -2676,7 +2793,8 @@ double basicLoop::getCrossSection( TString inname) {
   
   else if (inname.Contains("/DATA/"))                return -2;
 
-  std::cout<<"Cannot find cross section for this sample!"<<std::endl; 
+  std::cout<<"Cannot find cross section for this sample!"<<std::endl;
+  assert(0); 
   return -1;
   
 }

@@ -6,6 +6,7 @@
 #include <TFile.h>
 #include <TStyle.h>
 #include <fstream>
+#include <iomanip>
 
 #include "TMath.h"
 
@@ -102,10 +103,17 @@ void basicLoop::cutflow(bool writeFiles)
 
   TString samplename=  getSampleName(findInputName());
   TString outfilename="cutflow."; 
+  TString outfilenameU="cutflowUnweighted."; 
+
   outfilename+=getCutDescriptionString();
   outfilename+=".";    outfilename+=samplename; 
   outfilename+=".dat";
+
+  outfilenameU+=getCutDescriptionString();
+  outfilenameU+=".";    outfilenameU+=samplename; 
+  outfilenameU+=".dat";
   ofstream file(outfilename.Data());
+  ofstream fileU(outfilenameU.Data());
   
   for (unsigned int i=0 ; i<npass.size(); i++) {
     
@@ -121,11 +129,13 @@ void basicLoop::cutflow(bool writeFiles)
       cout<<ccc<<endl;
 
       //now including a decription string too. not perfect but better than nothing
-      file <<cutNames_[cutTags_[i]].Data()<<"\t" << weighted<<"\t" << weighted_error<<endl;
+      file <<cutNames_[cutTags_[i]].Data()<<"\t"<<setprecision(20) << weighted<<"\t" << weighted_error<<endl;
+      fileU <<cutNames_[cutTags_[i]].Data()<<"\t"<<setprecision(20) << npass.at(i)<<endl;
     }
   }
   
   file.close();
+  fileU.close();
   if (writeFiles) {
     for (unsigned int i=0 ; i<cutTags_.size(); i++) {
       textfiles[i]->close(); //i might be leaking the pointers here, but i don't care
@@ -442,7 +452,6 @@ void basicLoop::Nminus1plots()
    TH1D HnMuons_ge2b("HnMuons_ge2b","N of Muons (N-1 && >=2b)",njets_bins,0,njets_bins);
    TH1D HnMuons_ge3b("HnMuons_ge3b","N of Muons (N-1 && >=3b)",njets_bins,0,njets_bins);
 
-
    //MET
    double met_max=500,met_min=0;
    TH1D H_MET("H_MET","MET",nbins, met_min , met_max);
@@ -467,6 +476,10 @@ void basicLoop::Nminus1plots()
    TH1D HminDeltaPhiMETjAll_ge1b("HminDeltaPhiMETjAll_ge1b","minDeltaPhi(all jets,MET) (N-1)",nbins,0,TMath::Pi());
    TH1D HminDeltaPhiMETjAll_ge2b("HminDeltaPhiMETjAll_ge2b","minDeltaPhi(all jets,MET) (N-1)",nbins,0,TMath::Pi());
    TH1D HminDeltaPhiMETjAll_ge3b("HminDeltaPhiMETjAll_ge3b","minDeltaPhi(all jets,MET) (N-1)",nbins,0,TMath::Pi());
+
+   TH1D HminDeltaPhiMETjAll30("HminDeltaPhiMETjAll30","minDeltaPhi(all jets,MET) (N-1)",nbins,0,TMath::Pi());
+   TH1D HminDeltaPhiMETjAll30_ge1b("HminDeltaPhiMETjAll30_ge1b","minDeltaPhi(all jets,MET) (N-1)",nbins,0,TMath::Pi());
+   TH1D HminDeltaPhiMETjAll30_ge2b("HminDeltaPhiMETjAll30_ge2b","minDeltaPhi(all jets,MET) (N-1)",nbins,0,TMath::Pi());
 
    int vnbins=8;
    double vbins[]={0, 0.15, 0.3, 0.5, 0.7, 1, 1.5, 2, TMath::Pi()};
@@ -504,6 +517,15 @@ void basicLoop::Nminus1plots()
    TH1D   HminDeltaPhiAllFail("HminDeltaPhiAllFail","fail minDeltaPhiAll",nbins, met_min,met_max);
    TH1D   HminDeltaPhiAllFail_ge1b("HminDeltaPhiAllFail_ge1b","fail minDeltaPhiAll",nbins, met_min,met_max);
    TH1D   HminDeltaPhiAllFail_ge2b("HminDeltaPhiAllFail_ge2b","fail minDeltaPhiAll",nbins, met_min,met_max);
+
+   //similar histograms...we want to plot r(MET) for jet undermeasurement, jet overmeasurement
+   TH1D   HminDeltaPhiRatio_Over("HminDeltaPhiRatio_Over","pass minDeltaPhi / fail minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiRatio_Under("HminDeltaPhiRatio_Under","pass minDeltaPhi / fail minDeltaPhi",nbins, met_min,met_max);
+
+   TH1D   HminDeltaPhiPass_Over("HminDeltaPhiPass_Over","pass minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiFail_Over("HminDeltaPhiFail_Over","fail minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiPass_Under("HminDeltaPhiPass_Under","pass minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiFail_Under("HminDeltaPhiFail_Under","fail minDeltaPhi",nbins, met_min,met_max);
 
    //n b jets
    TH1D Hnbjets("Hnbjets","N of jets (RA2)",njets_bins,0,njets_bins);
@@ -546,6 +568,33 @@ void basicLoop::Nminus1plots()
    TH1D Hbjeteta1_ge2b("Hbjeteta1_ge2b","eta of lead b jet (>=2b)",nbins,-eta_max,eta_max);
    TH1D Hbjeteta1_ge3b("Hbjeteta1_ge3b","eta of lead b jet (>=3b)",nbins,-eta_max,eta_max);
 
+   //MC truth distributions
+   TH1D HgenInvisibleEnergy_SR("HgenInvisibleEnergy_SR","MC truth invis energy (SR)",nbins,met_min,met_max);
+   TH1D HgenInvisibleEnergy_D("HgenInvisibleEnergy_D","MC truth invis energy (high MET control)",nbins,met_min,met_max);
+   TH1D HgenInvisibleEnergy_lowMET("HgenInvisibleEnergy_lowMET","MC truth invis energy (low MET, good mindp)",nbins,met_min,met_max);
+   TH1D HgenInvisibleEnergy_lowlow("HgenInvisibleEnergy_lowlow","MC truth invis energy (low MET, bad mindp)",nbins,met_min,met_max);
+
+   TH1D HgenInvisibleMissingEnergy_SR("HgenInvisibleMissingEnergy_SR","MC truth invis energy vector (SR)",nbins,met_min,met_max);
+   TH1D HgenInvisibleMissingEnergy_D("HgenInvisibleMissingEnergy_D","MC truth invis energy vector (high MET control)",nbins,met_min,met_max);
+   TH1D HgenInvisibleMissingEnergy_lowMET("HgenInvisibleMissingEnergy_lowMET","MC truth invis energy vector (low MET, good mindp)",nbins,met_min,met_max);
+   TH1D HgenInvisibleMissingEnergy_lowlow("HgenInvisibleMissingEnergy_lowlow","MC truth invis energy vector (low MET, bad mindp)",nbins,met_min,met_max);
+
+   TH1D HgenMET_SR("HgenMET_SR","true MET",nbins,met_min,met_max);
+   TH1D HgenMET_D("HgenMET_D","true MET",nbins,met_min,met_max);
+   TH1D HgenMET_lowMET("HgenMET_lowMET","true MET",nbins,met_min,met_max);
+   TH1D HgenMET_lowlow("HgenMET_lowlow","true MET",nbins,met_min,met_max);
+
+   TH1D HmaxJetRecoError_SR("HmaxJetRecoError_SR","max(pT_reco - pT_gen)",nbins,-met_max,met_max);
+   TH1D HmaxJetRecoError_D("HmaxJetRecoError_D","max(pT_reco - pT_gen)",nbins,-met_max,met_max);
+   TH1D HmaxJetRecoError_lowMET("HmaxJetRecoError_lowMET","max(pT_reco - pT_gen)",nbins,-met_max,met_max);
+   TH1D HmaxJetRecoError_lowlow("HmaxJetRecoError_lowlow","max(pT_reco - pT_gen)",nbins,-met_max,met_max);
+
+   TH1D HmaxDeltaPhiMETjAll_SR("HmaxDeltaPhiMETjAll_SR","maxDeltaPhi(all jets,MET)",nbins,0,TMath::Pi()+0.01);
+   TH1D HmaxDeltaPhiMETjAll_D("HmaxDeltaPhiMETjAll_D","maxDeltaPhi(all jets,MET)",nbins,0,TMath::Pi()+0.01);
+   TH1D HmaxDeltaPhiMETjAll_lowMET("HmaxDeltaPhiMETjAll_lowMET","maxDeltaPhi(all jets,MET)",nbins,0,TMath::Pi()+0.01);
+   TH1D HmaxDeltaPhiMETjAll_lowlow("HmaxDeltaPhiMETjAll_lowlow","maxDeltaPhi(all jets,MET)",nbins,0,TMath::Pi()+0.01);
+
+
    H_HT.Sumw2();
    H_HT_ge1b.Sumw2();
    H_HT_ge2b.Sumw2();
@@ -578,6 +627,11 @@ void basicLoop::Nminus1plots()
    HminDeltaPhiMETjAll_ge1b.Sumw2();
    HminDeltaPhiMETjAll_ge2b.Sumw2();
    HminDeltaPhiMETjAll_ge3b.Sumw2();
+
+   HminDeltaPhiMETjAll30.Sumw2();
+   HminDeltaPhiMETjAll30_ge1b.Sumw2();
+   HminDeltaPhiMETjAll30_ge2b.Sumw2();
+
    HVminDeltaPhiMETj.Sumw2();
    HVminDeltaPhiMETj_ge1b.Sumw2();
    HVminDeltaPhiMETj_ge2b.Sumw2();
@@ -622,7 +676,15 @@ void basicLoop::Nminus1plots()
    HminDeltaPhiAllRatio.Sumw2();
    HminDeltaPhiAllRatio_ge1b.Sumw2();
    HminDeltaPhiAllRatio_ge2b.Sumw2();
-  
+
+   HminDeltaPhiRatio_Over.Sumw2();
+   HminDeltaPhiRatio_Under.Sumw2();
+
+   HminDeltaPhiPass_Over.Sumw2();
+   HminDeltaPhiFail_Over.Sumw2();
+   HminDeltaPhiPass_Under.Sumw2();
+   HminDeltaPhiFail_Under.Sumw2();
+
    //histograms just used for calculations
    HminDeltaPhiPass.Sumw2();
    HminDeltaPhiPass_ge1b.Sumw2();
@@ -637,7 +699,33 @@ void basicLoop::Nminus1plots()
    HminDeltaPhiAllFail.Sumw2();
    HminDeltaPhiAllFail_ge1b.Sumw2();
    HminDeltaPhiAllFail_ge2b.Sumw2();
-  
+
+   HgenInvisibleEnergy_SR.Sumw2();
+   HgenInvisibleEnergy_D.Sumw2();
+   HgenInvisibleEnergy_lowMET.Sumw2();
+   HgenInvisibleEnergy_lowlow.Sumw2();
+
+   HgenInvisibleMissingEnergy_SR.Sumw2();
+   HgenInvisibleMissingEnergy_D.Sumw2();
+   HgenInvisibleMissingEnergy_lowMET.Sumw2();
+   HgenInvisibleMissingEnergy_lowlow.Sumw2();
+
+   HgenMET_SR.Sumw2();
+   HgenMET_D.Sumw2();
+   HgenMET_lowMET.Sumw2();
+   HgenMET_lowlow.Sumw2();
+
+   HmaxJetRecoError_SR.Sumw2();
+   HmaxJetRecoError_D.Sumw2();
+   HmaxJetRecoError_lowMET.Sumw2();
+   HmaxJetRecoError_lowlow.Sumw2();
+
+   HmaxDeltaPhiMETjAll_SR.Sumw2();
+   HmaxDeltaPhiMETjAll_D.Sumw2();
+   HmaxDeltaPhiMETjAll_lowMET.Sumw2();
+   HmaxDeltaPhiMETjAll_lowlow.Sumw2();
+
+
    startTimer();   //keep track of performance
    //event loop
    Long64_t nbytes = 0, nb = 0;
@@ -652,6 +740,7 @@ void basicLoop::Nminus1plots()
       int njets = nGoodJets(); //update to use baseline0
       double minDeltaPhi_j_MET = getMinDeltaPhiMET(3);
       double minDeltaPhi_j_MET_All = getMinDeltaPhiMET(99);
+      double minDeltaPhi_j_MET_All30 = getMinDeltaPhiMET30(99);
       double dp_MPTMET = getDeltaPhiMPTMET();
       double deltaPhi_b1b2 =-99; //to be calculated later
 
@@ -720,6 +809,8 @@ void basicLoop::Nminus1plots()
 	HVminDeltaPhiMETj.Fill( minDeltaPhi_j_MET,weight);
 	HV2minDeltaPhiMETj.Fill( minDeltaPhi_j_MET,weight);
 
+	HminDeltaPhiMETjAll30.Fill( minDeltaPhi_j_MET_All30,weight);
+
 	if (nbSSVM >=1)  HminDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
 	if (nbSSVM >=2)  HminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,weight);
 	if (nbSSVM >=3)  HminDeltaPhiMETj_ge3b.Fill(minDeltaPhi_j_MET,weight);
@@ -727,6 +818,9 @@ void basicLoop::Nminus1plots()
 	if (nbSSVM >=1)  HminDeltaPhiMETjAll_ge1b.Fill(minDeltaPhi_j_MET_All,weight);
 	if (nbSSVM >=2)  HminDeltaPhiMETjAll_ge2b.Fill(minDeltaPhi_j_MET_All,weight);
 	if (nbSSVM >=3)  HminDeltaPhiMETjAll_ge3b.Fill(minDeltaPhi_j_MET_All,weight);
+
+	if (nbSSVM >=1)  HminDeltaPhiMETjAll30_ge1b.Fill(minDeltaPhi_j_MET_All30,weight);
+	if (nbSSVM >=2)  HminDeltaPhiMETjAll30_ge2b.Fill(minDeltaPhi_j_MET_All30,weight);
 
 	if (nbSSVM >=1)  HVminDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
 	if (nbSSVM >=2)  HVminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,weight);
@@ -739,23 +833,36 @@ void basicLoop::Nminus1plots()
       resetIgnoredCut();
 
       //without minDeltaPhi and without MET
-      //this is for plotting the ratio of (pass minDeltaPhi) / (fail minDeltaPhi)
+      //this is for plotting the ratio of (pass minDeltaPhi) / (fail minDeltaPhi), etc
       setIgnoredCut("cutDeltaPhi");
       setIgnoredCut("cutMET");
       if (Cut(ientry) >= 0) {
 
-	bool passMinDeltaPhi = minDeltaPhi_j_MET > 0.3;
+	bool passMinDeltaPhi = minDeltaPhi_j_MET > 0.3;	//this could be passCut("cutDeltaPhi")
+	//but then the code wouldn't be invariant on changes of the def'n of cutDeltaPhi...it just depends on what we want
 	bool passMinDeltaPhiAll = minDeltaPhi_j_MET_All > 0.3;
+	bool passMinDeltaPhiAll30 = minDeltaPhi_j_MET_All30 > 0.3;
+	double largestJetRecoError = getLargestJetPtRecoError();
+
+	//same question here: use passCut("cutMET") or just apply a hard-coded limit?
+	//opt for hard-coded
+	bool passMET = getMET() > 150;
 
 	if (passMinDeltaPhi) {
 	  HminDeltaPhiPass.Fill(getMET(),weight);
 	  if (nbSSVM >=1)  HminDeltaPhiPass_ge1b.Fill(getMET(),weight);
 	  if (nbSSVM >=2)  HminDeltaPhiPass_ge2b.Fill(getMET(),weight);
+
+	  if (largestJetRecoError>0) HminDeltaPhiPass_Over.Fill(getMET(), weight);
+	  else HminDeltaPhiPass_Under.Fill(getMET(), weight);
  	}
 	else {
 	  HminDeltaPhiFail.Fill(getMET(),weight);
 	  if (nbSSVM >=1)  HminDeltaPhiFail_ge1b.Fill(getMET(),weight);
 	  if (nbSSVM >=2)  HminDeltaPhiFail_ge2b.Fill(getMET(),weight);
+
+	  if (largestJetRecoError>0) HminDeltaPhiFail_Over.Fill(getMET(), weight);
+	  else HminDeltaPhiFail_Under.Fill(getMET(), weight);
 	}
 
 	if (passMinDeltaPhiAll) {
@@ -768,6 +875,41 @@ void basicLoop::Nminus1plots()
 	  if (nbSSVM >=1)  HminDeltaPhiAllFail_ge1b.Fill(getMET(),weight);
 	  if (nbSSVM >=2)  HminDeltaPhiAllFail_ge2b.Fill(getMET(),weight);
 	}
+
+	//calculate scalar and vector sums of jet invisible energy (MC truth)
+	double jetInvisibleEnergyHT = getJetInvisibleEnergyHT(); //scalar sum
+	double jetInvisibleEnergyMHT = getJetInvisibleEnergyMHT(); //vector sum
+	double maxdp = getMaxDeltaPhiMET30(99);
+	if (passMinDeltaPhi && passMET) {//signal region; using All30 variant
+	  HgenInvisibleEnergy_SR.Fill(jetInvisibleEnergyHT ,weight);
+	  HgenInvisibleMissingEnergy_SR.Fill(jetInvisibleEnergyMHT ,weight);
+	  HgenMET_SR.Fill(getGenMET() ,weight);
+	  HmaxJetRecoError_SR.Fill(largestJetRecoError, weight);
+	  HmaxDeltaPhiMETjAll_SR.Fill(maxdp, weight);
+	}
+	else if (!passMinDeltaPhi && passMET) { //region 'D'
+	  HgenInvisibleEnergy_D.Fill(jetInvisibleEnergyHT ,weight);
+	  HgenInvisibleMissingEnergy_D.Fill(jetInvisibleEnergyMHT ,weight);
+	  HgenMET_D.Fill(getGenMET() ,weight);
+	  HmaxJetRecoError_D.Fill(largestJetRecoError, weight);
+	  HmaxDeltaPhiMETjAll_D.Fill(maxdp, weight);
+	}
+	else if (passMinDeltaPhi && !passMET) { // "low MET" region
+	  HgenInvisibleEnergy_lowMET.Fill(jetInvisibleEnergyHT ,weight);
+	  HgenInvisibleMissingEnergy_lowMET.Fill(jetInvisibleEnergyMHT ,weight);
+	  HgenMET_lowMET.Fill(getGenMET() ,weight);
+	  HmaxJetRecoError_lowMET.Fill(largestJetRecoError, weight);
+	  HmaxDeltaPhiMETjAll_lowMET.Fill(maxdp, weight);
+	}
+	else if (!passMinDeltaPhi && !passMET) { // "lowlow" region
+	  HgenInvisibleEnergy_lowlow.Fill(jetInvisibleEnergyHT ,weight);
+	  HgenInvisibleMissingEnergy_lowlow.Fill(jetInvisibleEnergyMHT ,weight);
+	  HgenMET_lowlow.Fill(getGenMET() ,weight);
+	  HmaxJetRecoError_lowlow.Fill(largestJetRecoError, weight);
+	  HmaxDeltaPhiMETjAll_lowlow.Fill(maxdp, weight);
+	}
+	//in fact the ABCD regions might exclude the very low MET events, but i'm not excluding them here
+	else { cout<<"Found an event that did not fall into one of the ABCD regions!"<<endl; assert(0);}
       }
       resetIgnoredCut();
 
@@ -848,6 +990,9 @@ void basicLoop::Nminus1plots()
    HminDeltaPhiAllRatio.Divide(&HminDeltaPhiAllPass,&HminDeltaPhiAllFail);
    HminDeltaPhiAllRatio_ge1b.Divide(&HminDeltaPhiAllPass_ge1b,&HminDeltaPhiAllFail_ge1b);
    HminDeltaPhiAllRatio_ge2b.Divide(&HminDeltaPhiAllPass_ge2b,&HminDeltaPhiAllFail_ge2b);
+
+   HminDeltaPhiRatio_Over.Divide(&HminDeltaPhiPass_Over,&HminDeltaPhiFail_Over);
+   HminDeltaPhiRatio_Under.Divide(&HminDeltaPhiPass_Under,&HminDeltaPhiFail_Under);
 
    fout.Write();
    fout.Close();
