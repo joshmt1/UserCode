@@ -16,7 +16,7 @@ these are not needed (assuming this macro is compiled) because of the include ab
 gSystem->Load("basicLoop_C.so");
 
 */
-const TString version = "V00-01-02/DATA/38X";
+const TString version = "V00-01-05/DATA/38X";
 
 void run_ABCDLoop_data()
 {
@@ -59,9 +59,10 @@ void run_ABCDLoop_data()
   basicLoop looper(&ch,&info);  
 
   //important! this is where cuts are defined
-  looper.setCutScheme(basicLoop::kRA2);
+  looper.setCutScheme(basicLoop::kBaseline0);
   
   looper.setMETType(basicLoop::kpfMET);  //other options are basicLoop::ktcMET, basicLoop::kMET, basicLoop::kMHT
+  looper.setLeptonType(basicLoop::kPFLeptons); 
   looper.setJetType(basicLoop::kPF); //other options are basicLoop::kCalo
   looper.setBCut(0); //adjust number of b tags here
   
