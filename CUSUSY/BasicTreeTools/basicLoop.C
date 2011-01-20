@@ -168,7 +168,8 @@ void basicLoop::ABCDtree(unsigned int dataindex)
 
   //open output file
   //FIXME hardcoded for dellcmscornell here
-  TString outfilename="/cu1/joshmt/ABCDtrees/ABCDtree.";
+  //TString outfilename="/cu1/joshmt/ABCDtrees/ABCDtree.";
+  TString outfilename="/cu1/kreis/ABCDtrees/36_Jan20/ABCDtree.";
   outfilename+=getCutDescriptionString();
   outfilename+=".";    outfilename+=getBCutDescriptionString(); 
   outfilename+=".";    outfilename+=sampleName; 
@@ -185,6 +186,9 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   double myMHT;
   double minDeltaPhiMET;
   double minDeltaPhiMETAll;
+  double minDeltaPhiMET30All;
+  double minDeltaPhiMET30_eta5All;
+  double minDeltaPhiMET30_eta5_noIdAll;
   double minDeltaPhiMHT;
   double minDeltaRbj;
   double DeltaPhiMPTMET;
@@ -196,6 +200,9 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   ABCDtree.Branch("MHT",&myMHT,"MHT/D");
   ABCDtree.Branch("minDeltaPhiMET",&minDeltaPhiMET,"minDeltaPhiMET/D");
   ABCDtree.Branch("minDeltaPhiMETAll",&minDeltaPhiMETAll,"minDeltaPhiMETAll/D");
+  ABCDtree.Branch("minDeltaPhiMET30All",&minDeltaPhiMET30All,"minDeltaPhiMET30All/D");
+  ABCDtree.Branch("minDeltaPhiMET30_eta5All",&minDeltaPhiMET30_eta5All,"minDeltaPhiMET30_eta5All/D");
+  ABCDtree.Branch("minDeltaPhiMET30_eta5_noIdAll",&minDeltaPhiMET30_eta5_noIdAll,"minDeltaPhiMET30_eta5_noIdAll/D");
   ABCDtree.Branch("minDeltaPhiMHT",&minDeltaPhiMHT,"minDeltaPhiMHT/D");
   ABCDtree.Branch("minDeltaRbj",&minDeltaRbj,"minDeltaRbj/D");
   ABCDtree.Branch("DeltaPhiMPTMET",&DeltaPhiMPTMET,"DeltaPhiMPTMET/D");
@@ -214,6 +221,9 @@ void basicLoop::ABCDtree(unsigned int dataindex)
     myMHT = getMHT();
     minDeltaPhiMET = getMinDeltaPhiMET(3);
     minDeltaPhiMETAll = getMinDeltaPhiMET(99);
+    minDeltaPhiMET30All = getMinDeltaPhiMET30(99);
+    minDeltaPhiMET30_eta5All = getMinDeltaPhiMET30_eta5(99);
+    minDeltaPhiMET30_eta5_noIdAll = getMinDeltaPhiMET30_eta5_noId(99);
     minDeltaRbj = getOverallMinDeltaR_bj();
     DeltaPhiMPTMET = getDeltaPhiMPTMET();
 
