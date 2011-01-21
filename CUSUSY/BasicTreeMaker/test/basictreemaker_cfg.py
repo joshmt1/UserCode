@@ -12,7 +12,11 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(5000) )
 process.source = cms.Source("PoolSource",
     # replace 'myfile.root' with the source file you want to use
     fileNames = cms.untracked.vstring(
+     'file:/cu1/joshmt/AOD/387/TTJets_TuneD6T_Fall10_387_PAT_9_1_rY1.root'
 #   'file:/cu1/joshmt/AOD/Fall10-QCD_TuneD6T_HT-1000_7TeV-madgraph-C473857E-99DA-DF11-8531-00163691DC86.SUSYPAT.root'
+=======
+#   'file:/cu1/joshmt/AOD/Fall10-QCD_TuneD6T_HT-1000_7TeV-madgraph-C473857E-99DA-DF11-8531-00163691DC86.SUSYPAT.root'
+>>>>>>> 1.22
 #   'INPUT'
  #   'file:/afs/cern.ch/user/s/ssekmen/public/Sezen_PAT.root'
     'file:/cu1/joshmt/AOD/387/TTJets_TuneD6T_Fall10_387_PAT_9_1_rY1.root'
@@ -76,6 +80,9 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                         eleAlgorithms = cms.vstring("cleanPatElectrons","selectedPatElectronsPF"),
                                         muonAlgorithms = cms.vstring("cleanPatMuons","selectedPatMuonsPF"),
                                         tauAlgorithms = cms.vstring("cleanPatTaus","selectedPatTausPF"),
+
+#trying to add all particle flow candidates for RA2 filter specifications
+                                        PFCandSource = cms.InputTag('particleFlow'),
 
 #the 'SUSY trigger' used in the cut flow is the first (valid) one listed here
                                         triggersOfInterest = cms.vstring("HLT_HT100U","HLT_HT120U","HLT_HT140U","HLT_HT150U","HLT_HT150U_v3","HLT_HT100U_v3","HLT_HT140_J30U_Eta3_v3",
@@ -160,7 +167,7 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
 )
 
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/cu1/joshmt/AOD/BasicNtuple.root') )
-process.TFileService = cms.Service("TFileService", fileName = cms.string('BasicNtuple.root') )
+process.TFileService = cms.Service("TFileService", fileName = cms.string('/cu2/winstrom/temp/BasicNtuple.root') )
 
 if isMC:
     process.p = cms.Path(process.flavorHistorySeq

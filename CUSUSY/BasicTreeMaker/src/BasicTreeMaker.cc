@@ -28,7 +28,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.23 2011/01/21 10:47:30 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.24 2011/01/21 14:07:15 joshmt Exp $
 //
 //
 
@@ -123,6 +123,8 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   eleAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("eleAlgorithms")),
   muonAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("muonAlgorithms")),
   tauAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("tauAlgorithms")),
+
+  pfCandSrc_       (iConfig.getParameter<edm::InputTag>("PFCandSource")),
 
   jetIdLoose_      (iConfig.getParameter<edm::ParameterSet>("jetIdLoose") ),
   jetIdTight_      (iConfig.getParameter<edm::ParameterSet>("jetIdTight") ),
@@ -471,6 +473,69 @@ BasicTreeMaker::fillTauInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
   
 }
 
+  //Code from RA2 for filtering fake MHT with muons:
+
+bool BasicTreeMaker::badPFMuonFilter(const edm::Event& iEvent, edm::InputTag pfCandSource, edm::InputTag muonSource, double maxPtDiff, bool doPtDiff, bool doPJCut, bool debug){
+
+  edm::Handle<reco::PFCandidateCollection> pfCands;
+  iEvent.getByLabel(pfCandSource, pfCands);
+  edm::Handle<edm::View<pat::Muon> > muons;
+  iEvent.getByLabel(muonSource, muons);
+  reco::PFCandidateCollection pfCandidates_ = *pfCands;
+//  double metBefore = 0.;
+//  double metAfter = 0.;
+//  if (doPJCut) {
+//    bool fixed = postMuonCleaning(&pfCandidates_,metBefore,metAfter);
+//    if ( fixed ) return false;
+//  }
+  if (doPtDiff) {
+    for (reco::PFCandidateCollection::const_iterator c = pfCands->begin(); c != pfCands->end(); ++c) {
+      if (std::abs(c->pdgId()) != 13) continue;
+      if (!muons.failedToGet() && muons.isValid()) { // if these are pat muons
+	for (edm::View<pat::Muon>::const_iterator m = muons->begin(); m != muons->end(); ++m) {
+	  float dr = reco::deltaR(c->eta(), c->phi(), m->eta(), m->phi());
+	  if (m->originalObjectRef().id() == c->muonRef().id() &&
+	      m->originalObjectRef().key() == c->muonRef().key()) {
+	    if (debug) std::cout << "pf-reco muon match (mindr/pf pt/reco pt): " << dr << " " << c->pt() << " " << m->pt() << std::endl;
+	    if (c->pt() - m->pt() > maxPtDiff) return false;
+	  }
+	}
+      }
+      //else { // assume reco::Muon ref from pfcandidate will be present
+      //	float dr = reco::deltaR(c->eta(), c->phi(), c->muonRef()->eta(), c->muonRef()->phi());
+      //	if (debug) std::cout << "pf-reco muon match (mindr/pf pt/reco pt): " << dr << " " << c->pt() << " " << c->muonRef()->pt() << std::endl;
+      //	if (c->pt() - c->muonRef()->pt() > maxPtDiff) return false;
+      //}
+    }
+  }
+  // if no bad match found, return true
+  return true; 
+}
+
+bool BasicTreeMaker::inconsistentMuonPFCandidateFilter(const edm::Event& iEvent, edm::InputTag muonSource, double ptMin, double maxPTDiff, bool verbose){
+  using namespace std;  
+  using namespace edm;
+
+  edm::Handle<edm::View<pat::Muon> > muons;
+  iEvent.getByLabel(muonSource, muons);
+  
+  bool    passFilter = true;
+
+  if (!muons.failedToGet() && muons.isValid()) { // if these are pat muons
+    for (edm::View<pat::Muon>::const_iterator muon = muons->begin(); muon != muons->end(); ++muon) {
+      if ( muon->pt() < ptMin )                          continue;       
+      if (  muon->isTrackerMuon()
+	    && muon->isGlobalMuon()
+	    && fabs(muon->innerTrack()->pt()/muon->globalTrack()->pt() - 1) <= maxPTDiff   )  continue; 
+      passFilter = false;
+    }
+  }
+   
+  return passFilter;
+
+}
+
+  //End Code from RA2 for filtering fake MHT with muons
 void
 BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int il) {
 
@@ -497,6 +562,16 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
 
     muonIsGlobalMuonPromptTight[muTag].push_back(imuon->muonID("GlobalMuonPromptTight"));
     if (muonDebug)     std::cout<<"done with muon id" <<std::endl;    
+
+    //Added by Luke -- Trying to get functions for the muons that are implemented by RA2 to get rid of fake MHT
+
+    std::cout << "creating muon filter info" << std::endl;
+    passesBadPFMuonFilter[muTag] = badPFMuonFilter(iEvent, pfCandSrc_,edm::InputTag(muTag)) ;
+    std::cout << "done with badPFMuonFilter" << std::endl;
+    passesInconsistentMuonPFCandidateFilter[muTag] = inconsistentMuonPFCandidateFilter(iEvent, edm::InputTag(muTag)) ;
+    std::cout << "done with inconsistentMuonPFCandidateFilter" << std::endl;
+
+    //Done with fake MHT coding
 
     //record pT and eta of all that pass 
     muonPt[muTag].push_back( imuon->pt() );
@@ -1502,6 +1577,9 @@ BasicTreeMaker::beginJob()
     tree_->Branch( (string("muonEcalVeto")+tail).c_str(),&muonEcalVeto[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonHcalVeto")+tail).c_str(),&muonHcalVeto[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("nMuons")+tail).c_str(),&nMuons[muonAlgorithmNames_[il]],(string("nMuons")+itail).c_str());
+
+    tree_->Branch( (string("passesBadPFMuonFilter")+tail).c_str(),&passesBadPFMuonFilter[muonAlgorithmNames_[il]],(string("passesBadPFMuonFilter")+tail+"/O").c_str());
+    tree_->Branch( (string("passesInconsistentMuonPFCandidateFilter")+tail).c_str(),&passesInconsistentMuonPFCandidateFilter[muonAlgorithmNames_[il]],(string("passesInconsistentMuonPFCandidateFilter")+tail+"/O").c_str());
 
     tree_->Branch((string("eleEt")+tail).c_str(),&eleEt[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleEta")+tail).c_str(),&eleEta[eleAlgorithmNames_[il]]);

@@ -1,6 +1,8 @@
 Release notes
 --
-
+- Implement two muon filters from classic RA2
+  	    -hopefully eliminates fake MET
+	    -called passesBadPFMuonFilter and passesInconsistentMuonPFCandidateFilter
 - store *all* muons instead of just global muons
 - fix critical bug in gen jet info (px was stored instead of pT)
 - add JEC uncertainties

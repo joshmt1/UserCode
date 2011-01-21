@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.12 2011/01/21 10:47:30 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.13 2011/01/21 14:07:15 joshmt Exp $
 //
 //
 
@@ -55,6 +55,13 @@ private:
   int  findTopDecayMode( const reco::Candidate & cand );
 
   bool passJetId(const pat::Jet & jet);
+
+  //Code from RA2 for filtering fake MHT with muons:
+
+  bool badPFMuonFilter(const edm::Event& iEvent, edm::InputTag pfCandSource, edm::InputTag muonSource, double maxPtDiff = 100, bool doPtDiff = true, bool doPJCut = false, bool debug = false);
+  bool inconsistentMuonPFCandidateFilter(const edm::Event& iEvent, edm::InputTag muonSource, double ptMin = 100, double maxPTDiff = 0.1, bool verbose = false);
+
+  //End Code from RA2 for filtering fake MHT with muons
 
   //a clever piece of code stolen from Freya
   template <class C>
@@ -108,6 +115,8 @@ private:
   std::vector<std::string> eleAlgorithmNames_; //the real collection names
   std::vector<std::string> muonAlgorithmNames_; //the real collection names
   std::vector<std::string> tauAlgorithmNames_; //the real collection names
+
+  edm::InputTag pfCandSrc_;
 
   JetIDSelectionFunctor                jetIdLoose_;
   JetIDSelectionFunctor                jetIdTight_;
@@ -186,6 +195,12 @@ private:
   std::map< std::string, std::vector<float> > muonEcalVeto;
 
   std::map< std::string, int > nMuons; //good muons (passing pt and eta cuts)
+  
+  //beginning RA2 fake MHT muon reducing filter info
+  std::map< std::string, bool > passesBadPFMuonFilter;
+  std::map< std::string, bool > passesInconsistentMuonPFCandidateFilter;
+  //ending RA2 fake MHT muon reducing filter info
+
 
   //electron info for *all* electrons (!)
   std::map< std::string, std::vector<float> > eleEt;
