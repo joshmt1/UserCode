@@ -1,6 +1,7 @@
 Release notes
 --
 
+- store *all* muons instead of just global muons
 - fix critical bug in gen jet info (px was stored instead of pT)
 - add JEC uncertainties
 - change py to store *all* jets in ntuple

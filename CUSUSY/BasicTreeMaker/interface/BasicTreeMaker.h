@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.11 2011/01/10 10:05:22 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.12 2011/01/21 10:47:30 joshmt Exp $
 //
 //
 
@@ -164,8 +164,8 @@ private:
   float bsy;
   float bsz;
 
+  std::map< std::string, std::vector<bool> > muonIsGlobalMuon;
   std::map< std::string, std::vector<bool> > muonIsGlobalMuonPromptTight;
-  //muon info for all *AllGlobalMuons*
   std::map< std::string, std::vector<float> > muonPt;
   std::map< std::string, std::vector<float> > muonEta;
   std::map< std::string, std::vector<float> > muonPhi;

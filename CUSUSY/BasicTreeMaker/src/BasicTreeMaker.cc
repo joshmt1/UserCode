@@ -28,7 +28,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.22 2011/01/14 10:37:44 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.23 2011/01/21 10:47:30 joshmt Exp $
 //
 //
 
@@ -347,8 +347,9 @@ BasicTreeMaker::findTopDecayMode( const reco::Candidate & cand) {
 		  if (taudau == 11) found_tau_elec=true;
 		  else if (taudau == 13) found_tau_muon=true;
 		  else if (taudau ==213 || taudau==111 || taudau==113 ||taudau==211||taudau==130
-			   || taudau==223 ||taudau==321 ||taudau ==323 ||taudau ==310||taudau==221) found_tau_had=true;
+			   || taudau==223 ||taudau==321 ||taudau ==323 ||taudau ==310||taudau==221 ||taudau==20213) found_tau_had=true;
 		  else if (taudau == 14 || taudau==16 || taudau==12) { } //do nothing for neutrinos
+		  else if (taudau == 22 || taudau==24 ) { } //do nothing for photons (and W?)
 		  else {
 		    std::cout<<"WARNING -- Unknown tau daughter found = "<<taudau<<std::endl; //debug info
 		  }
@@ -473,12 +474,13 @@ BasicTreeMaker::fillTauInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
 void
 BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int il) {
 
-  const bool debug=false;
+  const bool eleDebug=false;
+  const bool muonDebug=false;
 
   std::string muTag=muonAlgorithmNames_[il];
   std::string eTag=eleAlgorithmNames_[il];
   
-  if (debug)  std::cout<<muTag<<"\t"<<eTag <<std::endl;
+  if (muonDebug)  std::cout<<muTag<<"\t"<<eTag <<std::endl;
   
   //to get the cut flow in the right (arbitrary) order, need to do muons first
   edm::Handle<edm::View<pat::Muon> > muonHandle;
@@ -486,21 +488,22 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
   const edm::View<pat::Muon> & muons = *muonHandle;
   for (edm::View<pat::Muon>::const_iterator imuon = muons.begin(); imuon!=muons.end(); ++imuon) {
     
-    if (debug)     std::cout<<"--mu id-- "<<muTag <<std::endl;
+    if (muonDebug)     std::cout<<"--mu id-- "<<muTag <<std::endl;
     
-    //all hell breaks loose if we don't require the muons to be global...
-    //i'm sure this could be fixed but i don't care
-    if ( !imuon->muonID("AllGlobalMuons") ) continue;
-    if (debug)     std::cout<<"found Global Muon" <<std::endl;
+    //now storing ALL muons
+
+    const  bool isGlobal = imuon->muonID("AllGlobalMuons");
+    muonIsGlobalMuon[muTag].push_back(isGlobal);
 
     muonIsGlobalMuonPromptTight[muTag].push_back(imuon->muonID("GlobalMuonPromptTight"));
-    if (debug)     std::cout<<"done with muon id" <<std::endl;    
+    if (muonDebug)     std::cout<<"done with muon id" <<std::endl;    
 
     //record pT and eta of all that pass 
     muonPt[muTag].push_back( imuon->pt() );
     muonEta[muTag].push_back( imuon->eta());
     muonPhi[muTag].push_back( imuon->phi());
-    if (debug) {
+
+    if (muonDebug) {
       std::cout<<"muon pT: "<<imuon->pt()<<" "<<imuon->innerTrack()->pt()<<std::endl;
       std::cout<<"muon isolation pairs: "<< //these are confirmed match in 384 running over a data PATtuple
 	imuon->ecalIso()<<" "<<imuon->isolationR03().emEt<<"\t"<<
@@ -511,43 +514,56 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
     muonEcalIso[muTag].push_back( imuon->ecalIso() );
     muonHcalIso[muTag].push_back( imuon->hcalIso() );
 
-    if (debug)     std::cout<<"--mu combined-- "<<muTag <<std::endl;
-    if (!imuon->combinedMuon().isNull()) {
-      muonChi2[muTag].push_back(imuon->combinedMuon()->chi2());
-      muonNdof[muTag].push_back(imuon->combinedMuon()->ndof());
+    //do this stuff only for global muons
+    if (isGlobal) {
+      if (muonDebug)     std::cout<<"--mu combined-- "<<muTag <<std::endl;
+      if (!imuon->combinedMuon().isNull()) {
+	muonChi2[muTag].push_back(imuon->combinedMuon()->chi2());
+	muonNdof[muTag].push_back(imuon->combinedMuon()->ndof());
+      }
+      else {
+	muonChi2[muTag].push_back(0);
+	muonNdof[muTag].push_back(0);
+      }
+      
+      if (muonDebug)     std::cout<<"--mu track-- "<<muTag <<std::endl;
+      muonTrackd0[muTag].push_back(imuon->track()->d0() );
+      muonTrackPhi[muTag].push_back(imuon->track()->phi() );
+      
+      muonNhits[muTag].push_back(imuon->numberOfValidHits());
+      
+      if (muonDebug)     std::cout<<"--mu veto-- "<<muTag <<std::endl;
+      //   std::cout<<imuon->hcalIsoDeposit()<<"\t"<<imuon->ecalIsoDeposit()<<std::endl;
+      //      muonHcalVeto[muTag].push_back(imuon->hcalIsoDeposit()->candEnergy());
+      //      muonEcalVeto[muTag].push_back(imuon->ecalIsoDeposit()->candEnergy());
+      if (imuon->isIsolationValid() ) {
+	muonEcalVeto[muTag].push_back(imuon->isolationR03().emVetoEt);
+	muonHcalVeto[muTag].push_back(imuon->isolationR03().hadVetoEt);
+      }
+      else {
+	muonEcalVeto[muTag].push_back(0);
+	muonHcalVeto[muTag].push_back(0);
+      }
+
     }
-    else {
+    else { //non-global
       muonChi2[muTag].push_back(0);
       muonNdof[muTag].push_back(0);
-    }
-
-    if (debug)     std::cout<<"--mu track-- "<<muTag <<std::endl;
-    muonTrackd0[muTag].push_back(imuon->track()->d0() );
-    muonTrackPhi[muTag].push_back(imuon->track()->phi() );
-
-    muonNhits[muTag].push_back(imuon->numberOfValidHits());
-    
-    if (debug)     std::cout<<"--mu veto-- "<<muTag <<std::endl;
-    //   std::cout<<imuon->hcalIsoDeposit()<<"\t"<<imuon->ecalIsoDeposit()<<std::endl;
-    //      muonHcalVeto[muTag].push_back(imuon->hcalIsoDeposit()->candEnergy());
-    //      muonEcalVeto[muTag].push_back(imuon->ecalIsoDeposit()->candEnergy());
-    if (imuon->isIsolationValid() ) {
-      muonEcalVeto[muTag].push_back(imuon->isolationR03().emVetoEt);
-      muonHcalVeto[muTag].push_back(imuon->isolationR03().hadVetoEt);
-    }
-    else {
+      muonTrackd0[muTag].push_back(-99 );
+      muonTrackPhi[muTag].push_back(-99 );
+      muonNhits[muTag].push_back(-99);
       muonEcalVeto[muTag].push_back(0);
       muonHcalVeto[muTag].push_back(0);
     }
 
     // Muon veto
-    bool passMuon = muonId_(*imuon,iEvent); //this includes isolation cut (and other things)
+    bool passMuon = isGlobal ? muonId_(*imuon,iEvent) : false; //this includes isolation cut (and other things)
     muonPassID[muTag].push_back(passMuon);
-
+    
     //store vtx z
-    //std::cout<<"[mu vtx z] = "<<imuon->vertex().z()<<std::endl;
+    if (muonDebug) std::cout<<"[mu vtx z] = "<<imuon->vertex().z()<<std::endl;
     muonVtx_z[muTag].push_back(  imuon->vertex().z());
-
+      
     if ( pv_z.size()>0 &&  (fabs( imuon->vertex().z() - pv_z.at(0)) >= 1)) passMuon=false; //new cut from Don
     if (!passMuon) continue;
 
@@ -558,7 +574,7 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
   // it is really stupid that I am using a different style of logic for muons and electrons
   //But I can't decide which I like better
 
-  if (debug)   std::cout<<"--elec--"<<std::endl;
+  if (eleDebug)   std::cout<<"--elec--"<<std::endl;
 
   edm::Handle<edm::View<pat::Electron> > electronHandle;
   iEvent.getByLabel(eTag,electronHandle);
@@ -593,7 +609,7 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
     
   } //end of loop over electrons
   if (eTag.find("PF") == std::string::npos) cutResults.push_back( nElectrons[eTag] == 0 );
-  if (debug)   std::cout<<"--leptons done--"<<std::endl;
+  if (eleDebug)   std::cout<<"--leptons done--"<<std::endl;
 
   //  leptonInfoFilled_=true;
 }
@@ -638,7 +654,7 @@ BasicTreeMaker::passJetId(const pat::Jet & jet) {
 void
 BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int jetIndex)
 {
-  const bool jetDebug=true;
+  const bool jetDebug=false;
   if (jetDebug)  std::cout<<" == fillJetInfo "<<jetAlgorithmNames_[jetIndex]<<" =="<<std::endl; //debug
  
   //  if (jetInfoFilled_) return;
@@ -1092,8 +1108,8 @@ BasicTreeMaker::resetTreeVariables() {
 
 
   for (unsigned int il=0; il<eleAlgorithmNames_.size(); il++) {
+    muonIsGlobalMuon[muonAlgorithmNames_[il]].clear();
     muonIsGlobalMuonPromptTight[muonAlgorithmNames_[il]].clear();
-    //    muonIsAllGlobalMuons[muonAlgorithmNames_[il]].clear();
     nMuons[muonAlgorithmNames_[il]]=0;
     muonPt[muonAlgorithmNames_[il]].clear();
     muonEta[muonAlgorithmNames_[il]].clear();
@@ -1464,8 +1480,8 @@ BasicTreeMaker::beginJob()
       itail="/I";
     }
 
+    tree_->Branch( (string("muonIsGlobalMuon")+tail).c_str(),&muonIsGlobalMuon[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonIsGlobalMuonPromptTight")+tail).c_str(),&muonIsGlobalMuonPromptTight[muonAlgorithmNames_[il]]);
-    //    tree_->Branch( (string("muonIsAllGlobalMuons")+tail).c_str(),&muonIsAllGlobalMuons[muonAlgorithmNames_[il]]);
 
     tree_->Branch( (string("muonPt")+tail).c_str(),&muonPt[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonEta")+tail).c_str(),&muonEta[muonAlgorithmNames_[il]]);
