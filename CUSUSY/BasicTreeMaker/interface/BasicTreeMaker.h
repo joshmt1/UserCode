@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.13 2011/01/21 14:07:15 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.14 2011/01/21 16:38:55 winstrom Exp $
 //
 //
 
@@ -39,7 +39,6 @@ private:
   void resetTreeVariables() ;
 
   void findHLTProcessName(const edm::Event & iEvent);
-  void fillShortNames();
 
   void fillPVInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int jetIndex);

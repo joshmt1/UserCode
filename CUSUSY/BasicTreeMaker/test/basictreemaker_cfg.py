@@ -7,16 +7,12 @@ process = cms.Process("BasicTreeMaker")
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(5000) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 process.source = cms.Source("PoolSource",
     # replace 'myfile.root' with the source file you want to use
     fileNames = cms.untracked.vstring(
-     'file:/cu1/joshmt/AOD/387/TTJets_TuneD6T_Fall10_387_PAT_9_1_rY1.root'
 #   'file:/cu1/joshmt/AOD/Fall10-QCD_TuneD6T_HT-1000_7TeV-madgraph-C473857E-99DA-DF11-8531-00163691DC86.SUSYPAT.root'
-=======
-#   'file:/cu1/joshmt/AOD/Fall10-QCD_TuneD6T_HT-1000_7TeV-madgraph-C473857E-99DA-DF11-8531-00163691DC86.SUSYPAT.root'
->>>>>>> 1.22
 #   'INPUT'
  #   'file:/afs/cern.ch/user/s/ssekmen/public/Sezen_PAT.root'
     'file:/cu1/joshmt/AOD/387/TTJets_TuneD6T_Fall10_387_PAT_9_1_rY1.root'
@@ -74,7 +70,8 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                         pvTag = cms.InputTag(pvString),
                                         jetAlgorithms = cms.vstring( "cleanPatJetsAK5Calo","cleanPatJetsAK5JPT","selectedPatJetsPF" ), #real collection names
                                         jetNames      = cms.vstring( "calo","JPT","PF" ), #for TTree use
-                                        metAlgorithms = cms.vstring( "patMETsAK5Calo", "patMETsTC","patMETsPF"),
+                                        metAlgorithms = cms.vstring( "patMETsAK5Calo", "patMETsTC","patMETsPF","patMETsTypeIPF"),
+                                        metNames = cms.vstring( "calo", "tc","pf","pf1"),
 
 #careful...the lepton code is pretty sensitive to the input here
                                         eleAlgorithms = cms.vstring("cleanPatElectrons","selectedPatElectronsPF"),

@@ -28,7 +28,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.24 2011/01/21 14:07:15 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.25 2011/01/21 16:38:55 winstrom Exp $
 //
 //
 
@@ -119,6 +119,7 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   jetAlgorithmTags_(iConfig.getParameter<std::vector<std::string> >("jetNames")),
   
   metAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("metAlgorithms")),
+  metAlgorithmTags_(iConfig.getParameter<std::vector<std::string> >("metNames")),
 
   eleAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("eleAlgorithms")),
   muonAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("muonAlgorithms")),
@@ -158,10 +159,10 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
 
   assert(  jetAlgorithmNames_.size() == jetAlgorithmTags_.size());
 
+  assert(  metAlgorithmNames_.size() == metAlgorithmTags_.size());
+
   //the fill lepton info method is not very flexible!
   assert(  eleAlgorithmNames_.size() == muonAlgorithmNames_.size() );
-
-  fillShortNames(); //must be called only once per job
 
   edm::Service<TFileService> fs;
   Heventcount_ = fs->make<TH1D>( "Heventcount"  , "events processed", 1,  0, 1 );
@@ -181,36 +182,6 @@ BasicTreeMaker::~BasicTreeMaker()
 //
 // member functions
 //
-void
-BasicTreeMaker::fillShortNames() {
-
-  /*
-this code is quite 'fragile'
-It depends on the collection name for PF MET always having PF in it and similarly for TC MET
-It also depends on CaloMET being the only type that does *not* have PF or TC in the name
-  */
-
-  assert( metAlgorithmTags_.size() == 0); //run this only once
-
-  for (unsigned int ii = 0; ii < metAlgorithmNames_.size(); ii++) {
-  
-    if ( metAlgorithmNames_[ii].find("PF") != std::string::npos) {
-      metAlgorithmTags_.push_back("pf");
-      std::cout<<"Mapping "<<metAlgorithmNames_[ii]<<" to PF MET"<<std::endl;
-    }
-    else if ( metAlgorithmNames_[ii].find("TC") != std::string::npos) {
-      metAlgorithmTags_.push_back("tc");
-      std::cout<<"Mapping "<<metAlgorithmNames_[ii]<<" to TC MET"<<std::endl;
-    }
-    else {
-      metAlgorithmTags_.push_back("calo");
-      std::cout<<"Mapping "<<metAlgorithmNames_[ii]<<" to CaloMET"<<std::endl;
-    }
-  }
-
-  assert( metAlgorithmTags_.size() <= 3);
-
-}
 
 void BasicTreeMaker::fillPVInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
@@ -1037,6 +1008,10 @@ BasicTreeMaker::fillMetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     MET[ metAlgorithmTags_[imettype] ] = metHandle->front().et() ;
     METphi[ metAlgorithmTags_[imettype] ] = metHandle->front().phi() ;
     METsig [ metAlgorithmTags_[imettype]]= metHandle->front().mEtSig();
+
+    if (true) {
+      std::cout<<metAlgorithmNames_[imettype] << " "<<MET[ metAlgorithmTags_[imettype] ]<<std::endl;
+    }
 
     if (isMC_ && metHandle->front().genMET()) {
       GenMET[ metAlgorithmTags_[imettype] ] = metHandle->front().genMET()->et() ;

@@ -1,5 +1,7 @@
 Release notes
 --
+
+- change MET storage implementation slightly (to be less hard-coded and more like jets)
 - Implement two muon filters from classic RA2
   	    -hopefully eliminates fake MET
 	    -called passesBadPFMuonFilter and passesInconsistentMuonPFCandidateFilter
