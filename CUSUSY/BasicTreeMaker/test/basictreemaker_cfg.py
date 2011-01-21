@@ -7,13 +7,16 @@ process = cms.Process("BasicTreeMaker")
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(5) )
 
 process.source = cms.Source("PoolSource",
     # replace 'myfile.root' with the source file you want to use
     fileNames = cms.untracked.vstring(
-#   'file:/cu1/joshmt/AOD/Fall10-QCD_TuneD6T_HT-1000_7TeV-madgraph-C473857E-99DA-DF11-8531-00163691DC86.SUSYPAT.root'
-   'INPUT'
+   'file:/cu1/joshmt/AOD/Fall10-QCD_TuneD6T_HT-1000_7TeV-madgraph-C473857E-99DA-DF11-8531-00163691DC86.SUSYPAT.root'
+#   'INPUT'
+ #   'file:/afs/cern.ch/user/s/ssekmen/public/Sezen_PAT.root'
+#    'file:/cu1/joshmt/AOD/387/TTJets_TuneD6T_Fall10_387_PAT_9_1_rY1.root'
+#   'file:/cu1/joshmt/AOD/387/PAT_387_run2010B_multijet_nov4rereco_9_1_9wD.root'
 #    'file:/cu1/joshmt/DonPAT/data/PAT_38X_jetmettau_sep17rereco_sep11_9_1_wJJ.root'
 #    'file:/cu1/joshmt/DonPAT/MoreMSSM_PAT_10_1_osg.root'
 #    'file:/cu1/joshmt/DonPAT/WJets-SUSYPAT-FEEFD640-9277-DF11-948C-001731EB1E20.root'
@@ -25,10 +28,17 @@ process.source = cms.Source("PoolSource",
 )
 ############################# START ntuple specifics ####################################
 
+#in MC the global tag is needed for JEC uncertainies
+#in data it is needed for JEC uncertainties and
+
 if isMC:
     print "is MC!"
+    process.load('Configuration.StandardSequences.Services_cff')
+    process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+    process.GlobalTag.globaltag = 'START38_V14::All' #this Global Tag is for the latest 387
 else:
     print "is Data!"
+    process.load('Configuration.StandardSequences.Services_cff')
     process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
     process.GlobalTag.globaltag = 'GR_R_38X_V15::All' #this Global Tag is for the latest 387
 
@@ -137,9 +147,9 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                         minJets = cms.int32( 3 ),
                                         
                                         jetPtMin = cms.double( 50.0 ),
-                                        jetEtaMax = cms.double( 2.5 ),  #RA2 Reference Selection
-                                        loosejetPtMin = cms.double( 30.0 ),
-                                        loosejetEtaMax = cms.double( 5.0 ),
+                                        jetEtaMax = cms.double( 2.4 ),
+                                        loosejetPtMin = cms.double( 0.0 ), #no cut
+                                        loosejetEtaMax = cms.double( 10.0 ), #no cut
                                         muPtMin = cms.double( 10.0 ),
                                         muEtaMax = cms.double( 2.4 ),
                                         eleEtMin = cms.double( 15.0 ),

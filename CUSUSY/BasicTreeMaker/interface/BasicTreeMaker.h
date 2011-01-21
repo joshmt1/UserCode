@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.10 2010/11/10 16:33:56 winstrom Exp $
+// $Id: BasicTreeMaker.h,v 1.11 2011/01/10 10:05:22 joshmt Exp $
 //
 //
 
@@ -224,6 +224,7 @@ string is the jetAlgorithmTag
   //loose jet info (no longer appying any jet id here!)
   std::map< std::string,  std::vector<int> > looseJetIndex; //map from loose jet to very loose jet list
   std::map< std::string,  std::vector<float> > loosejetPt;
+  std::map< std::string,  std::vector<float> > loosejetPtUncorr; //uncorrected
   std::map< std::string,  std::vector<float> > loosejetEt;
   std::map< std::string,  std::vector<float> > loosejetEta;
   std::map< std::string,  std::vector<float> > loosejetPhi;
@@ -238,6 +239,8 @@ string is the jetAlgorithmTag
   std::map< std::string,  std::vector<float> > loosejetSVWeightedLifetime;
   std::map< std::string,  std::vector<float> > loosejetSVUnWeightedCosTheta;
   std::map< std::string,  std::vector<float> > loosejetSVWeightedCosTheta;
+  std::map< std::string,  std::vector<float> > loosejetJECUncPlus;
+  std::map< std::string,  std::vector<float> > loosejetJECUncMinus;
 
   std::map< std::string,  std::vector<int> > loosejetFlavor;
   std::map< std::string,  std::vector<int> > loosejetGenPt;
@@ -247,15 +250,6 @@ string is the jetAlgorithmTag
   std::map< std::string,  std::vector<float> > loosejetInvisibleEnergy;
   std::map< std::string,  std::map < std::string, std::vector<float> > > loosejetBTagDisc;
 
-  std::map< std::string,  std::vector<float> > badjetPt;
-  std::map< std::string,  std::vector<float> > badjetEta;
-  std::map< std::string,  std::vector<float> > badjetPhi;
-
-  //here we store just caloJets (uncorrected)
-  //realized that I don't want even the 'loose' offline cuts for these jets
-  std::vector<float> veryloosejetPtUncorr; //uncorrected jet info
-  std::vector<float> veryloosejetEtaUncorr;
-  std::vector<float> veryloosejetPhiUncorr;
 
   int nbSSVM;
 

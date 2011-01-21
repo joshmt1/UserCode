@@ -28,7 +28,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.21 2011/01/10 10:05:22 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.22 2011/01/14 10:37:44 joshmt Exp $
 //
 //
 
@@ -70,6 +70,11 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 #include "RecoBTag/SecondaryVertex/interface/TrackKinematics.h"
 
 #include "CondFormats/PhysicsToolsObjects/interface/BinningPointByMap.h"
+
+//JEC uncertainty
+#include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
+#include "JetMETCorrections/Objects/interface/JetCorrectionsRecord.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
 
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
@@ -633,10 +638,12 @@ BasicTreeMaker::passJetId(const pat::Jet & jet) {
 void
 BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int jetIndex)
 {
-  const bool debug=false;
-  if (debug)  std::cout<<" == fillJetInfo "<<jetAlgorithmNames_[jetIndex]<<" =="<<std::endl; //debug
+  const bool jetDebug=true;
+  if (jetDebug)  std::cout<<" == fillJetInfo "<<jetAlgorithmNames_[jetIndex]<<" =="<<std::endl; //debug
  
   //  if (jetInfoFilled_) return;
+
+  JetCorrectionUncertainty *jecUncPF =0; //to be used inside the jet loop
 
   edm::Handle<edm::View<pat::Jet> > jetHandle;
   iEvent.getByLabel(jetAlgorithmNames_[jetIndex],jetHandle);
@@ -664,15 +671,21 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     //now pull out that jet
     const pat::Jet & jet = jets[jj];
     
-    //fill the 'very loose' vectors with uncorrected jet info
-//     if ( jet.isCaloJet() ) {
-//       pat::Jet uncorrectedJet = jet.correctedJet("Uncorrected"); //get the uncorrected jet
-//       if (uncorrectedJet.pt() >= 10) { //can apply tighter cuts offline
-// 	veryloosejetPtUncorr.push_back(uncorrectedJet.pt());
-// 	veryloosejetEtaUncorr.push_back(uncorrectedJet.eta());
-// 	veryloosejetPhiUncorr.push_back(uncorrectedJet.phi());
-//       }
-//     }
+    /*
+      - canned code for getting the JEC uncertainties from the DB
+      - note that it is hard-coded for PF -- this is kludge that I should eventually fix
+      - it is unclear to me if this can be done less often than once per event. so stick to this for now
+    */
+    if ( jecUncPF == 0 && jet.isPFJet() ) { // do this only once per event and only for PF jets
+      // handle the jet corrector parameters collection
+      edm::ESHandle<JetCorrectorParametersCollection> JetCorParColl;
+      // get the jet corrector parameters collection from the global tag
+      iSetup.get<JetCorrectionsRecord>().get("AK5PF",JetCorParColl);
+      // get the uncertainty parameters from the collection
+      JetCorrectorParameters const & JetCorPar = (*JetCorParColl)["Uncertainty"];
+      // instantiate the jec uncertainty object
+      jecUncPF = new JetCorrectionUncertainty(JetCorPar);
+    }
 
     //std::cout<<"about to get jet id"<<std::endl;
     
@@ -695,16 +708,25 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     bool passLooseCuts = (jet.pt() > loosejetPtMin_) && (fabs(jet.eta())<loosejetEtaMax_);
     bool passTightCuts = (jet.pt() > jetPtMin_) && (fabs(jet.eta())<jetEtaMax_) && passJetID;
 
-    if (debug && jet.isPFJet()) {
-      std::cout<<"jet "<<ii
+    if (jetDebug && jet.isPFJet()) {
+      std::cout<<"jet "<<ii<< " JEC="<<jet.currentJECLevel()
 	       <<" "<<jet.pt()<<" "<<jet.phi()<<" "<<jet.eta()<<" "<<passJetID<<std::endl;
       pat::Jet ujet = jet.correctedJet("Uncorrected");
-      std::cout<< (ujet.neutralHadronEnergy() + ujet.HFHadronEnergy() ) / ujet.energy() 
+      //       std::cout<<"jet "<<ii<< " JEC="<<ujet.currentJECLevel()
+      // 	       <<" "<<ujet.pt()<<" "<<ujet.phi()<<" "<<ujet.eta()<<std::endl;
+      std::cout<<"Uncorrected: "<< (ujet.neutralHadronEnergy() + ujet.HFHadronEnergy() ) / ujet.energy() 
 	       << " "<<ujet.neutralEmEnergyFraction() 
 	       << " "<<ujet.numberOfDaughters() 
 	       << " "<<ujet.chargedHadronEnergyFraction()
 	       << " "<<ujet.chargedMultiplicity() 
 	       << " "<<ujet.chargedEmEnergyFraction()<<std::endl;
+      std::cout<<"  corrected: "<< (jet.neutralHadronEnergy() + jet.HFHadronEnergy() ) / jet.energy() 
+	       << " "<<jet.neutralEmEnergyFraction() 
+	       << " "<<jet.numberOfDaughters() 
+	       << " "<<jet.chargedHadronEnergyFraction()
+	       << " "<<jet.chargedMultiplicity() 
+	       << " "<<jet.chargedEmEnergyFraction()<<std::endl;
+
     }
     
     //let's enforce that the tight cuts are always a subset of the loose cuts
@@ -719,24 +741,34 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
        std::cout<<"using jeclevel = "<<jet.currentJECLevel()<<std::endl;
     */
 
-    //failed the jet id for some reason but still at moderate pt and eta
-    if (!passJetID && jet.pt() > 20 && (fabs(jet.eta())<loosejetEtaMax_)) { 
-      badjetPt[jetAlgorithmTags_[jetIndex]].push_back( jet.pt() );
-      badjetEta[jetAlgorithmTags_[jetIndex]].push_back(jet.eta());
-      badjetPhi[jetAlgorithmTags_[jetIndex]].push_back(jet.phi());
-    }
-
     if (passLooseCuts) {
-      looseJetIndex[jetAlgorithmTags_[jetIndex]].push_back( veryloosejetPtUncorr.size() - 1);
+      //      looseJetIndex[jetAlgorithmTags_[jetIndex]].push_back( veryloosejetPtUncorr.size() - 1);
 
       MHTx -= jet.px();
       MHTy -= jet.py();
       loosejetPt[jetAlgorithmTags_[jetIndex]].push_back( jet.pt() );
+      loosejetPtUncorr[jetAlgorithmTags_[jetIndex]].push_back( jet.correctedJet("Uncorrected").pt() );
       loosejetEt[jetAlgorithmTags_[jetIndex]].push_back( jet.et() );
       loosejetEta[jetAlgorithmTags_[jetIndex]].push_back(jet.eta());
       loosejetPhi[jetAlgorithmTags_[jetIndex]].push_back(jet.phi());
       loosejetFlavor[jetAlgorithmTags_[jetIndex]].push_back( jet.partonFlavour() );
 
+      //JEC uncertainties
+      //for now we are hard-coding to only store them for PF jets
+      if (jet.isPFJet()) {
+	jecUncPF->setJetEta(jet.eta());
+	jecUncPF->setJetPt(jet.pt()); //corrected pT
+	const 	float uncplus = jecUncPF->getUncertainty(true);
+	loosejetJECUncPlus[jetAlgorithmTags_[jetIndex]].push_back( uncplus );
+	//due to weird behavior of this JetUncertainty class, need to reset the eta and pt
+	jecUncPF->setJetEta(jet.eta());
+	jecUncPF->setJetPt(jet.pt()); //corrected pT
+	const 	float uncminus = jecUncPF->getUncertainty(false);
+	loosejetJECUncMinus[jetAlgorithmTags_[jetIndex]].push_back( uncminus );
+	if (jetDebug)	std::cout<<"JEC uncertainty = "<<uncplus<<" "<<uncminus<<std::endl;
+      }
+
+      //jet id
       loosejetPassLooseID[jetAlgorithmTags_[jetIndex]].push_back( passJetID);
       loosejetPassTightID[jetAlgorithmTags_[jetIndex]].push_back( passTightJetID);
       float hfrac=0;
@@ -748,7 +780,7 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
       loosejetEnergyFracHadronic[jetAlgorithmTags_[jetIndex]].push_back(hfrac );
 
       if ( jet.genJet() != 0 ) {
-	loosejetGenPt[jetAlgorithmTags_[jetIndex]].push_back( jet.genJet()->px() );
+	loosejetGenPt[jetAlgorithmTags_[jetIndex]].push_back( jet.genJet()->pt() );
 	loosejetGenPhi[jetAlgorithmTags_[jetIndex]].push_back( jet.genJet()->phi() );
 	loosejetGenEta[jetAlgorithmTags_[jetIndex]].push_back( jet.genJet()->eta() );
 
@@ -898,7 +930,9 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
   }
   //  jetInfoFilled_=true;
 
-  //  std::cout<<" == done with fillJetInfo "<<jetAlgorithmNames_[jetIndex]<<" =="<<std::endl; //debug
+  //this object is not always created, but it should be safe to delete a 0 pointer
+  delete  jecUncPF;
+
 }
 		     
 
@@ -1024,9 +1058,13 @@ BasicTreeMaker::resetTreeVariables() {
     //   jetPhi.clear();
     //   jetFlavor.clear();
     loosejetPt[*ij].clear();
+    loosejetPtUncorr[*ij].clear();
     loosejetEt[*ij].clear();
     loosejetEta[*ij].clear();
     loosejetPhi[*ij].clear();
+
+    loosejetJECUncPlus[*ij].clear();
+    loosejetJECUncMinus[*ij].clear();
 
     loosejetGenPt[*ij].clear();
     loosejetGenEta[*ij].clear();
@@ -1047,18 +1085,11 @@ BasicTreeMaker::resetTreeVariables() {
     loosejetSVWeightedCosTheta[*ij].clear();
     loosejetSVUnWeightedCosTheta[*ij].clear();
 
-    badjetPt[*ij].clear();
-    badjetEta[*ij].clear();
-    badjetPhi[*ij].clear();
-
     for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
       loosejetBTagDisc[*ij][btagAlgorithmNames_[ib]].clear();
     }
   }
 
-  veryloosejetPtUncorr.clear();
-  veryloosejetEtaUncorr.clear();
-  veryloosejetPhiUncorr.clear();
 
   for (unsigned int il=0; il<eleAlgorithmNames_.size(); il++) {
     muonIsGlobalMuonPromptTight[muonAlgorithmNames_[il]].clear();
@@ -1166,6 +1197,8 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   runNumber   = iEvent.run();
   eventNumber = iEvent.eventAuxiliary().event() ;
   lumiSection = iEvent.getLuminosityBlock().luminosityBlock();
+
+  //  std::cout<<"~~~~~ "<<runNumber<<" "<<lumiSection<<" "<<eventNumber<<std::endl; //debug!
 
   // todo -- should put this in its own method, and check out sal's code -- much fancier!
   //Get the beam spot
@@ -1311,12 +1344,16 @@ BasicTreeMaker::beginJob()
 
     //loose jet branches
     tree_->Branch( (string("loosejetPt")+tail).c_str(),&loosejetPt[*ij]);
+    tree_->Branch( (string("loosejetPtUncorr")+tail).c_str(),&loosejetPtUncorr[*ij]);
     tree_->Branch( (string("loosejetEt")+tail).c_str(),&loosejetEt[*ij]);
     tree_->Branch( (string("loosejetEta")+tail).c_str(),&loosejetEta[*ij]);
     tree_->Branch( (string("loosejetPhi")+tail).c_str(),&loosejetPhi[*ij]);
     tree_->Branch( (string("loosejetPassLooseID")+tail).c_str(),&loosejetPassLooseID[*ij]);
     tree_->Branch( (string("loosejetPassTightID")+tail).c_str(),&loosejetPassTightID[*ij]);
     tree_->Branch( (string("loosejetEnergyFracHadronic")+tail).c_str(),&loosejetEnergyFracHadronic[*ij]);
+
+    tree_->Branch( (string("loosejetJECUncPlus")+tail).c_str(),&loosejetJECUncPlus[*ij]);
+    tree_->Branch( (string("loosejetJECUncMinus")+tail).c_str(),&loosejetJECUncMinus[*ij]);
 
     tree_->Branch( (string("loosejetFlavor")+tail).c_str(),&loosejetFlavor[*ij]);
     
@@ -1345,15 +1382,7 @@ BasicTreeMaker::beginJob()
       tree_->Branch(bname.c_str(),&loosejetBTagDisc[*ij][btagAlgorithmNames_[ib]]);
     }
    
-    tree_->Branch( (string("badjetPt")+tail).c_str(),&badjetPt[*ij]);
-    tree_->Branch( (string("badjetEta")+tail).c_str(),&badjetEta[*ij]);
-    tree_->Branch( (string("badjetPhi")+tail).c_str(),&badjetPhi[*ij]);
-
   }
-
-  tree_->Branch("veryloosejetPtUncorr",&veryloosejetPtUncorr);
-  tree_->Branch("veryloosejetEtaUncorr",&veryloosejetEtaUncorr);
-  tree_->Branch("veryloosejetPhiUncorr",&veryloosejetPhiUncorr);
 
   tree_->Branch("nbSSVM",&nbSSVM,"nbSSVM/I");
   tree_->Branch("HT",&HT,"HT/F");

@@ -1,6 +1,10 @@
 Release notes
 --
 
+- fix critical bug in gen jet info (px was stored instead of pT)
+- add JEC uncertainties
+- change py to store *all* jets in ntuple
+
 V00-01-05 - add tau info
 
 V00-01-04 - update for compatibility with JEC changes in CMSSW 386. Not backwards compatible!
