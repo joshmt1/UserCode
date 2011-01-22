@@ -13,9 +13,9 @@ process.source = cms.Source("PoolSource",
     # replace 'myfile.root' with the source file you want to use
     fileNames = cms.untracked.vstring(
 #   'file:/cu1/joshmt/AOD/Fall10-QCD_TuneD6T_HT-1000_7TeV-madgraph-C473857E-99DA-DF11-8531-00163691DC86.SUSYPAT.root'
-#   'INPUT'
+   'INPUT'
  #   'file:/afs/cern.ch/user/s/ssekmen/public/Sezen_PAT.root'
-    'file:/cu1/joshmt/AOD/387/TTJets_TuneD6T_Fall10_387_PAT_9_1_rY1.root'
+#    'file:/cu1/joshmt/AOD/387/TTJets_TuneD6T_Fall10_387_PAT_9_1_rY1.root'
 #   'file:/cu1/joshmt/AOD/387/PAT_387_run2010B_multijet_nov4rereco_9_1_9wD.root'
 #    'file:/cu1/joshmt/DonPAT/data/PAT_38X_jetmettau_sep17rereco_sep11_9_1_wJJ.root'
 #    'file:/cu1/joshmt/DonPAT/MoreMSSM_PAT_10_1_osg.root'
@@ -163,8 +163,8 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                         metMin = cms.double( 150.0 )
 )
 
-#process.TFileService = cms.Service("TFileService", fileName = cms.string('/cu1/joshmt/AOD/BasicNtuple.root') )
-process.TFileService = cms.Service("TFileService", fileName = cms.string('/cu2/winstrom/temp/BasicNtuple.root') )
+process.TFileService = cms.Service("TFileService", fileName = cms.string('BasicNtuple.root') )
+#process.TFileService = cms.Service("TFileService", fileName = cms.string('/cu2/winstrom/temp/BasicNtuple.root') )
 
 if isMC:
     process.p = cms.Path(process.flavorHistorySeq

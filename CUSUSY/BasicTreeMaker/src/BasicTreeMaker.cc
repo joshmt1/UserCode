@@ -28,7 +28,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.25 2011/01/21 16:38:55 winstrom Exp $
+// $Id: BasicTreeMaker.cc,v 1.26 2011/01/21 17:40:56 joshmt Exp $
 //
 //
 
@@ -536,11 +536,11 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
 
     //Added by Luke -- Trying to get functions for the muons that are implemented by RA2 to get rid of fake MHT
 
-    std::cout << "creating muon filter info" << std::endl;
+    //    std::cout << "creating muon filter info" << std::endl;
     passesBadPFMuonFilter[muTag] = badPFMuonFilter(iEvent, pfCandSrc_,edm::InputTag(muTag)) ;
-    std::cout << "done with badPFMuonFilter" << std::endl;
+    //    std::cout << "done with badPFMuonFilter" << std::endl;
     passesInconsistentMuonPFCandidateFilter[muTag] = inconsistentMuonPFCandidateFilter(iEvent, edm::InputTag(muTag)) ;
-    std::cout << "done with inconsistentMuonPFCandidateFilter" << std::endl;
+    //    std::cout << "done with inconsistentMuonPFCandidateFilter" << std::endl;
 
     //Done with fake MHT coding
 
@@ -1009,9 +1009,7 @@ BasicTreeMaker::fillMetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     METphi[ metAlgorithmTags_[imettype] ] = metHandle->front().phi() ;
     METsig [ metAlgorithmTags_[imettype]]= metHandle->front().mEtSig();
 
-    if (true) {
-      std::cout<<metAlgorithmNames_[imettype] << " "<<MET[ metAlgorithmTags_[imettype] ]<<std::endl;
-    }
+    //      std::cout<<metAlgorithmNames_[imettype] << " "<<MET[ metAlgorithmTags_[imettype] ]<<std::endl;
 
     if (isMC_ && metHandle->front().genMET()) {
       GenMET[ metAlgorithmTags_[imettype] ] = metHandle->front().genMET()->et() ;
