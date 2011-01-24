@@ -16,7 +16,7 @@ these are not needed (assuming this macro is compiled) because of the include ab
 gSystem->Load("basicLoop_C.so");
 
 */
-const TString version = "V00-01-05/DATA/38X";
+const TString version = "V00-01-05/DATA/387";
 
 void run_ABCDLoop_data()
 {
