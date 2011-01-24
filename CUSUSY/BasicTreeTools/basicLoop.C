@@ -861,7 +861,7 @@ void basicLoop::Nminus1plots()
 	bool passMinDeltaPhi = minDeltaPhi_j_MET > 0.3;	//this could be passCut("cutDeltaPhi")
 	//but then the code wouldn't be invariant on changes of the def'n of cutDeltaPhi...it just depends on what we want
 	bool passMinDeltaPhiAll = minDeltaPhi_j_MET_All > 0.3;
-	bool passMinDeltaPhiAll30 = minDeltaPhi_j_MET_All30 > 0.3;
+	//	bool passMinDeltaPhiAll30 = minDeltaPhi_j_MET_All30 > 0.3; //not using this at the moment
 	double largestJetRecoError = getLargestJetPtRecoError();
 
 	//same question here: use passCut("cutMET") or just apply a hard-coded limit?
