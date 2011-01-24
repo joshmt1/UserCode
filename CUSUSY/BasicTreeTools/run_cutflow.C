@@ -9,7 +9,7 @@ use:
 root -b -l -q run_cutflow.C++
 */
 
-const TString version = "V00-01-05"; //05 for Fall10
+const TString version = "V00-02-00-temp";
 
 //const TString extrapath = "SUSYPATv8_363"; //pass an empty string unless you need something else
 const TString extrapath = "";
@@ -47,7 +47,7 @@ void run_cutflow()
 
     if (samplefiles.Contains("DATA")) continue; //skip data (use run_cutflow_data.C)
 
-    //if (!(samplefiles.Contains("TTbar") )) continue; //hack to skip some samples
+    if (!(samplefiles.Contains("TTbar") )) continue; //hack to skip some samples
     
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
@@ -66,11 +66,13 @@ void run_cutflow()
     looper.setLeptonType(basicLoop::kPFLeptons);
     looper.setDPType(basicLoop::kminDP);
 
+    looper.setJESType(basicLoop::kJESup); //special line for JES systematic
+
     looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
 
     //    looper.setMuonReq(1); //inverted muon veto
 
-    looper.cutflow(false); //true means write verbose event count files
+    looper.cutflow(true); //true means write verbose event count files
   }
 
 

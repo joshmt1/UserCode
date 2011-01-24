@@ -65,7 +65,7 @@ void basicLoop::cutflow(bool writeFiles)
   for (unsigned int i=0 ; i<cutTags_.size(); i++) {
     npass.push_back(0);
     if (writeFiles) {
-      TString textfilename="cutflow."; 
+      TString textfilename="/cu3/joshmt/cutflow.";  //FIXME hard-coded path
       textfilename+=getCutDescriptionString();
       textfilename+=".";    textfilename+=getSampleName(findInputName());
       textfilename+=".";
@@ -957,7 +957,7 @@ void basicLoop::Nminus1plots()
 	    if ( isGoodJet30(ib) && passSSVM(ib)) { //refind the b jets
 	      nbjetsfound++;
 	      if (nbjetsfound==1) { //if this is the *lead* b jet
-		bjetpt1=loosejetPt->at(ib);
+		bjetpt1=getLooseJetPt(ib);
 		bjetphi1=loosejetPhi->at(ib);
 		bjeteta1=loosejetEta->at(ib);
 		break; //only interested in the lead b jet at the moment
@@ -1327,7 +1327,7 @@ void basicLoop::Loop(unsigned int dataindex)
 	if ( isGoodJet30(ib) && passSSVM(ib)) { //refind the b jets
 	  nbjetsfound++;
 	  if (nbjetsfound==1) { //if this is the *lead* b jet
-	    bjetpt1=loosejetPt->at(ib);
+	    bjetpt1=getLooseJetPt(ib);
 	    bjetphi1=loosejetPhi->at(ib);
 	    bjeteta1=loosejetEta->at(ib);
 	  }
@@ -1452,16 +1452,15 @@ void basicLoop::screendump()
     specifyEvent(1, 186, 25463);
   */
 
-  //ttbar events
-  //  specifyEvent(1,5,2401391);
-  // specifyEvent(1,8,3659004);
+  //Fall10 ttbar events
+  specifyEvent(1,1,122488);
 
   //LM9 events
   //  specifyEvent(1,11,4313);
   //  specifyEvent(1,12,4816);
 
   //  specifyEvent( 1, 325, 131361);
-  specifyEvent( 1, 1, 45);
+  //  specifyEvent( 1, 1, 45);
 
   ULong64_t nfound=0;
 
@@ -1481,7 +1480,7 @@ void basicLoop::screendump()
 	  cout<<"--- record for event: ("<<jentry <<") run,ls,ev = "<<runNumber<<sp<<lumiSection<<sp<<eventNumber<<endl;
 	  //Show() doesn't cut it-- it just shows the pointer addresses!
 	  
-	  if (true) {
+	  if (false) {
 	    for (unsigned int i=0 ; i<cutTags_.size(); i++) {
 	      if (cutRequired(cutTags_[i])) {
 		TString passstr = passCut(cutTags_[i]) ? "pass" : "fail";
@@ -1490,15 +1489,27 @@ void basicLoop::screendump()
 	    }
 	  }
 	  
-	  if (true) {
+	  if (false) {
 	    cout<<" jet info (pT, Eta, Jet ID, isGood, SSVHE) n good jets = "<<nGoodJets()<<endl;
 	    for (unsigned int ijet=0; ijet<loosejetPt->size(); ijet++) {
 	      TString jetisgood = isGoodJet(ijet) ? "Good" : "notGood";
-	      cout<<"\tjet "<<ijet<<": "<<loosejetPt->at(ijet)<<sp<<loosejetEta->at(ijet)<<sp<<loosejetPassLooseID->at(ijet)<<sp<<jetisgood
+	      cout<<"\tjet "<<ijet<<": "<<getLooseJetPt(ijet) <<sp<<loosejetEta->at(ijet)<<sp<<loosejetPassLooseID->at(ijet)<<sp<<jetisgood
 		  <<sp<< loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags->at(ijet)<<endl;
 	    }
 	    cout<<"\tEvent HT = "<<getHT()<<endl;
 	  }
+
+	  if (true) {
+	    //	    cout<<" jet info (pT, Eta, Jet ID, isGood, SSVHE) n good jets = "<<nGoodJets()<<endl;
+	    for (unsigned int ijet=0; ijet<loosejetPt->size(); ijet++) {
+	      TString jetisgood = isGoodJet(ijet) ? "Good" : "notGood";
+	      cout<<"jet "<<ijet<<endl<<"pt = "<<loosejetPt->at(ijet) <<", eta = "<<loosejetEta->at(ijet)<<endl
+		  <<"variable jet unc = "<<loosejetJECUncPlus->at(ijet)<<endl
+		  <<"total JEC uncertainty factor = "<<1+sqrt( loosejetJECUncPlus->at(ijet) * loosejetJECUncPlus->at(ijet) +0.053 * 0.053)<<endl
+		  <<"factor * pT = "<< (1+sqrt( loosejetJECUncPlus->at(ijet) * loosejetJECUncPlus->at(ijet) +0.053 * 0.053) )* loosejetPt->at(ijet) <<" compare to: "<<getLooseJetPt(ijet)<<endl;
+	    }
+	  }
+
 	}
 	if (nfound == specifiedEvents_.size()) break; //save time at the end
       }
