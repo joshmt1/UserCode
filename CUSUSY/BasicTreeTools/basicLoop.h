@@ -17,7 +17,7 @@
 #include "MiscUtil.cxx"
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
-// ---- this version is compatible with ntuple tag: V00-01-04 ----
+// ---- this version is compatible with ntuple tag: V00-01-05 ----
 #include <iostream>
 #include <vector>
 #include <set>
@@ -37,11 +37,25 @@ can handle this cut properly. (see note below)
 notes on the schemes:
 RA2 -- the legacy scheme. still uses some info precomputed in the ntuple.
 Sync1 -- cuts for first sync exercise. Recomputes (almost?) every cut.
-Baseline0 -- *must* recompute every cut. "Baseline" analysis cuts as laid out by me on the joint Twiki.
+Baseline0 -- *must* recompute every cut (except the PV, which I take from the ntuple). "Baseline" analysis cuts as laid out by me on the joint Twiki.
 
 Other notes:
 a lot of the functions are still doing computations using the tight jet list stored in the ntuple.
 This is rather dangerous. In particular, the eta range of the ntuple tight jets does not agree 100% with the kBaseline0 tight jets.
+
+-- plans for next major rewrite: --
+I want to unify all functions such as getHT() so that they return the value determined by the main configuraton enums.
+Then allow the user to override the default enums with arguments to the function. For instance,
+getMET() will return the MET corresponding to theMETType_, but the user can always ask for:
+getMET( kMHT) in order to get the MHT value.
+
+This can ever be done with cut schemes, so that:
+isGoodJet(ijet), for example, will change behavior based on cut scheme, but can be overridden with:
+isGoodJet(ijet, aCutScheme, aJetType);
+
+aCutScheme determines which cuts are applied and with what values. aJetType determines what type of jets to use (PF, calo, etc)
+
+This will take some care to implement, so for now I leave it on the drawing board.
 
 */
 
@@ -50,7 +64,7 @@ const char *CutSchemeNames_[]={"RA2", "Sync1", "Baseline0"};
 const char *METTypeNames_[]={"MHT", "MET",  "tcMET", "pfMET"};
 const char *METRangeNames_[]={"med",  "high", "wide", "medhigh"}; //'no cut' is not given, because the cut can always be skipped!
 
-const char *jetTypeNames_[]={"calo","PF"}; //no JPT in ntuple for now
+const char *jetTypeNames_[]={"calo","PF", "JPT"};
 const char *leptonTypeNames_[]={"RegLep","PFLep"};
 
 const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1", "minDPinv", "minDPAll30"};
@@ -69,7 +83,7 @@ public :
   METType theMETType_;
   enum METRange {kMedium=0, kHigh, kWide, kMedhigh};
   METRange theMETRange_;
-  enum jetType {kCalo=0, kPF};
+  enum jetType {kCalo=0, kPF, kJPT};
   jetType theJetType_;
   enum leptonType {kNormal=0, kPFLeptons};
   leptonType theLeptonType_;
@@ -677,6 +691,15 @@ public :
 
    bool passSSVM(int i);
 
+   //note that !(bad jet) != good jet
+   //a bad jet is a high pT jet with too wide eta or failing jet ID
+   //a good jet is high pT that has good eta and passes jet ID
+   //many soft jets are neither good jets nor bad jets
+   bool isBadJet(unsigned int ijet) ; //index on loose jet list
+   unsigned nBadJets();
+
+   bool passBadJetVeto(); //n bad jets == 0 or not
+
    bool isGoodJet_Sync1(unsigned int ijet);
    bool isGoodJet(unsigned int ijet); //index here is on the loose jet list
    bool isGoodJet30(unsigned int ijet); //index here is on the loose jet list
@@ -764,7 +787,7 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
    if (infotree!=0) {
      std::set<TString> triggersForCut;
      triggersForCut.insert("HLT_HT100U");
-     //     triggersForCut.insert("HLT_HT120U");
+     //    triggersForCut.insert("HLT_HT120U");
      triggersForCut.insert("HLT_HT140U");
      //     triggersForCut.insert("HLT_HT150U");
      triggersForCut.insert("HLT_HT150U_v3");
@@ -2304,6 +2327,10 @@ this function assumes that bindex is of a b jet. it doesn't verify it
 }
 
 double basicLoop::getOverallMinDeltaR_bj() {
+  /*
+this code was written for a study that proved to be not-so-useful
+still uses the 'tight' jets stored by the ntuple maker
+  */
 
   double minDeltaR_bj=999;
   //note that all tight jet vectors should have the same size
@@ -2400,6 +2427,8 @@ float basicLoop::getHT_Sync1() {
   return ht;
 }
 
+//doJetID_ is a major kludge introduced in order to disable jetid for some tests
+//in reality there should be a jetID enum (that also goes into the filename)
 const bool doJetID_=true; //this should be *true* unless you're doing something special!
 bool basicLoop::isGoodJet(unsigned int ijet) {
 
@@ -2418,6 +2447,18 @@ bool basicLoop::isGoodJet30(unsigned int ijet) {
 
   return true;
 }
+
+bool basicLoop::isBadJet(unsigned int ijet) {
+  //reverse the isGoodJet() cuts, except pT
+
+  if ( loosejetPt->at(ijet) <50) return false;
+  if ( fabs(loosejetEta->at(ijet)) > 5 || fabs(loosejetEta->at(ijet)) < 2.4) return false;
+  if ( loosejetPassLooseID->at(ijet) ) return false;
+
+  return true;
+}
+
+
 
 float basicLoop::getJetInvisibleEnergyHT() {
   //scalar sum of the MC truth jet invisible energy
@@ -2555,6 +2596,18 @@ unsigned int basicLoop::nGoodJets() {
   return njets;
 }
 
+unsigned int basicLoop::nBadJets() {
+  
+  unsigned int njets=0;
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+    if (isBadJet(i) )   njets++;
+  }
+  return njets;
+}
+
+bool basicLoop::passBadJetVeto() {
+  return (nBadJets() == 0);
+}
 
 int basicLoop::getTopDecayCategory() {
   /*
