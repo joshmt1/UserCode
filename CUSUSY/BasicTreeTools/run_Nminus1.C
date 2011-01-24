@@ -45,7 +45,7 @@ void run_Nminus1()
 
     if (samplefiles.Contains("DATA")) continue; //skip data
 
-    //if (!(samplefiles.Contains("LM13") )) continue; //hack to skip some samples
+    //if (!(samplefiles.Contains("QCD") )) continue; //hack to skip some samples
     
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
@@ -55,7 +55,8 @@ void run_Nminus1()
 
     looper.setCutScheme(basicLoop::kBaseline0);
     looper.setMETType(basicLoop::kpfMET);
-    looper.setMETRange(basicLoop::kMedhigh); //sideband region!
+    looper.setMETRange(basicLoop::kHigh); //signal region
+    //    looper.setMETRange(basicLoop::kMedhigh); //sideband region!
     looper.setJetType(basicLoop::kPF);
     looper.setLeptonType(basicLoop::kPFLeptons);
     looper.setDPType(basicLoop::kminDP);

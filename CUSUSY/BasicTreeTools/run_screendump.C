@@ -14,7 +14,7 @@ gSystem->Load("basicLoop_C.so");
 
 */
 
-const TString version = "V00-01-00";
+const TString version = "V00-01-05";
 
 void run_screendump()
 {
@@ -47,17 +47,22 @@ void run_screendump()
     cout<<"About to start on files: "<<samplefiles<<endl;
 
     if (samplefiles.Contains("DATA")) continue; //skip data (use run_cutflow_data.C)
-    if (!(samplefiles.Contains("LM0") )) continue; //hack to skip some samples
+    //    if (!(samplefiles.Contains("TTbar") )) continue; //hack to skip some samples
+    if (!(samplefiles.Contains("LM9") )) continue; //hack to skip some samples
     
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
     ch.Add(samplefiles);
     info.Add(samplefiles);
     basicLoop looper(&ch,&info);
-    looper.setCutScheme(basicLoop::kSync1);
+
+    looper.setCutScheme(basicLoop::kBaseline0);
     looper.setMETType(basicLoop::kpfMET);
+    looper.setMETRange(basicLoop::kHigh); //signal region
     looper.setJetType(basicLoop::kPF);
-    looper.setDPType(basicLoop::kDPSync1);
+    looper.setLeptonType(basicLoop::kPFLeptons);
+    looper.setDPType(basicLoop::kminDP);
+
 
     looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
     looper.screendump();

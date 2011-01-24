@@ -14,7 +14,7 @@ gSystem->Load("basicLoop_C.so");
 
 */
 
-const TString version = "V00-01-04/DATA/386";
+const TString version = "V00-01-05/DATA/387";
 
 void run_cutflow_data()
 {
@@ -48,7 +48,7 @@ void run_cutflow_data()
     
     samplefiles+="/*.root";
 
-    //if (!samplefiles.Contains("MultiJet")) continue;
+    if (!samplefiles.Contains("JetMETTau")) continue;
     cout<<"About to add files in: "<<samplefiles<<endl;
 
     ch.Add(samplefiles);
@@ -56,11 +56,12 @@ void run_cutflow_data()
   }
 
   basicLoop looper(&ch,&info);
-  
+  //looper.setSpecialCutDescription("onlyJetMETTauNoJetID");
+
   looper.setCutScheme(basicLoop::kBaseline0);
   looper.setMETType(basicLoop::kpfMET);
-  //  looper.setMETRange(basicLoop::kHigh); //signal region
-  looper.setMETRange(basicLoop::kMedium); //50 - 100 GeV region
+  looper.setMETRange(basicLoop::kHigh); //signal region
+  //  looper.setMETRange(basicLoop::kMedium); //50 - 100 GeV region
   looper.setJetType(basicLoop::kPF);
   looper.setLeptonType(basicLoop::kPFLeptons); //PF leptons
   //looper.setLeptonType(basicLoop::kNormal); //normal (not PF) leptons
