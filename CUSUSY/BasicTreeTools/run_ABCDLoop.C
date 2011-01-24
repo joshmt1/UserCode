@@ -71,7 +71,7 @@ void run_ABCDLoop()
     looper.setBCut(0);
     
     //careful what is set here!
-    looper.setIgnoredCut("cutMET"); //for kRA2
+    looper.setIgnoredCut("cutMET"); 
     looper.setIgnoredCut("cutDeltaPhi");
     
     looper.ABCDtree();  //go!
