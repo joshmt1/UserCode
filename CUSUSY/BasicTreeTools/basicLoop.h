@@ -21,6 +21,7 @@
 #include <iostream>
 #include <vector>
 #include <set>
+//#include <utility> //for std::pair
 
 /*
 some proto-documentation:
@@ -704,6 +705,8 @@ public :
    void specifyEvent(ULong64_t run, ULong64_t lumisection, ULong64_t event);
    bool eventIsSpecified();
    void setSpecialCutDescription(TString cutDesc) {specialCutDescription_=cutDesc;}
+
+   std::pair<float, float> getJESAdjustedMETxy();
 
    float getMET(); //return MET determined by theMETType_
    float getMETphi(); //return MET determined by theMETType_
@@ -2060,95 +2063,114 @@ with Uncorrect Pt>20 GeV, not just jets passing my 'loose' cuts
   */
 }
 
-float basicLoop::getMET() {
+std::pair<float,float> basicLoop::getJESAdjustedMETxy() {
+
+  if (theJESType_ == kJES0) {assert(0);}
+
   float myMET=-1;
+  float myMETphi=-99;
 
   //adjust for global MET type
   if (theMETType_== kMET) {
     myMET= caloMET;
+    myMETphi= caloMETphi;
   }
   else if (theMETType_ == ktcMET) {
     myMET= tcMET;
+    myMETphi= tcMETphi;
   }
   else if (theMETType_ == kpfMET) {
     myMET= pfMET;
+    myMETphi= pfMETphi;
   }
-  else if (theMETType_ == kMHT) {
-    myMET= getMHT();
-  }
-  else { 
-    assert(0);
+  //  else if (theMETType_ == kMHT) {  } //not implemented
+  else {  assert(0);  }
+
+  float myMETx = myMET * cos(myMETphi);
+  float myMETy = myMET * sin(myMETphi);
+  
+  //loop over all jets
+  for (unsigned int ijet=0; ijet<loosejetPt->size(); ++ijet) {
+    float jetUx = loosejetPtUncorr->at(ijet) * cos(loosejetPhi->at(ijet));
+    float jetUy = loosejetPtUncorr->at(ijet) * sin(loosejetPhi->at(ijet));
+
+    myMETx += jetUx;
+    myMETy += jetUy;
+    float jes_factor=1;
+    if (theJESType_ == kJESup) {
+      float unc =  sqrt( loosejetJECUncPlus->at(ijet) * loosejetJECUncPlus->at(ijet) +0.053 * 0.053);
+      jes_factor += unc;
+    }
+    else if (theJESType_ == kJESdown) {
+      float unc =  sqrt( loosejetJECUncMinus->at(ijet) * loosejetJECUncMinus->at(ijet) +0.053 * 0.053);
+      jes_factor -= unc;
+    }
+    else {assert(0);}
+    jetUx *= jes_factor;
+    jetUy *= jes_factor;
+
+    myMETx -= jetUx;
+    myMETy -= jetUy;
   }
 
-  if (theJESType_ != kJES0) { //need to adjust MET for JES uncertainty
-    //get the phi of met (before added in JES uncertainty)
-    float myMETphi=-99;
+  return make_pair(myMETx, myMETy);
+}
+
+float basicLoop::getMET() {
+  float myMET=-1;
+
+  if (theJESType_ == kJES0) {
+    //adjust for global MET type
     if (theMETType_== kMET) {
-      myMETphi= caloMETphi;
+      myMET= caloMET;
     }
     else if (theMETType_ == ktcMET) {
-      myMETphi= tcMETphi;
+      myMET= tcMET;
     }
     else if (theMETType_ == kpfMET) {
-      myMETphi= pfMETphi;
+      myMET= pfMET;
     }
-    //    else if (theMETType_ == kMHT) {} //not implemented
+    else if (theMETType_ == kMHT) {
+      myMET= getMHT();
+    }
     else { 
       assert(0);
     }
-
-    float myMETx = myMET * cos(myMETphi);
-    float myMETy = myMET * sin(myMETphi);
-
-    //loop over all jets
-    for (unsigned int ijet=0; ijet<loosejetPt->size(); ++ijet) {
-      float jetUx = loosejetPtUncorr->at(ijet) * cos(loosejetPhi->at(ijet));
-      float jetUy = loosejetPtUncorr->at(ijet) * sin(loosejetPhi->at(ijet));
-
-      myMETx += jetUx;
-      myMETy += jetUy;
-      float jes_factor=1;
-      if (theJESType_ == kJESup) {
-	float unc =  sqrt( loosejetJECUncPlus->at(ijet) * loosejetJECUncPlus->at(ijet) +0.053 * 0.053);
-	jes_factor += unc;
-      }
-      else if (theJESType_ == kJESdown) {
-	float unc =  sqrt( loosejetJECUncMinus->at(ijet) * loosejetJECUncMinus->at(ijet) +0.053 * 0.053);
-	jes_factor -= unc;
-      }
-      else {assert(0);}
-      jetUx *= jes_factor;
-      jetUy *= jes_factor;
-
-      myMETx -= jetUx;
-      myMETy -= jetUy;
-    }
-    myMET = sqrt( myMETx*myMETx + myMETy*myMETy);
+  }
+  else {
+    std::pair<float, float> metxy = getJESAdjustedMETxy();
+    myMET = sqrt( metxy.first*metxy.first + metxy.second*metxy.second);
   }
 
   return myMET;
 }
 
 float basicLoop::getMETphi() {
-  //for just one number i am happy to do this by value
 
-  //adjust for global MET type
-  if (theMETType_== kMET) {
-    return caloMETphi;
-  }
-  else if (theMETType_ == ktcMET) {
-    return tcMETphi;
-  }
-  else if (theMETType_ == kpfMET) {
-    return pfMETphi;
-  }
-  else if (theMETType_ == kMHT) {
-    return getMHTphi();
-  }
-  
-  assert(0);
+  float myMETphi=-99;
 
-  return 0;
+  if (theJESType_ == kJES0) { //no JES uncertainty factor
+    //adjust for global MET type
+    if (theMETType_== kMET) {
+      myMETphi = caloMETphi;
+    }
+    else if (theMETType_ == ktcMET) {
+      myMETphi = tcMETphi;
+    }
+    else if (theMETType_ == kpfMET) {
+      myMETphi = pfMETphi;
+    }
+    else if (theMETType_ == kMHT) {
+      myMETphi = getMHTphi();
+    }
+    else {  assert(0); }
+  }
+  else { //need to deal with JES uncertainty
+    std::pair<float, float> metxy = getJESAdjustedMETxy();
+    myMETphi = atan2(metxy.second, metxy.first);
+  }
+
+  return myMETphi;
 }
 
 float basicLoop::getGenMET() {

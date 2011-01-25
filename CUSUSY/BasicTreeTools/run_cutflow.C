@@ -9,7 +9,7 @@ use:
 root -b -l -q run_cutflow.C++
 */
 
-const TString version = "V00-02-00-temp";
+const TString version = "V00-02-00";
 
 //const TString extrapath = "SUSYPATv8_363"; //pass an empty string unless you need something else
 const TString extrapath = "";
@@ -72,7 +72,7 @@ void run_cutflow()
 
     //    looper.setMuonReq(1); //inverted muon veto
 
-    looper.cutflow(true); //true means write verbose event count files
+    looper.cutflow(false); //true means write verbose event count files
   }
 
 
