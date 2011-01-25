@@ -162,6 +162,7 @@ public :
   vector<int>     *tightJetIndex;
   vector<int>     *looseJetIndex;
   vector<float>   *loosejetPt;
+  vector<float>   *loosejetPtUncorr;
   vector<float>   *loosejetEt;
   vector<float>   *loosejetEta;
   vector<float>   *loosejetPhi;
@@ -1872,13 +1873,7 @@ bool basicLoop::passCut(const TString cutTag) {
   //it is now an anachronism that we treat MET and MHT as different cut flow steps
   //this block of code should now evaluate *the same* for both steps
   if (cutTag == "cutMET" || cutTag=="cutMHT") {
-    float mymet = 0;
-    if      ( theMETType_ == kMET )   mymet=caloMET;
-    else if ( theMETType_ == ktcMET ) mymet=tcMET;
-    else if ( theMETType_ == kpfMET ) mymet=pfMET;
-    //FIXME...loose jet def'n has changed, so MHT stored in ntuple is probably not ok
-    else if ( theMETType_ == kMHT)    mymet=MHT;
-    else {assert(0);}
+    float mymet = getMET();
 
     if (theMETRange_ == kMedium) return (mymet>=50 && mymet<100); //redefining kMedium as 50-100!
     //on the next line we are redoing the default that is stored in the ntuple. I think this is ok
@@ -1892,7 +1887,7 @@ bool basicLoop::passCut(const TString cutTag) {
   if (cutTag == "cutDeltaPhi" && 
       (theDPType_ == kDeltaPhi && theMETType_!=kMHT)) {
     //      ( theCutScheme_ == kRA2MET ||theCutScheme_ == kRA2tcMET ) ) {
-    
+    cout<<"WARNING -- kDeltaPhi is implemented in an old way (only calo jets)"<<endl;
     float phi_of_MET = getMETphi();
     
     // FIXME loose jet def'n has changed! this needs a careful update
@@ -2040,7 +2035,7 @@ Int_t basicLoop::Cut(Long64_t entry)
 
 double basicLoop::getUncorrectedHT(const double threshold) {
 
-  std::cout<<"getUncorrectedHT needs to be reimplemented!"<<std::endl;
+  std::cout<<"getUncorrectedHT needs to be reimplemented! "<<threshold <<std::endl;
   return -1;
 
   /*
@@ -2066,25 +2061,72 @@ with Uncorrect Pt>20 GeV, not just jets passing my 'loose' cuts
 }
 
 float basicLoop::getMET() {
-  //for just one number i am happy to do this by value
+  float myMET=-1;
 
   //adjust for global MET type
   if (theMETType_== kMET) {
-    return caloMET;
+    myMET= caloMET;
   }
   else if (theMETType_ == ktcMET) {
-    return tcMET;
+    myMET= tcMET;
   }
   else if (theMETType_ == kpfMET) {
-    return pfMET;
+    myMET= pfMET;
   }
   else if (theMETType_ == kMHT) {
-    return getMHT();
+    myMET= getMHT();
   }
-  
-  assert(0);
+  else { 
+    assert(0);
+  }
 
-  return 0;
+  if (theJESType_ != kJES0) { //need to adjust MET for JES uncertainty
+    //get the phi of met (before added in JES uncertainty)
+    float myMETphi=-99;
+    if (theMETType_== kMET) {
+      myMETphi= caloMETphi;
+    }
+    else if (theMETType_ == ktcMET) {
+      myMETphi= tcMETphi;
+    }
+    else if (theMETType_ == kpfMET) {
+      myMETphi= pfMETphi;
+    }
+    //    else if (theMETType_ == kMHT) {} //not implemented
+    else { 
+      assert(0);
+    }
+
+    float myMETx = myMET * cos(myMETphi);
+    float myMETy = myMET * sin(myMETphi);
+
+    //loop over all jets
+    for (unsigned int ijet=0; ijet<loosejetPt->size(); ++ijet) {
+      float jetUx = loosejetPtUncorr->at(ijet) * cos(loosejetPhi->at(ijet));
+      float jetUy = loosejetPtUncorr->at(ijet) * sin(loosejetPhi->at(ijet));
+
+      myMETx += jetUx;
+      myMETy += jetUy;
+      float jes_factor=1;
+      if (theJESType_ == kJESup) {
+	float unc =  sqrt( loosejetJECUncPlus->at(ijet) * loosejetJECUncPlus->at(ijet) +0.053 * 0.053);
+	jes_factor += unc;
+      }
+      else if (theJESType_ == kJESdown) {
+	float unc =  sqrt( loosejetJECUncMinus->at(ijet) * loosejetJECUncMinus->at(ijet) +0.053 * 0.053);
+	jes_factor -= unc;
+      }
+      else {assert(0);}
+      jetUx *= jes_factor;
+      jetUy *= jes_factor;
+
+      myMETx -= jetUx;
+      myMETy -= jetUy;
+    }
+    myMET = sqrt( myMETx*myMETx + myMETy*myMETy);
+  }
+
+  return myMET;
 }
 
 float basicLoop::getMETphi() {
@@ -2809,6 +2851,7 @@ void basicLoop::InitJets() {
     tightJetIndex = tightJetIndex_calo;
     looseJetIndex = looseJetIndex_calo;
     loosejetPt = loosejetPt_calo;
+    loosejetPtUncorr = loosejetPtUncorr_calo;
     loosejetEt = loosejetEt_calo;
     loosejetEta = loosejetEta_calo;
     loosejetPhi = loosejetPhi_calo;
@@ -2845,6 +2888,7 @@ void basicLoop::InitJets() {
     tightJetIndex = tightJetIndex_PF;
     looseJetIndex = looseJetIndex_PF;
     loosejetPt = loosejetPt_PF;
+    loosejetPtUncorr = loosejetPtUncorr_PF;
     loosejetEt = loosejetEt_PF;
     loosejetEta = loosejetEta_PF;
     loosejetPhi = loosejetPhi_PF;
