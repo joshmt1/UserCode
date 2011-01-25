@@ -95,6 +95,7 @@ const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1", "minDPinv", 
 
 const char *jesTypeNames_[] = {"JES0","JESup","JESdown"};
 const char *jerTypeNames_[] = {"JER0","JERbias","JERup"}; //this one is weird -- 0==0==down, bias=0.1, up=0.2
+const char *unclusteredMetUncNames_[] = {"METunc0","METdown","METup"};
 
 //in 1/pb
 //const double lumi=36.143; //Don's number for 386 Nov4ReReco
@@ -120,6 +121,8 @@ public :
   JESType theJESType_;
   enum JERType {kJER0=0,kJERbias,kJERup};
   JERType theJERType_;
+  enum METuncType {kMETunc0=0,kMETuncDown,kMETuncUp};
+  METuncType theMETuncType_;
   unsigned int nBcut_;
   //these are an extension of the ele/mu veto
   //If the cutEleVeto or cutMuVeto is set, then there must be exactly this number of e/mu in the event
@@ -695,6 +698,7 @@ public :
    void setJetType(jetType jettype);
    void setLeptonType(leptonType leptontype);
    void setMETRange(METRange metrange);
+   void setMETuncType(METuncType metunctype);
    void setDPType(dpType dptype);
    void setJESType(JESType jestype);
    void setJERType(JERType jertype);
@@ -712,6 +716,8 @@ public :
 
    std::pair<float, float> getJESAdjustedMETxy();
    std::pair<float, float> getJERAdjustedMETxy();
+
+   std::pair<float,float> getUnclusteredSmearedMETxy() ;
 
    float getMET(); //return MET determined by theMETType_
    float getMETphi(); //return MET determined by theMETType_
@@ -752,6 +758,7 @@ public :
    bool passBadJetVeto(); //n bad jets == 0 or not
 
    float getLooseJetPt(unsigned int ijet); //includes JES
+   float getLooseJetPtUncorr(unsigned int ijet); //includes JER
    bool isGoodJet_Sync1(unsigned int ijet);
    bool isGoodJet(unsigned int ijet); //index here is on the loose jet list
    bool isGoodJet30(unsigned int ijet); //index here is on the loose jet list
@@ -809,6 +816,7 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
      theDPType_(kminDP),
      theJESType_(kJES0),
      theJERType_(kJER0),
+     theMETuncType_(kMETunc0),
      nBcut_(0),
      ne_(0),
      nmu_(0),
@@ -2069,6 +2077,94 @@ with Uncorrect Pt>20 GeV, not just jets passing my 'loose' cuts
   */
 }
 
+std::pair<float,float> basicLoop::getUnclusteredSmearedMETxy() {
+  assert( theLeptonType_ == kPFLeptons);  //hard-code for PF leptons for now
+
+  /*
+twiki says to make sure we use JER bias-corrected uncorrected jet pT.
+so we set that automatically in setMETuncType()
+  */
+
+  float myMET=-1;
+  float myMETphi=-99;
+
+  //adjust for global MET type
+  if (theMETType_== kMET) {
+    myMET= caloMET;
+    myMETphi= caloMETphi;
+  }
+  else if (theMETType_ == ktcMET) {
+    myMET= tcMET;
+    myMETphi= tcMETphi;
+  }
+  else if (theMETType_ == kpfMET) {
+    myMET= pfMET;
+    myMETphi= pfMETphi;
+  }
+  //  else if (theMETType_ == kMHT) {  } //not implemented
+  else {  assert(0);  }
+
+  float myMETx = myMET * cos(myMETphi);
+  float myMETy = myMET * sin(myMETphi);
+  
+  for (unsigned int ijet = 0; ijet< loosejetPt->size(); ++ijet) {
+    float jetUx = getLooseJetPtUncorr(ijet) * cos(loosejetPhi->at(ijet));
+    float jetUy = getLooseJetPtUncorr(ijet) * sin(loosejetPhi->at(ijet));
+
+    myMETx += jetUx;
+    myMETy += jetUy;
+  }
+
+  for (unsigned int imu = 0; imu< muonPt_PF->size(); ++imu) {
+    float mux = muonPt_PF->at(imu) * cos(muonPhi_PF->at(imu));
+    float muy = muonPt_PF->at(imu) * sin(muonPhi_PF->at(imu));
+
+    myMETx += mux;
+    myMETy += muy;
+  }
+  for (unsigned int iel = 0; iel< eleEt_PF->size(); ++iel) {
+    float elx = eleEt_PF->at(iel) * cos(elePhi_PF->at(iel));
+    float ely = eleEt_PF->at(iel) * sin(elePhi_PF->at(iel));
+
+    myMETx += elx;
+    myMETy += ely;
+  }
+
+  //now scale unclustered MET
+  float factor=1;
+  if (theMETuncType_ ==kMETuncDown) factor=0.9;
+  else if (theMETuncType_ ==kMETuncUp) factor=1.1;
+  else {assert(0);}
+  myMETx *= factor;
+  myMETy *= factor;
+
+  //now repeat all of the loops but do -= instead of +=
+  for (unsigned int ijet = 0; ijet< loosejetPt->size(); ++ijet) {
+    float jetUx = getLooseJetPtUncorr(ijet) * cos(loosejetPhi->at(ijet));
+    float jetUy = getLooseJetPtUncorr(ijet) * sin(loosejetPhi->at(ijet));
+
+    myMETx -= jetUx;
+    myMETy -= jetUy;
+  }
+
+  for (unsigned int imu = 0; imu< muonPt_PF->size(); ++imu) {
+    float mux = muonPt_PF->at(imu) * cos(muonPhi_PF->at(imu));
+    float muy = muonPt_PF->at(imu) * sin(muonPhi_PF->at(imu));
+
+    myMETx -= mux;
+    myMETy -= muy;
+  }
+  for (unsigned int iel = 0; iel< eleEt_PF->size(); ++iel) {
+    float elx = eleEt_PF->at(iel) * cos(elePhi_PF->at(iel));
+    float ely = eleEt_PF->at(iel) * sin(elePhi_PF->at(iel));
+
+    myMETx -= elx;
+    myMETy -= ely;
+  }
+
+  return make_pair(myMETx,myMETy);
+}
+
 std::pair<float,float> basicLoop::getJESAdjustedMETxy() {
 
   if (theJESType_ == kJES0) {assert(0);}
@@ -2183,7 +2279,7 @@ std::pair<float,float> basicLoop::getJERAdjustedMETxy() {
 float basicLoop::getMET() {
   float myMET=-1;
 
-  if (theJESType_ == kJES0 && theJERType_ == kJER0) {
+  if (theJESType_ == kJES0 && theJERType_ == kJER0 && theMETuncType_== kMETunc0) {
     //adjust for global MET type
     if (theMETType_== kMET) {
       myMET= caloMET;
@@ -2201,12 +2297,16 @@ float basicLoop::getMET() {
       assert(0);
     }
   }
-  else if (theJESType_ != kJES0 && theJERType_ == kJER0) {
+  else if (theJESType_ != kJES0 && theJERType_ == kJER0 && theMETuncType_== kMETunc0) {
     std::pair<float, float> metxy = getJESAdjustedMETxy();
     myMET = sqrt( metxy.first*metxy.first + metxy.second*metxy.second);
   }
-  else if (theJESType_ == kJES0 && theJERType_ != kJER0) {
+  else if (theJESType_ == kJES0 && theJERType_ != kJER0 && theMETuncType_== kMETunc0) {
     std::pair<float, float> metxy = getJERAdjustedMETxy();
+    myMET = sqrt( metxy.first*metxy.first + metxy.second*metxy.second);
+  }
+  else if (theJESType_ == kJES0 && theJERType_ == kJERbias && theMETuncType_!= kMETunc0) {
+    std::pair<float, float> metxy = getUnclusteredSmearedMETxy();
     myMET = sqrt( metxy.first*metxy.first + metxy.second*metxy.second);
   }
   else {assert(0);}
@@ -2218,7 +2318,7 @@ float basicLoop::getMETphi() {
 
   float myMETphi=-99;
 
-  if (theJESType_ == kJES0 && theJERType_ == kJER0) {
+  if (theJESType_ == kJES0 && theJERType_ == kJER0 && theMETuncType_== kMETunc0) {
     //adjust for global MET type
     if (theMETType_== kMET) {
       myMETphi = caloMETphi;
@@ -2234,14 +2334,19 @@ float basicLoop::getMETphi() {
     }
     else {  assert(0); }
   }
-  else if (theJESType_ != kJES0 && theJERType_ == kJER0) { //JES uncertainty
+  else if (theJESType_ != kJES0 && theJERType_ == kJER0 && theMETuncType_== kMETunc0) { //JES uncertainty
     std::pair<float, float> metxy = getJESAdjustedMETxy();
     myMETphi = atan2(metxy.second, metxy.first);
   }
-  else if (theJESType_ == kJES0 && theJERType_ != kJER0) { //JER uncertainty
+  else if (theJESType_ == kJES0 && theJERType_ != kJER0 && theMETuncType_== kMETunc0) { //JER uncertainty
     std::pair<float, float> metxy = getJERAdjustedMETxy();
     myMETphi = atan2(metxy.second, metxy.first);
   }
+  else if (theJESType_ == kJES0 && theJERType_ == kJERbias && theMETuncType_!= kMETunc0) {
+    std::pair<float, float> metxy = getUnclusteredSmearedMETxy();
+    myMETphi = atan2(metxy.second, metxy.first);
+  }
+  else {assert(0);}
 
   return myMETphi;
 }
@@ -2673,6 +2778,38 @@ float basicLoop::getLooseJetPt( unsigned int ijet ) {
 
   //if we haven't returned by now there must be something illegal going one!
   std::cout<<"Problem in getLooseJetPt with illegal combination of JES and JER settings!"<<std::endl;
+  assert(0);
+
+  return -1;
+}
+
+//apparently i need a method to get uncorrected jet pt adjusted by the JER correction...here it is
+float basicLoop::getLooseJetPtUncorr( unsigned int ijet) {
+
+  //the normal case first
+  if ( theJESType_ == kJES0 && theJERType_ == kJER0) return loosejetPtUncorr->at(ijet);
+  else if (theJESType_ != kJES0 ) {
+    cout<<"Not implemented or desired!"<<endl;
+  }
+  else if (theJERType_ != kJER0 && theJESType_ == kJES0) {
+    float genpt = loosejetGenPt->at(ijet);
+    float recopt = loosejetPt->at(ijet);
+    float uncorrpt = loosejetPtUncorr->at(ijet);
+    if (genpt >15 ) {
+      float factor = 0;
+      if (theJERType_ == kJERbias )    factor = 0.1; //hard-coded factors from top twiki
+      else if (theJERType_ == kJERup)  factor = 0.2;
+      else {assert(0);}
+
+      float  deltapt = (recopt - genpt) * factor;
+      float frac = (recopt+deltapt)/recopt;
+      float ptscale = frac>0 ? frac : 0;
+      uncorrpt *= ptscale;
+    }
+    return uncorrpt;
+  }
+
+  std::cout<<"Problem in getLooseJetPtUncorr with illegal combination of JES and JER settings!"<<std::endl;
   assert(0);
 
   return -1;
@@ -3180,30 +3317,31 @@ TString basicLoop::findInputName() {
 }
 
 void basicLoop::setMETType(METType mettype) {
-
   theMETType_ = mettype;
 }
 
 void basicLoop::setJESType(JESType jestype) {
-
   theJESType_ = jestype;
 }
 
 void basicLoop::setJERType(JERType jertype) {
-
   theJERType_ = jertype;
 }
 
+void basicLoop::setMETuncType(METuncType metunctype) {
+  theMETuncType_ = metunctype;
+  if (theMETuncType_ != kMETunc0) {
+    setJERType(kJERbias);
+    cout<<"NOTE -- I am turning on the Jet Energy Resolution bias correction because you selected an Unclustered MET Correction!"<<endl;
+  }
+}
+
 void basicLoop::setJetType(jetType jettype) {
-
   theJetType_ = jettype;
-
 }
 
 void basicLoop::setLeptonType(leptonType leptontype) {
-
   theLeptonType_ = leptontype;
-
 }
 
 void basicLoop::setEleReq(int ne) {
@@ -3299,6 +3437,10 @@ TString basicLoop::getCutDescriptionString() {
   cuts += METTypeNames_[theMETType_];
   cuts += METRangeNames_[theMETRange_];
   cuts += "_";
+  if (theMETuncType_ != kMETunc0) {
+    cuts+= unclusteredMetUncNames_[theMETuncType_];
+    cuts+= "_";
+  }
   cuts += leptonTypeNames_[theLeptonType_];
   cuts += ne_; 
   cuts += "e";
@@ -3334,6 +3476,7 @@ void basicLoop::printState() {
   cout<<"Requiring exactly     "<<nmu_<<" muons"<<endl;
   cout<<"MET type set to:      "<<METTypeNames_[theMETType_]<<endl;
   cout<<"MET range set to:     "<<METRangeNames_[theMETRange_]<<endl;
+  cout<<"Unclustered energy:   "<<unclusteredMetUncNames_[theMETuncType_]<<endl;
   cout<<"DeltaPhi type set to: "<<dpTypeNames_[theDPType_]<<endl;
   cout<<"Requiring at least    "<<nBcut_<<" b tags"<<endl;
   for (unsigned int i = 0; i< ignoredCut_.size() ; i++) {
