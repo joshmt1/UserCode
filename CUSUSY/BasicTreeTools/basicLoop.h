@@ -94,6 +94,7 @@ const char *leptonTypeNames_[]={"RegLep","PFLep"};
 const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1", "minDPinv", "minDPAll30"};
 
 const char *jesTypeNames_[] = {"JES0","JESup","JESdown"};
+const char *jerTypeNames_[] = {"JER0","JERbias","JERup"}; //this one is weird -- 0==0==down, bias=0.1, up=0.2
 
 //in 1/pb
 //const double lumi=36.143; //Don's number for 386 Nov4ReReco
@@ -117,6 +118,8 @@ public :
   dpType theDPType_;
   enum JESType {kJES0=0,kJESup,kJESdown};
   JESType theJESType_;
+  enum JERType {kJER0=0,kJERbias,kJERup};
+  JERType theJERType_;
   unsigned int nBcut_;
   //these are an extension of the ele/mu veto
   //If the cutEleVeto or cutMuVeto is set, then there must be exactly this number of e/mu in the event
@@ -694,6 +697,7 @@ public :
    void setMETRange(METRange metrange);
    void setDPType(dpType dptype);
    void setJESType(JESType jestype);
+   void setJERType(JERType jertype);
    void setIgnoredCut(const TString cutTag);
    void resetIgnoredCut() ;
    void setBCut(unsigned int nb);
@@ -707,6 +711,7 @@ public :
    void setSpecialCutDescription(TString cutDesc) {specialCutDescription_=cutDesc;}
 
    std::pair<float, float> getJESAdjustedMETxy();
+   std::pair<float, float> getJERAdjustedMETxy();
 
    float getMET(); //return MET determined by theMETType_
    float getMETphi(); //return MET determined by theMETType_
@@ -803,6 +808,7 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
      theLeptonType_(kNormal),
      theDPType_(kminDP),
      theJESType_(kJES0),
+     theJERType_(kJER0),
      nBcut_(0),
      ne_(0),
      nmu_(0),
@@ -2116,10 +2122,68 @@ std::pair<float,float> basicLoop::getJESAdjustedMETxy() {
   return make_pair(myMETx, myMETy);
 }
 
+std::pair<float,float> basicLoop::getJERAdjustedMETxy() {
+  if (theJERType_ == kJER0) {assert(0);}
+
+  float myMET=-1;
+  float myMETphi=-99;
+
+  //adjust for global MET type
+  if (theMETType_== kMET) {
+    myMET= caloMET;
+    myMETphi= caloMETphi;
+  }
+  else if (theMETType_ == ktcMET) {
+    myMET= tcMET;
+    myMETphi= tcMETphi;
+  }
+  else if (theMETType_ == kpfMET) {
+    myMET= pfMET;
+    myMETphi= pfMETphi;
+  }
+  //  else if (theMETType_ == kMHT) {  } //not implemented
+  else {  assert(0);  }
+
+  float myMETx = myMET * cos(myMETphi);
+  float myMETy = myMET * sin(myMETphi);
+  
+  //loop over all jets
+  for (unsigned int ijet=0; ijet<loosejetPt->size(); ++ijet) {
+    float genpt = loosejetGenPt->at(ijet);
+
+    if (genpt < 15) continue;
+
+    float jetUx = loosejetPtUncorr->at(ijet) * cos(loosejetPhi->at(ijet));
+    float jetUy = loosejetPtUncorr->at(ijet) * sin(loosejetPhi->at(ijet));
+
+    myMETx += jetUx;
+    myMETy += jetUy;
+
+    float recopt = loosejetPt->at(ijet);
+    float factor = 0;
+    if (theJERType_ == kJERbias )    factor = 0.1; //hard-coded factors from top twiki
+    else if (theJERType_ == kJERup)  factor = 0.2;
+    else {assert(0);}
+
+    float  deltapt = (recopt - genpt) * factor;
+    float frac = (recopt+deltapt)/recopt;
+    float ptscale = frac>0 ? frac : 0;
+        //
+
+    jetUx *= ptscale;
+    jetUy *= ptscale;
+
+    myMETx -= jetUx;
+    myMETy -= jetUy;
+  }
+  return make_pair(myMETx, myMETy);
+
+}
+
 float basicLoop::getMET() {
   float myMET=-1;
 
-  if (theJESType_ == kJES0) {
+  if (theJESType_ == kJES0 && theJERType_ == kJER0) {
     //adjust for global MET type
     if (theMETType_== kMET) {
       myMET= caloMET;
@@ -2137,10 +2201,15 @@ float basicLoop::getMET() {
       assert(0);
     }
   }
-  else {
+  else if (theJESType_ != kJES0 && theJERType_ == kJER0) {
     std::pair<float, float> metxy = getJESAdjustedMETxy();
     myMET = sqrt( metxy.first*metxy.first + metxy.second*metxy.second);
   }
+  else if (theJESType_ == kJES0 && theJERType_ != kJER0) {
+    std::pair<float, float> metxy = getJERAdjustedMETxy();
+    myMET = sqrt( metxy.first*metxy.first + metxy.second*metxy.second);
+  }
+  else {assert(0);}
 
   return myMET;
 }
@@ -2149,7 +2218,7 @@ float basicLoop::getMETphi() {
 
   float myMETphi=-99;
 
-  if (theJESType_ == kJES0) { //no JES uncertainty factor
+  if (theJESType_ == kJES0 && theJERType_ == kJER0) {
     //adjust for global MET type
     if (theMETType_== kMET) {
       myMETphi = caloMETphi;
@@ -2165,8 +2234,12 @@ float basicLoop::getMETphi() {
     }
     else {  assert(0); }
   }
-  else { //need to deal with JES uncertainty
+  else if (theJESType_ != kJES0 && theJERType_ == kJER0) { //JES uncertainty
     std::pair<float, float> metxy = getJESAdjustedMETxy();
+    myMETphi = atan2(metxy.second, metxy.first);
+  }
+  else if (theJESType_ == kJES0 && theJERType_ != kJER0) { //JER uncertainty
+    std::pair<float, float> metxy = getJERAdjustedMETxy();
     myMETphi = atan2(metxy.second, metxy.first);
   }
 
@@ -2563,21 +2636,44 @@ float basicLoop::getHT_Sync1() {
 //automatically adjust for jes rescaling
 //this includes an extra uncertainty of 5.3%
 //according to https://twiki.cern.ch/twiki/bin/viewauth/CMS/TopLeptonPlusJets2010Systematics
+
+//also adjust for JER according to that twiki
 float basicLoop::getLooseJetPt( unsigned int ijet ) {
 
-  if ( theJESType_ == kJES0 ) return loosejetPt->at(ijet);
-  else if (theJESType_ == kJESup ) {
+  //only allow one of JES or JER variations at a time
+
+  //the normal case first
+  if ( theJESType_ == kJES0 && theJERType_ == kJER0) return loosejetPt->at(ijet);
+  //then JES variations
+  else if (theJESType_ == kJESup && theJERType_ == kJER0) {
     float unc =  sqrt( loosejetJECUncPlus->at(ijet) * loosejetJECUncPlus->at(ijet) +0.053 * 0.053);
-    return ( (1+unc)*loosejetPt->at(ijet) );
+    return (1+unc) * loosejetPt->at(ijet) ;
   }
-  else if (theJESType_ == kJESdown ) {
+  else if (theJESType_ == kJESdown && theJERType_ == kJER0) {
     float unc =  sqrt( loosejetJECUncMinus->at(ijet) * loosejetJECUncMinus->at(ijet) +0.053 * 0.053);
-    return ( (1-unc)*loosejetPt->at(ijet) );
+    return (1-unc) *loosejetPt->at(ijet) ;
   }
-  else {
-    cout<<"[basicLoop::getLooseJetPt] something weird going on!"<<endl;
-    assert(0);
+  //now do JER variations
+  else if (theJERType_ != kJER0 && theJESType_ == kJES0) {
+    float genpt = loosejetGenPt->at(ijet);
+    float recopt = loosejetPt->at(ijet);
+    if (genpt >15 ) {
+      float factor = 0;
+      if (theJERType_ == kJERbias )    factor = 0.1; //hard-coded factors from top twiki
+      else if (theJERType_ == kJERup)  factor = 0.2;
+      else {assert(0);}
+
+      float  deltapt = (recopt - genpt) * factor;
+      float frac = (recopt+deltapt)/recopt;
+      float ptscale = frac>0 ? frac : 0;
+      recopt *= ptscale;
+    }
+    return recopt;
   }
+
+  //if we haven't returned by now there must be something illegal going one!
+  std::cout<<"Problem in getLooseJetPt with illegal combination of JES and JER settings!"<<std::endl;
+  assert(0);
 
   return -1;
 }
@@ -3093,6 +3189,11 @@ void basicLoop::setJESType(JESType jestype) {
   theJESType_ = jestype;
 }
 
+void basicLoop::setJERType(JERType jertype) {
+
+  theJERType_ = jertype;
+}
+
 void basicLoop::setJetType(jetType jettype) {
 
   theJetType_ = jettype;
@@ -3191,6 +3292,10 @@ TString basicLoop::getCutDescriptionString() {
     cuts+= jesTypeNames_[theJESType_];
     cuts+= "_";
   }
+  if (theJERType_ != kJER0) {
+    cuts+= jerTypeNames_[theJERType_];
+    cuts+= "_";
+  }
   cuts += METTypeNames_[theMETType_];
   cuts += METRangeNames_[theMETRange_];
   cuts += "_";
@@ -3223,6 +3328,7 @@ void basicLoop::printState() {
   cout<<"Cut scheme set to:    "<<CutSchemeNames_[theCutScheme_]<<endl;
   cout<<"jet type set to:      "<<jetTypeNames_[theJetType_]<<endl;
   cout<<"JES uncertainty set:  "<<jesTypeNames_[theJESType_]<<endl;
+  cout<<"JER scaling set:      "<<jerTypeNames_[theJERType_]<<endl;
   cout<<"lepton type set to:   "<<leptonTypeNames_[theLeptonType_]<<endl;
   cout<<"Requiring exactly     "<<ne_<<" electrons"<<endl;
   cout<<"Requiring exactly     "<<nmu_<<" muons"<<endl;
