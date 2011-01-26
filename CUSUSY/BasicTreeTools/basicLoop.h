@@ -726,7 +726,7 @@ public :
    
    float getJetInvisibleEnergyHT(); //could add a pT cut as an argument
    float getJetInvisibleEnergyMHT(); //could add a pT cut as an argument
-   float getLargestJetPtRecoError();
+   float getLargestJetPtRecoError(unsigned int maxjets);
 
    void cutflow(bool writeFiles=false);
    void cutflowPlotter();
@@ -2874,9 +2874,12 @@ float basicLoop::getJetInvisibleEnergyMHT() {
   return sqrt(x*x + y*y);
 }
 
-float basicLoop::getLargestJetPtRecoError() {
+float basicLoop::getLargestJetPtRecoError(unsigned int maxjets) {
   float biggest=0;
-  for (unsigned int ij=0; ij<loosejetPt->size(); ++ij) {
+
+  unsigned int loopmax = (loosejetPt->size() < maxjets) ? loosejetPt->size() : maxjets;
+  //should i be applying jet cuts here?
+  for (unsigned int ij=0; ij<loopmax; ++ij) {
     float residual = loosejetGenPt->at(ij) > 0 ? getLooseJetPt(ij) - loosejetGenPt->at(ij) : 0;
     if ( fabs(residual) > fabs(biggest) ) biggest = residual;
   }

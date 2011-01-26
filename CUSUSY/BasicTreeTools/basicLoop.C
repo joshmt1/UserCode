@@ -543,11 +543,32 @@ void basicLoop::Nminus1plots()
    //similar histograms...we want to plot r(MET) for jet undermeasurement, jet overmeasurement
    TH1D   HminDeltaPhiRatio_Over("HminDeltaPhiRatio_Over","pass minDeltaPhi / fail minDeltaPhi",nbins, met_min,met_max);
    TH1D   HminDeltaPhiRatio_Under("HminDeltaPhiRatio_Under","pass minDeltaPhi / fail minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiRatio_Close("HminDeltaPhiRatio_Close","pass minDeltaPhi / fail minDeltaPhi",nbins, met_min,met_max);
 
    TH1D   HminDeltaPhiPass_Over("HminDeltaPhiPass_Over","pass minDeltaPhi",nbins, met_min,met_max);
    TH1D   HminDeltaPhiFail_Over("HminDeltaPhiFail_Over","fail minDeltaPhi",nbins, met_min,met_max);
    TH1D   HminDeltaPhiPass_Under("HminDeltaPhiPass_Under","pass minDeltaPhi",nbins, met_min,met_max);
    TH1D   HminDeltaPhiFail_Under("HminDeltaPhiFail_Under","fail minDeltaPhi",nbins, met_min,met_max);
+
+   TH1D   HminDeltaPhiPass_Close("HminDeltaPhiPass_Close","pass minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiFail_Close("HminDeltaPhiFail_Close","fail minDeltaPhi",nbins, met_min,met_max);
+
+   //MPT , MET
+   TH1D HdeltaPhiMPTMET_MET150("HdeltaPhiMPTMET_MET150","DeltaPhi(MPT,MET) MET>150 no mindp",nbins,0,TMath::Pi()+0.01);
+   TH1D HdeltaPhiMPTMET_MET200("HdeltaPhiMPTMET_MET200","DeltaPhi(MPT,MET) MET>200 no mindp",nbins,0,TMath::Pi()+0.01);
+   TH1D HdeltaPhiMPTMET_MET250("HdeltaPhiMPTMET_MET250","DeltaPhi(MPT,MET) MET>250 no mindp",nbins,0,TMath::Pi()+0.01);
+
+   TH1D   HminDeltaPhiRatio_MPTMET_MET150("HminDeltaPhiRatio_MPTMET_MET150","pass minDeltaPhi / fail minDeltaPhi",nbins,0,TMath::Pi()+0.01);
+   TH1D   HminDeltaPhiPass_MPTMET_MET150("HminDeltaPhiPass_MPTMET_MET150","pass minDeltaPhi",nbins,0,TMath::Pi()+0.01);
+   TH1D   HminDeltaPhiFail_MPTMET_MET150("HminDeltaPhiFail_MPTMET_MET150","fail minDeltaPhi",nbins,0,TMath::Pi()+0.01 );
+
+   TH1D   HminDeltaPhiRatio_MPTMET_MET200("HminDeltaPhiRatio_MPTMET_MET200","pass minDeltaPhi / fail minDeltaPhi",nbins,0,TMath::Pi()+0.01);
+   TH1D   HminDeltaPhiPass_MPTMET_MET200("HminDeltaPhiPass_MPTMET_MET200","pass minDeltaPhi",nbins,0,TMath::Pi()+0.01);
+   TH1D   HminDeltaPhiFail_MPTMET_MET200("HminDeltaPhiFail_MPTMET_MET200","fail minDeltaPhi",nbins,0,TMath::Pi()+0.01 );
+
+   TH1D   HminDeltaPhiRatio_MPTMET_MET250("HminDeltaPhiRatio_MPTMET_MET250","pass minDeltaPhi / fail minDeltaPhi",nbins,0,TMath::Pi()+0.01);
+   TH1D   HminDeltaPhiPass_MPTMET_MET250("HminDeltaPhiPass_MPTMET_MET250","pass minDeltaPhi",nbins,0,TMath::Pi()+0.01);
+   TH1D   HminDeltaPhiFail_MPTMET_MET250("HminDeltaPhiFail_MPTMET_MET250","fail minDeltaPhi",nbins,0,TMath::Pi()+0.01 );
 
    //n b jets
    TH1D Hnbjets("Hnbjets","N of jets (RA2)",njets_bins,0,njets_bins);
@@ -699,11 +720,14 @@ void basicLoop::Nminus1plots()
 
    HminDeltaPhiRatio_Over.Sumw2();
    HminDeltaPhiRatio_Under.Sumw2();
+   HminDeltaPhiRatio_Close.Sumw2();
 
    HminDeltaPhiPass_Over.Sumw2();
    HminDeltaPhiFail_Over.Sumw2();
    HminDeltaPhiPass_Under.Sumw2();
    HminDeltaPhiFail_Under.Sumw2();
+   HminDeltaPhiPass_Close.Sumw2();
+   HminDeltaPhiFail_Close.Sumw2();
 
    //histograms just used for calculations
    HminDeltaPhiPass.Sumw2();
@@ -744,6 +768,23 @@ void basicLoop::Nminus1plots()
    HmaxDeltaPhiMETjAll_D.Sumw2();
    HmaxDeltaPhiMETjAll_lowMET.Sumw2();
    HmaxDeltaPhiMETjAll_lowlow.Sumw2();
+
+   HdeltaPhiMPTMET_MET150.Sumw2();
+   HdeltaPhiMPTMET_MET200.Sumw2();
+   HdeltaPhiMPTMET_MET250.Sumw2();
+   
+   HminDeltaPhiRatio_MPTMET_MET150.Sumw2();
+   HminDeltaPhiPass_MPTMET_MET150.Sumw2();
+   HminDeltaPhiFail_MPTMET_MET150.Sumw2();
+   
+   HminDeltaPhiRatio_MPTMET_MET200.Sumw2();
+   HminDeltaPhiPass_MPTMET_MET200.Sumw2();
+   HminDeltaPhiFail_MPTMET_MET200.Sumw2();
+   
+   HminDeltaPhiRatio_MPTMET_MET250.Sumw2();
+   HminDeltaPhiPass_MPTMET_MET250.Sumw2();
+   HminDeltaPhiFail_MPTMET_MET250.Sumw2();
+   
 
 
    startTimer();   //keep track of performance
@@ -831,6 +872,22 @@ void basicLoop::Nminus1plots()
 
 	HminDeltaPhiMETjAll30.Fill( minDeltaPhi_j_MET_All30,weight);
 
+	//MET > 150
+	HdeltaPhiMPTMET_MET150.Fill(dp_MPTMET,weight);
+	if (minDeltaPhi_j_MET > 0.3) HminDeltaPhiPass_MPTMET_MET150.Fill(dp_MPTMET,weight);
+	else HminDeltaPhiFail_MPTMET_MET150.Fill(dp_MPTMET,weight);
+
+	if (getMET() >200) {
+	  HdeltaPhiMPTMET_MET200.Fill(dp_MPTMET,weight);
+	  if (minDeltaPhi_j_MET > 0.3) HminDeltaPhiPass_MPTMET_MET200.Fill(dp_MPTMET,weight);
+	  else HminDeltaPhiFail_MPTMET_MET200.Fill(dp_MPTMET,weight);
+	}
+	if (getMET() >250) {
+	  HdeltaPhiMPTMET_MET250.Fill(dp_MPTMET,weight);
+	  if (minDeltaPhi_j_MET > 0.3) HminDeltaPhiPass_MPTMET_MET250.Fill(dp_MPTMET,weight);
+	  else HminDeltaPhiFail_MPTMET_MET250.Fill(dp_MPTMET,weight);
+	}
+
 	if (nbSSVM >=1)  HminDeltaPhiMETj_ge1b.Fill(minDeltaPhi_j_MET,weight);
 	if (nbSSVM >=2)  HminDeltaPhiMETj_ge2b.Fill(minDeltaPhi_j_MET,weight);
 	if (nbSSVM ==1)  HminDeltaPhiMETj_eq1b.Fill(minDeltaPhi_j_MET,weight);
@@ -862,7 +919,7 @@ void basicLoop::Nminus1plots()
 	//but then the code wouldn't be invariant on changes of the def'n of cutDeltaPhi...it just depends on what we want
 	bool passMinDeltaPhiAll = minDeltaPhi_j_MET_All > 0.3;
 	//	bool passMinDeltaPhiAll30 = minDeltaPhi_j_MET_All30 > 0.3; //not using this at the moment
-	double largestJetRecoError = getLargestJetPtRecoError();
+	double largestJetRecoError = getLargestJetPtRecoError(3); //look at only the first 3 jets
 
 	//same question here: use passCut("cutMET") or just apply a hard-coded limit?
 	//opt for hard-coded
@@ -873,16 +930,18 @@ void basicLoop::Nminus1plots()
 	  if (nbSSVM >=1)  HminDeltaPhiPass_ge1b.Fill(getMET(),weight);
 	  if (nbSSVM >=2)  HminDeltaPhiPass_ge2b.Fill(getMET(),weight);
 
-	  if (largestJetRecoError>0) HminDeltaPhiPass_Over.Fill(getMET(), weight);
-	  else HminDeltaPhiPass_Under.Fill(getMET(), weight);
+	  if      (largestJetRecoError>50)  HminDeltaPhiPass_Over.Fill(getMET(), weight);
+	  else if (largestJetRecoError<-50) HminDeltaPhiPass_Under.Fill(getMET(), weight);
+	  else                              HminDeltaPhiPass_Close.Fill(getMET(), weight);
  	}
 	else {
 	  HminDeltaPhiFail.Fill(getMET(),weight);
 	  if (nbSSVM >=1)  HminDeltaPhiFail_ge1b.Fill(getMET(),weight);
 	  if (nbSSVM >=2)  HminDeltaPhiFail_ge2b.Fill(getMET(),weight);
 
-	  if (largestJetRecoError>0) HminDeltaPhiFail_Over.Fill(getMET(), weight);
-	  else HminDeltaPhiFail_Under.Fill(getMET(), weight);
+	  if      (largestJetRecoError>50)  HminDeltaPhiFail_Over.Fill(getMET(), weight);
+	  else if (largestJetRecoError<-50) HminDeltaPhiFail_Under.Fill(getMET(), weight);
+	  else                              HminDeltaPhiFail_Close.Fill(getMET(), weight);
 	}
 
 	if (passMinDeltaPhiAll) {
@@ -1010,6 +1069,11 @@ void basicLoop::Nminus1plots()
 
    HminDeltaPhiRatio_Over.Divide(&HminDeltaPhiPass_Over,&HminDeltaPhiFail_Over);
    HminDeltaPhiRatio_Under.Divide(&HminDeltaPhiPass_Under,&HminDeltaPhiFail_Under);
+   HminDeltaPhiRatio_Close.Divide(&HminDeltaPhiPass_Close,&HminDeltaPhiFail_Close);
+
+   HminDeltaPhiRatio_MPTMET_MET150.Divide(&HminDeltaPhiPass_MPTMET_MET150,&HminDeltaPhiFail_MPTMET_MET150);
+   HminDeltaPhiRatio_MPTMET_MET200.Divide(&HminDeltaPhiPass_MPTMET_MET200,&HminDeltaPhiFail_MPTMET_MET200);
+   HminDeltaPhiRatio_MPTMET_MET250.Divide(&HminDeltaPhiPass_MPTMET_MET250,&HminDeltaPhiFail_MPTMET_MET250);
 
    fout.Write();
    fout.Close();
