@@ -97,6 +97,8 @@ const char *jesTypeNames_[] = {"JES0","JESup","JESdown"};
 const char *jerTypeNames_[] = {"JER0","JERbias","JERup"}; //this one is weird -- 0==0==down, bias=0.1, up=0.2
 const char *unclusteredMetUncNames_[] = {"METunc0","METdown","METup"};
 
+const char *tailCleaningNames_[] = {"NoCleaning","MuonCleaning"};
+
 //in 1/pb
 //const double lumi=36.143; //Don's number for 386 Nov4ReReco
 const double lumi=36.146; //386 Nov4ReReco Datasets - PATIFIED WITH 387
@@ -123,6 +125,9 @@ public :
   JERType theJERType_;
   enum METuncType {kMETunc0=0,kMETuncDown,kMETuncUp};
   METuncType theMETuncType_;
+  enum tailCleaningType {kNoCleaning=0, kMuonCleaning};
+  tailCleaningType theCleaningType_;
+
   unsigned int nBcut_;
   //these are an extension of the ele/mu veto
   //If the cutEleVeto or cutMuVeto is set, then there must be exactly this number of e/mu in the event
@@ -702,6 +707,7 @@ public :
    void setDPType(dpType dptype);
    void setJESType(JESType jestype);
    void setJERType(JERType jertype);
+   void setCleaningType(tailCleaningType cleanuptype);
    void setIgnoredCut(const TString cutTag);
    void resetIgnoredCut() ;
    void setBCut(unsigned int nb);
@@ -745,6 +751,8 @@ public :
    int countEleSync1() ;
 
    bool passTauVeto();
+
+   bool passCleaning();
 
    bool passSSVM(int i);
 
@@ -817,6 +825,7 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
      theJESType_(kJES0),
      theJERType_(kJER0),
      theMETuncType_(kMETunc0),
+     theCleaningType_(kNoCleaning),
      nBcut_(0),
      ne_(0),
      nmu_(0),
@@ -1469,11 +1478,12 @@ doing it this way is a dirty hack, but it is so much easier than implementing a 
     cutTags_.push_back("cutMET");  cutNames_[cutTags_.back()]="MET";
 
     cutTags_.push_back("cutDeltaPhi"); cutNames_[cutTags_.back()]="DeltaPhi";
+    cutTags_.push_back("cutCleaning"); cutNames_[cutTags_.back()]="TailCleaning";
+
     cutTags_.push_back("cut1b"); cutNames_[cutTags_.back()]=">=1b";
     cutTags_.push_back("cut2b"); cutNames_[cutTags_.back()]=">=2b";
     cutTags_.push_back("cut3b"); cutNames_[cutTags_.back()]=">=3b";
     
-
     //modified order (for comparisons with Don)
     /*
     cout<<"Using modified Baseline0 cut order!"<<endl;
@@ -1582,6 +1592,7 @@ bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to
     else if (cutTag == "cut1b") cutIsRequired =  nBcut_ >=1;
     else if (cutTag == "cut2b") cutIsRequired =  nBcut_ >=2;
     else if (cutTag == "cut3b") cutIsRequired =  nBcut_ >=3;
+    else if (cutTag == "cutCleaning") cutIsRequired = theCleaningType_ != kNoCleaning;
     else assert(0);
   }
   else assert(0);
@@ -1957,6 +1968,8 @@ bool basicLoop::passCut(const TString cutTag) {
       if (cutTag == "cut3b") return nb >=3;
     }
   }
+
+  if (cutTag == "cutCleaning") return passCleaning();
 
   //we want to avoid using the precomputed cut flow for the basline0 scheme
   if (theCutScheme_==kBaseline0 && cutTag!="cutInclusive") {
@@ -3000,6 +3013,17 @@ bool basicLoop::passBadJetVeto() {
   return (nBadJets() == 0);
 }
 
+bool basicLoop::passCleaning() {
+
+  if (theCleaningType_ == kNoCleaning) return true;
+  else if (theCleaningType_ == kMuonCleaning) {
+    return (passesBadPFMuonFilter && passesInconsistentMuonPFCandidateFilter);
+  }
+  else {assert(0);}
+
+  return false;
+}
+
 int basicLoop::getTopDecayCategory() {
   /*
     this is a kludge on top of a kludge, I suppose.
@@ -3355,6 +3379,10 @@ void basicLoop::setMuonReq(int nmu) {
   nmu_ = nmu;
 }
 
+void basicLoop::setCleaningType( tailCleaningType cleanuptype) {
+  theCleaningType_ = cleanuptype;
+}
+
 void basicLoop::setMETRange(METRange metrange) {
 
   theMETRange_ = metrange;
@@ -3451,6 +3479,10 @@ TString basicLoop::getCutDescriptionString() {
   cuts += "mu";
   cuts += "_";
   cuts+= dpTypeNames_[theDPType_];
+  if (theCleaningType_ != kNoCleaning) {
+    cuts+="_";
+    cuts+=tailCleaningNames_[theCleaningType_];
+  }
   for (unsigned int icut=0; icut<ignoredCut_.size() ; icut++) {
     cuts+="_No";
     //it would be more robust to use .find() instead of []
@@ -3482,6 +3514,7 @@ void basicLoop::printState() {
   cout<<"Unclustered energy:   "<<unclusteredMetUncNames_[theMETuncType_]<<endl;
   cout<<"DeltaPhi type set to: "<<dpTypeNames_[theDPType_]<<endl;
   cout<<"Requiring at least    "<<nBcut_<<" b tags"<<endl;
+  cout<<"Tail cleanup set to:  "<<tailCleaningNames_[theCleaningType_]<<endl;
   for (unsigned int i = 0; i< ignoredCut_.size() ; i++) {
     cout<<"Will ignore cut:    "<<cutNames_[ignoredCut_.at(i)]<<endl;
   }
