@@ -47,7 +47,7 @@ void run_cutflow()
 
     if (samplefiles.Contains("DATA")) continue; //skip data (use run_cutflow_data.C)
 
-    if (!(samplefiles.Contains("TTbar") )) continue; //hack to skip some samples
+    //if (!(samplefiles.Contains("TTbar") )) continue; //hack to skip some samples
     
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
@@ -66,7 +66,7 @@ void run_cutflow()
     looper.setLeptonType(basicLoop::kPFLeptons);
     looper.setDPType(basicLoop::kminDP);
 
-    looper.setJESType(basicLoop::kJESup); //special line for JES systematic
+    looper.setCleaningType(basicLoop::kMuonCleaning);
 
     looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
 
