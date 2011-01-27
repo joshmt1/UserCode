@@ -16,7 +16,7 @@ these are not needed (assuming this macro is compiled) because of the include ab
 gSystem->Load("basicLoop_C.so");
 
 */
-const TString version = "V00-01-05";
+const TString version = "V00-02-00";
 
 void run_ABCDLoop()
 {
@@ -47,13 +47,16 @@ void run_ABCDLoop()
 
     cout<<"About to start on files: "<<samplefiles<<endl;
 
+
     if(!(samplefiles.Contains("LM13")
 	 || samplefiles.Contains("TTbar")
 	 || samplefiles.Contains("Zinv")
 	 || samplefiles.Contains("WJets")
 	 || samplefiles.Contains("ZJets")
-	 || samplefiles.Contains("SingleTop")
-	 || samplefiles.Contains("QCD")) ) continue; //hack to skip some samples   
+	 || samplefiles.Contains("SingleTop"))) continue; //hack to skip some samples   
+
+
+    //    if(!samplefiles.Contains("LM13")) continue;
 
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
@@ -68,6 +71,8 @@ void run_ABCDLoop()
     looper.setMETType(basicLoop::kpfMET);
     looper.setLeptonType(basicLoop::kPFLeptons);
     looper.setJetType(basicLoop::kPF);
+    looper.setCleaningType(basicLoop::kMuonCleaning);
+
     looper.setBCut(0);
     
     //careful what is set here!
