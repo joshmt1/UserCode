@@ -21,7 +21,6 @@
 #include <iostream>
 #include <vector>
 #include <set>
-//#include <utility> //for std::pair
 
 /*
 some proto-documentation:
@@ -1959,13 +1958,15 @@ bool basicLoop::passCut(const TString cutTag) {
     if (cutTag == "cut1b") return nbSSVM >=1;
     if (cutTag == "cut2b") return nbSSVM >=2;
     if (cutTag == "cut3b") return nbSSVM >=3;
+    if (cutTag == "cutEq1b") return nbSSVM == 1;
   }
   else if (theCutScheme_==kSync1) {
-    if (cutTag == "cut1b" || cutTag == "cut2b" || cutTag == "cut3b") {
+    if (cutTag == "cut1b" || cutTag == "cut2b" || cutTag == "cut3b" || cutTag=="cutEq1b") {
       int nb = countBJets_Sync1();
       if (cutTag == "cut1b") return nb >=1;
       if (cutTag == "cut2b") return nb >=2;
       if (cutTag == "cut3b") return nb >=3;
+      if (cutTag == "cutEq1b") return nb == 1;
     }
   }
 

@@ -45,7 +45,8 @@ void basicLoop::cutflow(bool writeFiles)
   printState();
 
   std::vector<int> npass;
-  
+  int npass_eq1b=0; //special kludge for eq1b case
+
   if (fChain == 0) return;
   
   const   double sigma = getCrossSection(findInputName());
@@ -98,6 +99,13 @@ void basicLoop::cutflow(bool writeFiles)
       if (writeFiles)     *textfiles[i] <<runNumber<<" "<<lumiSection<<" "<<eventNumber<<endl;
       //the structure of this code means we will dump files for cuts that are not required.
       //that's a bit wasteful but i'm not going to worry about it
+
+      //special kludge for eq1b
+      //if we reach this point then we have passed the cut. if the cut is >=1b, then we might also
+      //pass the ==1b cut
+      if ( cutRequired(cutTags_[i]) && cutTags_[i]=="cut1b") {
+	if (passCut("cutEq1b"))	++npass_eq1b;
+      }
     }
     
   }
@@ -134,6 +142,18 @@ void basicLoop::cutflow(bool writeFiles)
       //now including a decription string too. not perfect but better than nothing
       file <<cutNames_[cutTags_[i]].Data()<<"\t"<<setprecision(20) << weighted<<"\t" << weighted_error<<endl;
       fileU <<cutNames_[cutTags_[i]].Data()<<"\t"<<setprecision(20) << npass.at(i)<<endl;
+
+      //special kludge for ==1b case
+      //this is an ugly duplication of code, to be dealt with later
+      if ( cutTags_[i]=="cut1b") {
+	error = sqrt(npass_eq1b);
+	weighted = npass_eq1b * weight;
+	weighted_error = error * weight;
+	sprintf(ccc,"%20s %15d | %.2f | Weighted = %f +/- %f","==1b",npass_eq1b,100*double(npass_eq1b)/double(npass.at(0)),weighted,weighted_error);
+	cout<<ccc<<endl;
+	file <<"==1b"<<"\t"<<setprecision(20) << weighted<<"\t" << weighted_error<<endl;
+	fileU <<"==1b"<<"\t"<<setprecision(20) << npass_eq1b<<endl;
+      }
     }
   }
   
