@@ -18,17 +18,22 @@ root -b -l -q cutflow_twiki.C++
 #include "TAxis.h"
 TCanvas * Ccutflow;
 
-//global settings that change what the output of the code is
+//here at the top are global settings that change what the output of the code is
+//filestub_  -- what input files to use (just the middle part of the filename)
+//mode_      -- what type of table to print
+//latexMode_ -- do you want your table formatted for latex or for twiki
 
-//const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep_minDP_NoDeltaPhi_NoTrigger";
-//const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP";
-const TString filestub_ ="Baseline0.highprecision.PF_pfMEThigh_PFLep0e0mu_minDP";
+const TString filestub_ ="Baseline0_PF_pfMETmed_PFLep0e0mu_minDP_MuonCleaning";
 //mode 1 is print cut flow table (B & S) ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
 //mode 4 is like 1 but B only, 5 is like 1 but S only
 //mode 6 is print S/B table
 //mode 7 prints signal efficiency table (%)
 const int mode_ = 4;
-const bool latexMode_ = true; //otherwise TWiki
+const bool latexMode_ = true; //true=latex, false=TWiki
+
+//nb: this routine is hard-coded to use 4 QCD samples and 3 SingleTop samples
+//also, the list of input sample is hard-coded below
+
 const TString pm = latexMode_ ? " \\pm " : " +/- ";
 
 //utility function for making output more readable
@@ -131,8 +136,10 @@ void cutflow_twiki()
   std::vector<TString> cutnames;
 
   int nbackground = 6;
-  char *background_list[]={"QCD","TTbarJets","SingleTop","Zinvisible","WJets","ZJets"};
-  int nsignal = 2;//5;//16; //oops, where did LM3 go?
+  char *background_list[]={"QCD","TTbarJets","SingleTop","WJets","ZJets","Zinvisible"}; //this one corresponds to filenames
+  //FIXME -- this is hard-coded for Latex output:
+  char *background_names[]={"QCD","\\ttbar","Single-Top","\\WJets","\\ZJets","\\Zinvisible"}; //this one has printed names
+  int nsignal = 2;//5;//16;
   //  char *signal_list[]={"LM0", "LM1", "LM2", "LM4", "LM5", "LM6","LM7", "LM8","LM9","LM9p", "LM9t175", "LM10", "LM11", "LM12","LM13","mMSSM"};
   //  char *signal_list[]={"LM0", "LM1", "LM9","LM13","mMSSMv3"};
   char *signal_list[]={ "LM9","LM13"};
@@ -266,7 +273,7 @@ void cutflow_twiki()
   cout<<"Cut"<<col;
   if (mode_==1 ||mode_==4) { //print background names
     for (int ibackground=0 ; ibackground<nbackground; ibackground++)  {
-      cout<< background_list[ibackground];
+      cout<< background_names[ibackground];
       cout<<col;
     }
     //after the individual backgrounds, print the background total
@@ -282,6 +289,10 @@ void cutflow_twiki()
     }
   }
   cout<<endl;
+
+  if (latexMode_) {
+    cout<<"\\hline"<<endl;
+  }
 
   //now we print out the actual numbers
   for (int i=0; i<ncuts; i++) {
