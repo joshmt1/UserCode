@@ -679,6 +679,9 @@ public :
    virtual void     Show(Long64_t entry = -1);
 
    // ========================================== begin
+   //first the functions in basicLoop.C
+   //these are "User" functions that loop over events.
+   //the operation of the code should not depend on them
    virtual void     Loop(unsigned int dataindex=0);
    virtual void     exampleLoop();
    virtual void     screendump();
@@ -688,17 +691,23 @@ public :
    virtual void triggerPlotData();
    virtual void triggerTest();
    virtual void Nminus1plots();
+   void cutflow(bool writeFiles=false);
+   void cutflowPlotter();
 
+   //below here are == functions in basicLoop.h ==
+   //these are utilities that e.g. calculate useful quantities for a given event
+
+   //some stuff that is used internally
    void fillTightJetInfo();
    void InitJets();
 
-   void printState();
-
+   //performance timing
    void startTimer();
    void checkTimer(const Long64_t ndone, const Long64_t ntotal);
    void stopTimer(const Long64_t ntotal);
 
-   //   int getCutFlow(TString cut);
+   //configuration options
+   void printState(); //dump useful configuration info to the screen
    bool setCutScheme(CutScheme cutscheme);
    void setMETType(METType mettype);
    void setJetType(jetType jettype);
@@ -717,15 +726,16 @@ public :
    TString getCutDescriptionString();
    TString getBCutDescriptionString();
 
+   //really special configuration options (for expert use)
    void specifyEvent(ULong64_t run, ULong64_t lumisection, ULong64_t event);
    bool eventIsSpecified();
    void setSpecialCutDescription(TString cutDesc) {specialCutDescription_=cutDesc;}
    void useRealDatasetNames(bool usereal) { realDatasetNames_=usereal;}
 
-   std::pair<float, float> getJESAdjustedMETxy();
-   std::pair<float, float> getJERAdjustedMETxy();
-
-   std::pair<float,float> getUnclusteredSmearedMETxy() ;
+   //calculate useful stuff and get useful info
+   TString getSampleName(TString inname="") ;
+   double getCrossSection(TString inname="") ;
+   TString findInputName() ;
 
    float getMET(); //return MET determined by theMETType_
    float getMETphi(); //return MET determined by theMETType_
@@ -737,27 +747,28 @@ public :
    float getLargestJetPtRecoError(unsigned int maxjets);
    float getDeltaPhiMismeasuredMET(unsigned int maxjets);
 
-   void cutflow(bool writeFiles=false);
-   void cutflowPlotter();
+   //for systematics (return is a pair with METx, METy)
+   std::pair<float, float> getJESAdjustedMETxy();
+   std::pair<float, float> getJERAdjustedMETxy();
+   std::pair<float,float> getUnclusteredSmearedMETxy() ;
+
    bool cutRequired(TString cutTag) ;
    bool passCut(TString cutTag) ;
-   TString getSampleName(TString inname="") ;
-   double getCrossSection(TString inname="") ;
-   TString findInputName() ;
 
+   //old RA2 cuts
    bool passMuVetoRA2() ;
    bool passEleVetoRA2() ;
+
+   //used for Sync1 and kBaseline0
    bool passMuVetoSync1() ;
    bool passEleVetoSync1() ;
-
    int countMuSync1() ;
    int countEleSync1() ;
 
    bool passTauVeto();
-
    bool passCleaning();
 
-   bool passSSVM(int i);
+   bool passSSVM(int i); //index is for loose jets
 
    //note that !(bad jet) != good jet
    //a bad jet is a high pT jet with too wide eta or failing jet ID
