@@ -11,7 +11,7 @@
 //QCD and SingleTop need to be added with hadd
 
 /* things that would be great to implement:
-1. summary of overflow bins in last bins of stack (as Don's plots always have)
+1. summary of overflow bins in last bins of stack (as Don's plots always have) -- done!
 2. some sort of error bar indication on the stack (especially for QCD)
 */
 
@@ -51,6 +51,7 @@ int rebin_=0;
 bool logy_=false;
 bool dostack_=false;
 bool doleg_=true;
+bool dodata_=true;
 
 bool doVerticalLine_=false;
 double verticalLinePosition_=0;
@@ -90,6 +91,10 @@ void setStackMode(bool dostack) {
   dostack_=dostack;
 }
 
+void doData(bool dodata) {
+  dodata_=dodata;
+}
+
 void setRebin(int rebin) {
   rebin_=rebin;
 }
@@ -124,10 +129,10 @@ void addOverflowBin(TH1D* theHist) {
     lastBinError += pow(theHist->GetBinError( ibin),2);
   }
   lastBinError = sqrt(lastBinError);
-  cout<<lastBinContent<<" +/- "<<lastBinError<<endl;
 
   theHist->SetBinContent(lastVisibleBin,lastBinContent);
   theHist->SetBinError(lastVisibleBin,lastBinError);
+  cout<<lastBinContent<<" +/- "<<lastBinError<<endl;
 }
 
 void drawVerticalLine() {
@@ -155,7 +160,7 @@ void loadSamples(TString filestub) {
   if (filestub == loaded_) return;
   else if (loaded_ != "") {cout<<"quit root and try again"<<endl; return;}
   loaded_=filestub;
-  const TString cutdesc = "Baseline0_PF_pfMETmedhigh_PFLep0e0mu_minDP";
+  const TString cutdesc = "Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP_MuonCleaning";
 
   samples_.push_back("QCD");
   samples_.push_back("TTbarJets");
@@ -205,7 +210,7 @@ void loadSamples(TString filestub) {
   dname+=cutdesc;
   dname+=".data.root";
   if (dname.Contains("_NoTrigger"))   dname.ReplaceAll("_NoTrigger","");
-  if (dostack_) {
+  if (dostack_ && dodata_) {
     fdata = new TFile(dname);
     if (fdata->IsZombie()) cout<<"Problem with data file! "<<dname<<endl;
   }
@@ -274,6 +279,8 @@ void drawNormalized(const TString hname, const TString xtitle, const TString yti
     //better do these bin-based manipulations after the rebinning!
     addOverflowBin(  hh.find(hname,files_[samples_[isample]]) ); //manipulates the TH1D provided via the pointer!
 
+    //cout<<"
+
     if (!dostack_) {
       //set line color instead of fill color for this type of plot
       hh.find(hname,files_[samples_[isample]])->SetLineColor(sampleColor_[samples_[isample]]);
@@ -314,18 +321,21 @@ void drawNormalized(const TString hname, const TString xtitle, const TString yti
 
     if (doVerticalLine_) drawVerticalLine(); //i want to draw the data last
 
-    hdata = (TH1D*) fdata->Get(hname);
-    hdata->UseCurrentStyle();
-    hdata->SetMarkerColor(kBlack);
-    hdata->SetLineWidth(2);
-    hdata->SetMarkerStyle(kFullCircle);
-    hdata->SetMarkerSize(1);
-    if (rebin_!=0)  hdata->Rebin(rebin_);
-    addOverflowBin(hdata); // manipulates the histogram!
-    hdata->Draw("SAME");
-    cout<<hdata->GetMaximum()<<"\t"<<thestack->GetMaximum()<<endl;
-    if (hdata->GetMaximum() > thestack->GetMaximum()) {
-      thestack->SetMaximum( hdata->GetMaximum());
+    if (dodata_) {
+      hdata = (TH1D*) fdata->Get(hname);
+      if (hdata == 0) cout<<"Problem with data histogram!"<<endl;
+      hdata->UseCurrentStyle();
+      hdata->SetMarkerColor(kBlack);
+      hdata->SetLineWidth(2);
+      hdata->SetMarkerStyle(kFullCircle);
+      hdata->SetMarkerSize(1);
+      if (rebin_!=0)  hdata->Rebin(rebin_);
+      addOverflowBin(hdata); // manipulates the histogram!
+      hdata->Draw("SAME");
+      cout<<hdata->GetMaximum()<<"\t"<<thestack->GetMaximum()<<endl;
+      if (hdata->GetMaximum() > thestack->GetMaximum()) {
+	thestack->SetMaximum( hdata->GetMaximum());
+      }
     }
   }
 
@@ -464,6 +474,7 @@ void plotOtherStuff()
 /*
 constructing this one carefully so that running it once through really will produce a complete and valid set of plots
 (i.e. keeping in mind the bugs I already discussed)
+This is more or less how I generated plots for the AN
 */
 void plotWithScale() {
   // .L drawCutflowPlots.C++                                                                          
@@ -471,28 +482,44 @@ void plotWithScale() {
   //setting for the whole session
   setStackMode(true);
 
+  // == starting here, draw with the high MET region files ===
+
   //MET (first draw without scale factor)
   setPlotRange(0,260);
   setLogY(true);
+  drawNormalized("H_MET","E_{T}^{miss} [GeV]","Events");
+  drawNormalized("H_MET_eq1b","E_{T}^{miss} [GeV]","Events");
   drawNormalized("H_MET_ge1b","E_{T}^{miss} [GeV]","Events");
   drawNormalized("H_MET_ge2b","E_{T}^{miss} [GeV]","Events");
 
-  setQCDScale(2.8);
-
-  //MET
-  setPlotRange(0,260);
-  setLogY(true);
-  enableVerticalLine(150);
-  drawNormalized("H_MET_ge1b","E_{T}^{miss} [GeV]","Events");
-  drawNormalized("H_MET_ge2b","E_{T}^{miss} [GeV]","Events");
-
-  //minDeltaPhi
-  enableVerticalLine(0.3);
   resetPlotRange(); 
   setLogY(false);
   setRebin(4);
   drawNormalized("HminDeltaPhiMETj_ge1b","min(#Delta#phi[ jets 1..3, E_{T}^{miss} ] )","Events");
   drawNormalized("HminDeltaPhiMETj_ge2b","min(#Delta#phi[ jets 1..3, E_{T}^{miss} ] )","Events");
+  drawNormalized("HminDeltaPhiMETj_eq1b","min(#Delta#phi[ jets 1..3, E_{T}^{miss} ] )","Events");
+
+
+  setQCDScale(2.8);
+
+  //don't bother with these at the moment
+
+  //MET
+//   setPlotRange(0,260);
+//   setLogY(true);
+//   enableVerticalLine(150);
+//   drawNormalized("H_MET_ge1b","E_{T}^{miss} [GeV]","Events");
+//   drawNormalized("H_MET_ge2b","E_{T}^{miss} [GeV]","Events");
+
+//   //minDeltaPhi
+//   enableVerticalLine(0.3);
+//   resetPlotRange(); 
+//   setLogY(false);
+//   setRebin(4);
+//   drawNormalized("HminDeltaPhiMETj_ge1b","min(#Delta#phi[ jets 1..3, E_{T}^{miss} ] )","Events");
+//   drawNormalized("HminDeltaPhiMETj_ge2b","min(#Delta#phi[ jets 1..3, E_{T}^{miss} ] )","Events");
+
+  // == here, start over and draw with the medhigh MET region files ===
 
   //HT
   resetVerticalLine();
@@ -500,12 +527,14 @@ void plotWithScale() {
   setRebin(25); //gives 100 GeV wide bins
   drawNormalized("H_HT_ge1b","H_{T} (GeV)","Events");
   drawNormalized("H_HT_ge2b","H_{T} (GeV)","Events");
+  drawNormalized("H_HT_eq1b","H_{T} (GeV)","Events");
 
   //n jets
   setPlotRange(0,8);
   resetRebin();
   drawNormalized("Hnjets_ge1b","Jet multiplicity","Events");
   drawNormalized("Hnjets_ge2b","Jet multiplicity","Events");
+  drawNormalized("Hnjets_eq1b","Jet multiplicity","Events");
 
   //n b jets
   setPlotRange(0,4);
@@ -516,10 +545,12 @@ void plotWithScale() {
   //  drawNormalized("HnElectrons","Number of electrons","Events");
   drawNormalized("HnElectrons_ge1b","Number of electrons","Events");
   drawNormalized("HnElectrons_ge2b","Number of electrons","Events");
+  drawNormalized("HnElectrons_eq1b","Number of electrons","Events");
 
   //  drawNormalized("HnMuons","Number of muons","Events");
   drawNormalized("HnMuons_ge1b","Number of muons","Events");
   drawNormalized("HnMuons_ge2b","Number of muons","Events");
+  drawNormalized("HnMuons_eq1b","Number of muons","Events");
 
   //jet pT
   resetPlotRange();
@@ -527,12 +558,110 @@ void plotWithScale() {
   //  drawNormalized("Hjetpt1","p_{T} of lead jet","Events");
   drawNormalized("Hjetpt1_ge1b","p_{T} of lead jet","Events");
   drawNormalized("Hjetpt1_ge2b","p_{T} of lead jet","Events");
+  drawNormalized("Hjetpt1_eq1b","p_{T} of lead jet","Events");
 
   //b jet pT
   //same rebin factor
   drawNormalized("Hbjetpt1_ge1b","p_{T} of lead b-tagged jet","Events");
   drawNormalized("Hbjetpt1_ge2b","p_{T} of lead b-tagged jet","Events");
+  drawNormalized("Hbjetpt1_eq1b","p_{T} of lead b-tagged jet","Events");
 
   resetRebin(); //cleanup
+
+}
+
+void morePlots() {
+  // .L drawCutflowPlots.C++                                                                          
+
+  doData(false);
+  //setting for the whole session
+  setStackMode(true);
+
+  setLogY(true);
+
+  drawNormalized("HdeltaPhiMPTMET_MET0","#Delta #phi (MPT,MET) for all MET, no minDP cut","Events");
+  drawNormalized("HdeltaPhiMPTMET_MET150","#Delta #phi (MPT,MET) for MET>150, no minDP cut","Events");
+
+  setLogY(false);
+  drawNormalized("HdeltaPhiMPTMET_MET0","#Delta #phi (MPT,MET) for all MET, no minDP cut","Events");
+
+}
+
+//a new and rather independent set of code
+void plotQCD() {
+  // .L drawCutflowPlots.C++                                                                          
+
+  /*
+  loadSamples("Nminus1plots");
+
+  TH1D* ratio_Over = (TH1D*) files_["QCD"]->Get("HminDeltaPhiRatio_Over");
+  TH1D* ratio_Under = (TH1D*) files_["QCD"]->Get("HminDeltaPhiRatio_Under");
+  TH1D* ratio_Close = (TH1D*) files_["QCD"]->Get("HminDeltaPhiRatio_Close");
+  */
+
+  TFile f("Nminus1plots.Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP_MuonCleaning.QCD.root");
+  TH1D* ratio_Over = (TH1D*) f.Get("HminDeltaPhiRatio_Over");
+  TH1D* ratio_Under = (TH1D*) f.Get("HminDeltaPhiRatio_Under");
+  TH1D* ratio_Close = (TH1D*) f.Get("HminDeltaPhiRatio_Close");
+
+  gStyle->SetOptStat(0);
+
+  TCanvas * cratio = new TCanvas("cratio","ratio",600,400);
+  cratio->SetLogy(); //for some reason this had no effect....
+
+  ratio_Close->SetLineColor(kGreen); //  ratio_Close->SetMarkerStyle();
+  ratio_Under->SetLineColor(kRed);
+  ratio_Over->SetLineColor(kBlue);
+
+  ratio_Close->SetXTitle("MET (GeV)");
+  ratio_Close->SetYTitle("r");
+  ratio_Close->SetTitle("");
+
+  TLegend theleg(0.15,0.55,0.5,0.85);
+  theleg.AddEntry(ratio_Over,"(reco - gen pT) > 50 GeV");
+  theleg.AddEntry(ratio_Under,"(reco - gen pT) < -50 GeV");
+  theleg.AddEntry(ratio_Close,"(reco - gen pT) within 50 GeV ");
+
+  ratio_Close->Draw();
+
+  theleg.SetBorderSize(0);
+
+  //theleg.SetFillColor(0);
+  //theleg.SetLineColor(1);
+  theleg.SetLineStyle(0);
+  theleg.SetTextFont(42);
+  theleg.SetFillStyle(0);
+
+  theleg.Draw();
+
+  ratio_Under->Draw("same");
+  ratio_Over->Draw("same");
+
+}
+
+void MPTMET() {
+
+  TFile f("Nminus1plots.Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP_MuonCleaning.QCD.root");
+  TH1D* pass_h = (TH1D*) f.Get("HminDeltaPhiPass_hMPTMET");
+  TH1D* fail_h = (TH1D*) f.Get("HminDeltaPhiFail_hMPTMET");
+
+  TH1D* pass_l = (TH1D*) f.Get("HminDeltaPhiPass_lMPTMET");
+  TH1D* fail_l = (TH1D*) f.Get("HminDeltaPhiFail_lMPTMET");
+
+  const int rebin=4;
+  pass_h->Rebin(rebin);
+  fail_h->Rebin(rebin);
+
+  pass_l->Rebin(rebin);
+  fail_l->Rebin(rebin);
+
+  TH1D* ratio_h = new TH1D("ratio_h","r(MET) high",pass_h->GetNbinsX(),pass_h->GetXaxis()->GetXmin(),pass_h->GetXaxis()->GetXmax());
+  TH1D* ratio_l = new TH1D("ratio_l","r(MET) low",pass_h->GetNbinsX(),pass_h->GetXaxis()->GetXmin(),pass_h->GetXaxis()->GetXmax());
+
+  ratio_h->Divide(pass_h,fail_h);
+  ratio_l->Divide(pass_l,fail_l);
+
+  TH1D* Hhl = new TH1D("Hhl","double ratio",pass_h->GetNbinsX(),pass_h->GetXaxis()->GetXmin(),pass_h->GetXaxis()->GetXmax());
+   Hhl->Divide(ratio_h,ratio_l);
 
 }
