@@ -14,7 +14,7 @@ gSystem->Load("basicLoop_C.so");
 
 */
 
-const TString version = "V00-01-04/DATA/386";
+const TString version = "V00-02-00/DATA/387";
 
 void run_Nminus1_data()
 {
@@ -59,10 +59,11 @@ void run_Nminus1_data()
   
   looper.setCutScheme(basicLoop::kBaseline0);
   looper.setMETType(basicLoop::kpfMET);
-  looper.setMETRange(basicLoop::kMedhigh); //sideband!
+  looper.setMETRange(basicLoop::kHigh);
   looper.setJetType(basicLoop::kPF);
-  looper.setLeptonType(basicLoop::kNormal);
+  looper.setLeptonType(basicLoop::kPFLeptons);
   looper.setDPType(basicLoop::kminDP);
+  looper.setCleaningType(basicLoop::kMuonCleaning);
   
   looper.Nminus1plots();
   
