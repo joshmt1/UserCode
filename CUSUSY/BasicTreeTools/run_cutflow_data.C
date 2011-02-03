@@ -14,7 +14,7 @@ gSystem->Load("basicLoop_C.so");
 
 */
 
-const TString version = "V00-01-05/DATA/387";
+const TString version = "V00-02-00/DATA/387";
 
 void run_cutflow_data()
 {
@@ -24,11 +24,7 @@ void run_cutflow_data()
   TString dir = "/cu1/joshmt/";
   if (computername =="JoshPC") {
     dir="~/data/";
-    //  libname="basicLoop_C.dll";
   }
-  //could also add CASTOR
-
-  //gSystem->Load(libname);
 
   dir += "BasicNtuples/";
   dir += version; dir+="/";
@@ -48,7 +44,7 @@ void run_cutflow_data()
     
     samplefiles+="/*.root";
 
-    if (!samplefiles.Contains("JetMETTau")) continue;
+    //if (!samplefiles.Contains("JetMETTau")) continue;
     cout<<"About to add files in: "<<samplefiles<<endl;
 
     ch.Add(samplefiles);
@@ -56,19 +52,17 @@ void run_cutflow_data()
   }
 
   basicLoop looper(&ch,&info);
-  //looper.setSpecialCutDescription("onlyJetMETTauNoJetID");
+  //  looper.setSpecialCutDescription("OnlyUnprescaledTrg");
 
   looper.setCutScheme(basicLoop::kBaseline0);
   looper.setMETType(basicLoop::kpfMET);
   looper.setMETRange(basicLoop::kHigh); //signal region
-  //  looper.setMETRange(basicLoop::kMedium); //50 - 100 GeV region
+  //looper.setMETRange(basicLoop::kMedium); //50 - 100 GeV region
   looper.setJetType(basicLoop::kPF);
   looper.setLeptonType(basicLoop::kPFLeptons); //PF leptons
-  //looper.setLeptonType(basicLoop::kNormal); //normal (not PF) leptons
-  
   looper.setDPType(basicLoop::kminDP);
-  //  looper.setIgnoredCut("cutDeltaPhi"); //was ignoring this cut for preliminary sections of the note
-  
+  looper.setCleaningType(basicLoop::kMuonCleaning);
+
   looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
 
   //looper.setMuonReq(1); //inverted muon veto
