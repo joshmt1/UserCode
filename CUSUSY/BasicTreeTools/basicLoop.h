@@ -137,6 +137,8 @@ public :
 
   bool isData_; //set in ctor
 
+  bool  realDatasetNames_;
+
   //any trigger on this list will be considered OK for passing the trigger cut
   //key is the trigger name ; value is the position in the passTrigger variable in the ntuple
   std::map<TString, int>  triggerList_; //contains only triggers used for determining the signal
@@ -718,6 +720,7 @@ public :
    void specifyEvent(ULong64_t run, ULong64_t lumisection, ULong64_t event);
    bool eventIsSpecified();
    void setSpecialCutDescription(TString cutDesc) {specialCutDescription_=cutDesc;}
+   void useRealDatasetNames(bool usereal) { realDatasetNames_=usereal;}
 
    std::pair<float, float> getJESAdjustedMETxy();
    std::pair<float, float> getJERAdjustedMETxy();
@@ -732,6 +735,7 @@ public :
    float getJetInvisibleEnergyHT(); //could add a pT cut as an argument
    float getJetInvisibleEnergyMHT(); //could add a pT cut as an argument
    float getLargestJetPtRecoError(unsigned int maxjets);
+   float getDeltaPhiMismeasuredMET(unsigned int maxjets);
 
    void cutflow(bool writeFiles=false);
    void cutflowPlotter();
@@ -785,10 +789,12 @@ public :
 
    bool passPV();
 
-   bool passHLT(); //bool printedHLT_; 
+   bool passHLT(); bool printedHLT_; 
    TString lastTriggerPass_; //not really filled...but keep it in so that basicLoop.C compiles
    bool passHLT(const TString & triggerName);
    int getHLTPrescale(const TString & triggerName);
+
+   void lookForPrescalePass();
 
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
@@ -829,9 +835,10 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
      ne_(0),
      nmu_(0),
      isData_(false),
+     realDatasetNames_(false),
      starttime_(0),
      specialCutDescription_(""),
-     //     printedHLT_(false),
+     printedHLT_(false),
      lastTriggerPass_("")
 //====================== end
 
@@ -1799,7 +1806,8 @@ bool basicLoop::passDeltaPhi_Sync1() {
   return pass;
 }
 
-bool basicLoop::passHLT() { //do I pass the OR of what is in triggerList_
+//the standard code -- applies the simple OR of what is in triggerList_
+bool basicLoop::passHLT() { 
 
   for (std::map<TString, int>::const_iterator itrig=triggerList_.begin(); 
        itrig!=triggerList_.end(); ++itrig) {
@@ -1815,6 +1823,23 @@ bool basicLoop::passHLT() { //do I pass the OR of what is in triggerList_
   }
   return false;
 }
+
+
+/* modification of the above code to require that the triggers in the OR have prescale==1
+bool basicLoop::passHLT() {
+
+  if (!printedHLT_) {cout<<"WARNING -- using modified HLT filter!"<<endl; printedHLT_=true;}
+
+  for (std::map<TString, int>::const_iterator itrig=triggerList_.begin(); 
+       itrig!=triggerList_.end(); ++itrig) {
+
+    if ( passTrigger->at( itrig->second) && (hltPrescale->at(itrig->second) == 1) ) {
+      return true;
+    }
+  }
+  return false;
+}
+*/
 
 bool basicLoop::passHLT(const TString & triggerName) { //do I pass the trigger given as the argument?
 
@@ -2900,6 +2925,22 @@ float basicLoop::getLargestJetPtRecoError(unsigned int maxjets) {
   return biggest;
 }
 
+float basicLoop::getDeltaPhiMismeasuredMET(unsigned int maxjets) {
+
+  float biggest=0;
+  unsigned int ibiggest=0;
+
+  unsigned int loopmax = (loosejetPt->size() < maxjets) ? loosejetPt->size() : maxjets;
+  //should i be applying jet cuts here?
+  for (unsigned int ij=0; ij<loopmax; ++ij) {
+    float residual = loosejetGenPt->at(ij) > 0 ? getLooseJetPt(ij) - loosejetGenPt->at(ij) : 0;
+    if ( fabs(residual) > fabs(biggest) ) { biggest = residual; ibiggest = ij; }
+  }
+
+  return getDeltaPhi(loosejetPhi->at(ibiggest),getMETphi());
+
+}
+
 bool basicLoop::isGoodJet_Sync1(unsigned int ijet) {
 
   if ( getLooseJetPt(ijet) <50) return false;
@@ -3095,6 +3136,7 @@ I am _not_ updating this to use the JES uncertainties!
   jetBTagDisc_simpleSecondaryVertexHighPurBJetTags.clear();
   jetBTagDisc_simpleSecondaryVertexBJetTags.clear();
 
+  //did a test where i commented this loop out. didn't help much with code speed.
   //now fill with new values
   for (unsigned int i=0; i<tightJetIndex->size(); i++) {
     int j = tightJetIndex->at(i);
@@ -3241,8 +3283,15 @@ TString basicLoop::getSampleName(TString inname) {
   else if (inname.Contains("/ZJets/"))                     return "ZJets";
   else if (inname.Contains("/Zinvisible/"))                return "Zinvisible";
 
-  else if (inname.Contains("/DATA/"))                      return "data";
-  
+  else if (inname.Contains("/DATA/"))  {
+    if (realDatasetNames_) {
+      int lastslash=     inname.Last('/');
+      TString wholepath=inname(0,lastslash);
+      lastslash = wholepath.Last('/');
+      return wholepath(lastslash+1,wholepath.Length());
+    }
+    else return "data";
+  }
   std::cout<<"Cannot find sample name for this sample!"<<std::endl;
   
   return "";
