@@ -12,7 +12,7 @@ just do:
 root -b -l -q run_Nminus1.C++
 */
 
-const TString version = "V00-01-05";
+const TString version = "V00-02-00";
 
 //const TString extrapath = "SUSYPATv8_363"; //pass an empty string unless you need something else
 const TString extrapath = "";
@@ -26,9 +26,11 @@ void run_Nminus1()
   if (computername =="JoshPC") {
     dir="~/data/";
   }
-  //could also add CASTOR
+  else if (computername.Contains("lxplus")) {
+    dir="/tmp/joshmt/";
+  }
 
-  dir += "BasicNtuples/";
+  if (!computername.Contains("lxplus")) dir += "BasicNtuples/";
   if (extrapath!="") { dir += extrapath; dir += "/";}
   dir += version; dir+="/";
   TChain dummy("dummy");
@@ -45,7 +47,8 @@ void run_Nminus1()
 
     if (samplefiles.Contains("DATA")) continue; //skip data
 
-    //if (!(samplefiles.Contains("QCD") )) continue; //hack to skip some samples
+    //    if ((samplefiles.Contains("LM") )) continue; //hack to skip some samples
+    //    if ((samplefiles.Contains("Pt1000") )) continue; //hack to skip some samples
     
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
@@ -60,6 +63,7 @@ void run_Nminus1()
     looper.setJetType(basicLoop::kPF);
     looper.setLeptonType(basicLoop::kPFLeptons);
     looper.setDPType(basicLoop::kminDP);
+    looper.setCleaningType(basicLoop::kMuonCleaning);
 
     looper.Nminus1plots();
   }

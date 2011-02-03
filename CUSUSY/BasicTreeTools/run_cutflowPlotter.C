@@ -12,7 +12,7 @@ just do:
 root -b -l -q run_cutflowPlotter.C++
 */
 
-const TString version = "V00-01-01";
+const TString version = "V00-02-00";
 
 //const TString extrapath = "SUSYPATv8_363"; //pass an empty string unless you need something else
 const TString extrapath = "";
@@ -45,7 +45,7 @@ void run_cutflowPlotter()
 
     if (samplefiles.Contains("DATA")) continue; //skip data (use run_cutflowPlotter_data.C)
 
-    //if (!(samplefiles.Contains("LM0") )) continue; //hack to skip some samples
+    if (!(samplefiles.Contains("TTbarJ") )) continue; //hack to skip some samples
     
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
@@ -59,6 +59,7 @@ void run_cutflowPlotter()
     looper.setJetType(basicLoop::kPF);
     looper.setLeptonType(basicLoop::kPFLeptons);
     looper.setDPType(basicLoop::kminDP);
+    looper.setCleaningType(basicLoop::kMuonCleaning);
 
     looper.setBCut(3); //require 3 b tags so that we run the full cut flow table
     looper.cutflowPlotter();
