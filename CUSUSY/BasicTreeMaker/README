@@ -1,6 +1,9 @@
 Release notes
 --
 
+V00-02-01 - identical to V00-02-00 except a bug fix in branch loosejetGenParticlePDGId
+
+V00-02-00 - 
 - change MET storage implementation slightly (to be less hard-coded and more like jets)
 - Implement two muon filters from classic RA2
   	    -hopefully eliminates fake MET
