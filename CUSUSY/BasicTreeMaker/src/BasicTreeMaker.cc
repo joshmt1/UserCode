@@ -20,7 +20,7 @@ using a class created with MakeClass.
 
 Originally developed and tested with CMSSW_3_6_2
 Have also used in in 384.
-Latest incarnation is for 386 (also tested in 387)
+Latest incarnation is for 386 and 387
 
   Recipe is kept here:
 https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
@@ -28,7 +28,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.26 2011/01/21 17:40:56 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.27 2011/01/22 12:58:36 joshmt Exp $
 //
 //
 
@@ -875,6 +875,7 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
 	loosejetGenPt[jetAlgorithmTags_[jetIndex]].push_back( -99 );
 	loosejetGenPhi[jetAlgorithmTags_[jetIndex]].push_back( -99 );
 	loosejetGenEta[jetAlgorithmTags_[jetIndex]].push_back( -99 );
+	loosejetGenParticlePDGId[jetAlgorithmTags_[jetIndex]].push_back( -99 );
       }
       
       for (unsigned int ib=0; ib<btagAlgorithmNames_.size(); ib++) {
