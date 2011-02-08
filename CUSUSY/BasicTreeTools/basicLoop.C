@@ -1,6 +1,5 @@
 #define basicLoop_cxx
 #include "basicLoop.h"
-#include <TH1.h>
 #include <TH2.h>
 #include <TDatime.h>
 #include <TFile.h>
@@ -551,18 +550,30 @@ void basicLoop::Nminus1plots()
    TH1D   HminDeltaPhiAllFail_ge1b("HminDeltaPhiAllFail_ge1b","fail minDeltaPhiAll",nbins, met_min,met_max);
    TH1D   HminDeltaPhiAllFail_ge2b("HminDeltaPhiAllFail_ge2b","fail minDeltaPhiAll",nbins, met_min,met_max);
 
+   //to do ! add ge1b case for these!
    TH1D HdeltaPhiMETMismeasuredJet_Over("HdeltaPhiMETMismeasuredJet_Over","DeltaPhi between most mismeasured of lead 3 jets and MET (SR)",nbins, 0,TMath::Pi()+0.01);
    TH1D HdeltaPhiMETMismeasuredJet_Under("HdeltaPhiMETMismeasuredJet_Under","DeltaPhi between most mismeasured of lead 3 jets and MET (SR)",nbins, 0,TMath::Pi()+0.01);
    TH1D HdeltaPhiMETMismeasuredJet_Close("HdeltaPhiMETMismeasuredJet_Close","DeltaPhi between most mismeasured of lead 3 jets and MET (SR)",nbins, 0,TMath::Pi()+0.01);
    TH1D HdeltaPhiMETMismeasuredJetAll_Close("HdeltaPhiMETMismeasuredJetAll_Close","DeltaPhi between most mismeasured of lead 3 jets and MET (SR)",nbins, 0,TMath::Pi()+0.01);
 
+   TH1D HdeltaPhiMETMismeasuredJet_Over_ge1b("HdeltaPhiMETMismeasuredJet_Over_ge1b","DeltaPhi between most mismeasured of lead 3 jets and MET (SR)",nbins, 0,TMath::Pi()+0.01);
+   TH1D HdeltaPhiMETMismeasuredJet_Under_ge1b("HdeltaPhiMETMismeasuredJet_Under_ge1b","DeltaPhi between most mismeasured of lead 3 jets and MET (SR)",nbins, 0,TMath::Pi()+0.01);
+   TH1D HdeltaPhiMETMismeasuredJet_Close_ge1b("HdeltaPhiMETMismeasuredJet_Close_ge1b","DeltaPhi between most mismeasured of lead 3 jets and MET (SR)",nbins, 0,TMath::Pi()+0.01);
+   TH1D HdeltaPhiMETMismeasuredJetAll_Close_ge1b("HdeltaPhiMETMismeasuredJetAll_Close_ge1b","DeltaPhi between most mismeasured of lead 3 jets and MET (SR)",nbins, 0,TMath::Pi()+0.01);
+
    TH1D   HminDeltaPhiPass_Over("HminDeltaPhiPass_Over","pass minDeltaPhi",nbins, met_min,met_max);
    TH1D   HminDeltaPhiFail_Over("HminDeltaPhiFail_Over","fail minDeltaPhi",nbins, met_min,met_max);
    TH1D   HminDeltaPhiPass_Under("HminDeltaPhiPass_Under","pass minDeltaPhi",nbins, met_min,met_max);
    TH1D   HminDeltaPhiFail_Under("HminDeltaPhiFail_Under","fail minDeltaPhi",nbins, met_min,met_max);
-
    TH1D   HminDeltaPhiPass_Close("HminDeltaPhiPass_Close","pass minDeltaPhi",nbins, met_min,met_max);
    TH1D   HminDeltaPhiFail_Close("HminDeltaPhiFail_Close","fail minDeltaPhi",nbins, met_min,met_max);
+
+   TH1D   HminDeltaPhiPass_Over_ge1b("HminDeltaPhiPass_Over_ge1b","pass minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiFail_Over_ge1b("HminDeltaPhiFail_Over_ge1b","fail minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiPass_Under_ge1b("HminDeltaPhiPass_Under_ge1b","pass minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiFail_Under_ge1b("HminDeltaPhiFail_Under_ge1b","fail minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiPass_Close_ge1b("HminDeltaPhiPass_Close_ge1b","pass minDeltaPhi",nbins, met_min,met_max);
+   TH1D   HminDeltaPhiFail_Close_ge1b("HminDeltaPhiFail_Close_ge1b","fail minDeltaPhi",nbins, met_min,met_max);
 
    //MPT , MET
    TH1D HdeltaPhiMPTMET_MET0("HdeltaPhiMPTMET_MET0","DeltaPhi(MPT,MET) MET>0 no mindp",nbins,0,TMath::Pi()+0.01);
@@ -644,18 +655,73 @@ void basicLoop::Nminus1plots()
    TH1D HgenMET_lowMET("HgenMET_lowMET","true MET",nbins,met_min,met_max);
    TH1D HgenMET_lowlow("HgenMET_lowlow","true MET",nbins,met_min,met_max);
 
+   TH1D HgenMET_SR_ge1b("HgenMET_SR_ge1b","true MET",nbins,met_min,met_max);
+
    TH1D HmaxJetRecoError3_SR("HmaxJetRecoError3_SR","max(pT_reco - pT_gen)",nbins,-met_max,met_max);
    TH1D HmaxJetRecoError3_D("HmaxJetRecoError3_D","max(pT_reco - pT_gen)",nbins,-met_max,met_max);
    TH1D HmaxJetRecoError3_lowMET("HmaxJetRecoError3_lowMET","max(pT_reco - pT_gen)",nbins,-met_max,met_max);
    TH1D HmaxJetRecoError3_lowlow("HmaxJetRecoError3_lowlow","max(pT_reco - pT_gen)",nbins,-met_max,met_max);
 
    TH1D HmaxJetRecoErrorAll_Close("HmaxJetRecoErrorAll_Close","max(pT_reco - pT_gen)",nbins,-met_max,met_max);
+   TH1D HmaxJetRecoErrorAll_Close_ge1b("HmaxJetRecoErrorAll_Close_ge1b","max(pT_reco - pT_gen)",nbins,-met_max,met_max);
+
+   TH2D HdeltaPhiMETMismeasuredJetAll_Close_HmaxJetRecoErrorAll_Close("HdeltaPhiMETMismeasuredJetAll_Close_HmaxJetRecoErrorAll_Close","DeltaPhi(bad jet,MET) v max(pT_reco - pT_gen)", nbins,-met_max,met_max,nbins,0,TMath::Pi()+0.01);
 
    TH1D HmaxDeltaPhiMETjAll_SR("HmaxDeltaPhiMETjAll_SR","maxDeltaPhi(all jets,MET)",nbins,0,TMath::Pi()+0.01);
    TH1D HmaxDeltaPhiMETjAll_D("HmaxDeltaPhiMETjAll_D","maxDeltaPhi(all jets,MET)",nbins,0,TMath::Pi()+0.01);
    TH1D HmaxDeltaPhiMETjAll_lowMET("HmaxDeltaPhiMETjAll_lowMET","maxDeltaPhi(all jets,MET)",nbins,0,TMath::Pi()+0.01);
    TH1D HmaxDeltaPhiMETjAll_lowlow("HmaxDeltaPhiMETjAll_lowlow","maxDeltaPhi(all jets,MET)",nbins,0,TMath::Pi()+0.01);
 
+   TH1D HgenMET_SR_Close_noJetMismeasurement("HgenMET_SR_Close_noJetMismeasurement","gen MET (SR, <75 GeV of jet measurement)",nbins,met_min,met_max);
+   TH1D HgenMET_SR_Close_noJetMismeasurement_ge1b("HgenMET_SR_Close_noJetMismeasurement_ge1b","gen MET (SR, <75 GeV of jet measurement)",nbins,met_min,met_max);
+   TH1D HgenInvisibleMHT_SR_Close_noJetMismeasurement("HgenInvisibleMHT_SR_Close_noJetMismeasurement","MC truth vector invis energy (S, <75 GeV of jet measurementR)",nbins,met_min,met_max);
+
+   TH1D HgenInvisibleMHT_SR_Close_noJetMismeasurement_ge1b("HgenInvisibleMHT_SR_Close_noJetMismeasurement_ge1b","MC truth vector invis energy (S, <75 GeV of jet measurementR)",nbins,met_min,met_max);
+
+   int pdglow = -10;
+   int pdghigh= 25;
+   TH1D HjetFlavor_SR("HjetFlavor_SR","jet flavor (SR)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HjetFlavor_D("HjetFlavor_D","jet flavor (D)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HjetFlavor_lowMET("HjetFlavor_lowMET","jet flavor (lowMET)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HjetFlavor_lowlow("HjetFlavor_lowlow","jet flavor (lowlow)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HjetFlavor_SR_Close("HjetFlavor_SR_Close","jet flavor (SR+Close)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HjetFlavor_SR_Close_noJetMismeasurement("HjetFlavor_SR_Close_noJetMismeasurement","jet flavor (SR, <75 GeV of jet mismeasurement)",pdghigh - pdglow,pdglow,pdghigh);
+
+   TH1D HjetFlavor_SR_ge1b("HjetFlavor_SR_ge1b","jet flavor (SR)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HjetFlavor_SR_Close_noJetMismeasurement_ge1b("HjetFlavor_SR_Close_noJetMismeasurement_ge1b","jet flavor (SR, <75 GeV of jet mismeasurement)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HjetFlavor_SR_ge2b("HjetFlavor_SR_ge2b","jet flavor (SR)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HjetFlavor_SR_Close_noJetMismeasurement_ge2b("HjetFlavor_SR_Close_noJetMismeasurement_ge2b","jet flavor (SR, <75 GeV of jet mismeasurement)",pdghigh - pdglow,pdglow,pdghigh);
+
+   TH1D HgenPDGId_SR("HgenPDGId_SR","gen PDG Id (SR)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HgenPDGId_D("HgenPDGId_D","gen PDG Id (D)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HgenPDGId_lowMET("HgenPDGId_lowMET","gen PDG Id (lowMET)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HgenPDGId_lowlow("HgenPDGId_lowlow","gen PDG Id (lowlow)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HgenPDGId_SR_Close("HgenPDGId_SR_Close","gen PDG Id (SR+Close)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HgenPDGId_SR_Close_noJetMismeasurement("HgenPDGId_SR_Close_noJetMismeasurement","gen PDG Id (SR, <75 GeV of jet mismeasurement)",pdghigh - pdglow,pdglow,pdghigh);
+
+   TH1D HgenPDGId_SR_ge1b("HgenPDGId_SR_ge1b","gen PDG Id (SR)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HgenPDGId_SR_Close_noJetMismeasurement_ge1b("HgenPDGId_SR_Close_noJetMismeasurement_ge1b","gen PDG Id (SR, <75 GeV of jet mismeasurement)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HgenPDGId_SR_ge2b("HgenPDGId_SR_ge2b","gen PDG Id (SR)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HgenPDGId_SR_Close_noJetMismeasurement_ge2b("HgenPDGId_SR_Close_noJetMismeasurement_ge2b","gen PDG Id (SR, <75 GeV of jet mismeasurement)",pdghigh - pdglow,pdglow,pdghigh);
+
+   TH1D HtaggedJetFlavor_SR_ge1b("HtaggedJetFlavor_SR_ge1b","flavor of b-tagged jets (SR)",pdghigh - pdglow,pdglow,pdghigh);
+   TH1D HtaggedJetGenPDGId_SR_ge1b("HtaggedJetGenPDGId_SR_ge1b","gen PDF Id of b-tagged jets (SR)",pdghigh - pdglow,pdglow,pdghigh);
+
+   TH2D HjetResidual_Flavor_SR("HjetResidual_Flavor_SR","reco-gen pT vs flavor (SR)",pdghigh,0,pdghigh,nbins,-met_max,met_max);
+   TH2D HjetResidual_GenPDGId_SR("HjetResidual_GenPDGId_SR","reco-gen pT vs pdg id (SR)",pdghigh,0,pdghigh,nbins,-met_max,met_max);
+
+   TH2D HjetInvEnergy_Flavor_SR("HjetInvEnergy_Flavor_SR","jet invisible energy vs flavor (SR)",pdghigh,0,pdghigh,nbins,met_min,met_max);
+   TH2D HjetInvEnergy_GenPDGId_SR("HjetInvEnergy_GenPDGId_SR","jet invisible energy vs pdg id (SR)",pdghigh,0,pdghigh,nbins,met_min,met_max);
+
+   HtaggedJetFlavor_SR_ge1b.Sumw2();
+   HtaggedJetGenPDGId_SR_ge1b.Sumw2();
+   HdeltaPhiMETMismeasuredJetAll_Close_HmaxJetRecoErrorAll_Close.Sumw2();
+
+   HjetResidual_Flavor_SR.Sumw2();
+   HjetResidual_GenPDGId_SR.Sumw2();
+
+   HjetInvEnergy_Flavor_SR.Sumw2();
+   HjetInvEnergy_GenPDGId_SR.Sumw2();
 
    H_HT.Sumw2();
    H_HT_ge1b.Sumw2();
@@ -737,6 +803,13 @@ void basicLoop::Nminus1plots()
    HminDeltaPhiPass_Close.Sumw2();
    HminDeltaPhiFail_Close.Sumw2();
 
+   HminDeltaPhiPass_Over_ge1b.Sumw2();
+   HminDeltaPhiFail_Over_ge1b.Sumw2();
+   HminDeltaPhiPass_Under_ge1b.Sumw2();
+   HminDeltaPhiFail_Under_ge1b.Sumw2();
+   HminDeltaPhiPass_Close_ge1b.Sumw2();
+   HminDeltaPhiFail_Close_ge1b.Sumw2();
+
    //histograms just used for calculations
    HminDeltaPhiPass.Sumw2();
    HminDeltaPhiPass_ge1b.Sumw2();
@@ -767,12 +840,15 @@ void basicLoop::Nminus1plots()
    HgenMET_lowMET.Sumw2();
    HgenMET_lowlow.Sumw2();
 
+   HgenMET_SR_ge1b.Sumw2();
+
    HmaxJetRecoError3_SR.Sumw2();
    HmaxJetRecoError3_D.Sumw2();
    HmaxJetRecoError3_lowMET.Sumw2();
    HmaxJetRecoError3_lowlow.Sumw2();
 
    HmaxJetRecoErrorAll_Close.Sumw2();
+   HmaxJetRecoErrorAll_Close_ge1b.Sumw2();
 
    HmaxDeltaPhiMETjAll_SR.Sumw2();
    HmaxDeltaPhiMETjAll_D.Sumw2();
@@ -801,10 +877,46 @@ void basicLoop::Nminus1plots()
    HdeltaPhiMETMismeasuredJet_Close.Sumw2();
    HdeltaPhiMETMismeasuredJetAll_Close.Sumw2();
 
+   HdeltaPhiMETMismeasuredJet_Over_ge1b.Sumw2();
+   HdeltaPhiMETMismeasuredJet_Under_ge1b.Sumw2();
+   HdeltaPhiMETMismeasuredJet_Close_ge1b.Sumw2();
+   HdeltaPhiMETMismeasuredJetAll_Close_ge1b.Sumw2();
+
    HminDeltaPhiPass_hMPTMET.Sumw2();
    HminDeltaPhiFail_hMPTMET.Sumw2();
    HminDeltaPhiPass_lMPTMET.Sumw2();
    HminDeltaPhiFail_lMPTMET.Sumw2();
+
+   HgenMET_SR_Close_noJetMismeasurement.Sumw2();
+   HgenInvisibleMHT_SR_Close_noJetMismeasurement.Sumw2();
+
+   HgenInvisibleMHT_SR_Close_noJetMismeasurement_ge1b.Sumw2();
+
+   HgenMET_SR_Close_noJetMismeasurement_ge1b.Sumw2();
+
+   HjetFlavor_SR.Sumw2();
+   HjetFlavor_D.Sumw2();
+   HjetFlavor_lowMET.Sumw2();
+   HjetFlavor_lowlow.Sumw2();
+   HjetFlavor_SR_Close.Sumw2();
+   HjetFlavor_SR_Close_noJetMismeasurement.Sumw2();
+
+   HjetFlavor_SR_ge1b.Sumw2();
+   HjetFlavor_SR_ge2b.Sumw2();
+   HjetFlavor_SR_Close_noJetMismeasurement_ge1b.Sumw2();
+   HjetFlavor_SR_Close_noJetMismeasurement_ge2b.Sumw2();
+
+   HgenPDGId_SR.Sumw2();
+   HgenPDGId_D.Sumw2();
+   HgenPDGId_lowMET.Sumw2();
+   HgenPDGId_lowlow.Sumw2();
+   HgenPDGId_SR_Close.Sumw2();
+   HgenPDGId_SR_Close_noJetMismeasurement.Sumw2();
+
+   HgenPDGId_SR_ge1b.Sumw2();
+   HgenPDGId_SR_ge2b.Sumw2();
+   HgenPDGId_SR_Close_noJetMismeasurement_ge1b.Sumw2();
+   HgenPDGId_SR_Close_noJetMismeasurement_ge2b.Sumw2();
 
    startTimer();   //keep track of performance
    //event loop
@@ -930,6 +1042,7 @@ void basicLoop::Nminus1plots()
 
       double largestJetRecoError3 = getLargestJetPtRecoError(3); //look at only the first 3 jets
       double largestJetRecoErrorAll = getLargestJetPtRecoError(99);
+      double jetInvisibleEnergyMHT = getJetInvisibleEnergyMHT(); //vector sum
       //without minDeltaPhi and without MET
       //this is for plotting the ratio of (pass minDeltaPhi) / (fail minDeltaPhi), etc
       setIgnoredCut("cutDeltaPhi");
@@ -947,18 +1060,28 @@ void basicLoop::Nminus1plots()
 	//opt for hard-coded
 	bool passMET = getMET() > 150;
 
+	const float dpMPTMETcut = 2.5; //really nothing but qcd above here
 	if (passMinDeltaPhi) {
 	  HminDeltaPhiPass.Fill(getMET(),weight);
 	  if (nbSSVM >=1)  HminDeltaPhiPass_ge1b.Fill(getMET(),weight);
 	  if (nbSSVM >=2)  HminDeltaPhiPass_ge2b.Fill(getMET(),weight);
 
 	  HminDeltaPhiPass_MPTMET_MET0.Fill(dp_MPTMET,weight);
-	  if (dp_MPTMET>1.5) HminDeltaPhiPass_hMPTMET.Fill(getMET(),weight);
+	  if (dp_MPTMET>dpMPTMETcut) HminDeltaPhiPass_hMPTMET.Fill(getMET(),weight);
 	  else               HminDeltaPhiPass_lMPTMET.Fill(getMET(),weight);
 
-	  if      (largestJetRecoError3>50)  HminDeltaPhiPass_Over.Fill(getMET(), weight);
-	  else if (largestJetRecoError3<-50) HminDeltaPhiPass_Under.Fill(getMET(), weight);
-	  else                              HminDeltaPhiPass_Close.Fill(getMET(), weight);
+	  if      (largestJetRecoError3>50) {
+	    HminDeltaPhiPass_Over.Fill(getMET(), weight);
+	    if (nbSSVM >=1) HminDeltaPhiPass_Over_ge1b.Fill(getMET(), weight);
+	  }
+	  else if (largestJetRecoError3<-50) {
+	    HminDeltaPhiPass_Under.Fill(getMET(), weight);
+	    if (nbSSVM >=1) HminDeltaPhiPass_Under_ge1b.Fill(getMET(), weight);
+	  }
+	  else  {
+	    HminDeltaPhiPass_Close.Fill(getMET(), weight);
+	    if (nbSSVM >=1) HminDeltaPhiPass_Close_ge1b.Fill(getMET(), weight);
+	  }
  	}
 	else {
 	  HminDeltaPhiFail.Fill(getMET(),weight);
@@ -966,12 +1089,21 @@ void basicLoop::Nminus1plots()
 	  if (nbSSVM >=2)  HminDeltaPhiFail_ge2b.Fill(getMET(),weight);
 
 	  HminDeltaPhiFail_MPTMET_MET0.Fill(dp_MPTMET,weight);
-	  if (dp_MPTMET>1.5) HminDeltaPhiFail_hMPTMET.Fill(getMET(),weight);
+	  if (dp_MPTMET>dpMPTMETcut) HminDeltaPhiFail_hMPTMET.Fill(getMET(),weight);
 	  else               HminDeltaPhiFail_lMPTMET.Fill(getMET(),weight);
 
-	  if      (largestJetRecoError3>50)  HminDeltaPhiFail_Over.Fill(getMET(), weight);
-	  else if (largestJetRecoError3<-50) HminDeltaPhiFail_Under.Fill(getMET(), weight);
-	  else                              HminDeltaPhiFail_Close.Fill(getMET(), weight);
+	  if      (largestJetRecoError3>50)  {
+	    HminDeltaPhiFail_Over.Fill(getMET(), weight);
+	    if (nbSSVM >=1) HminDeltaPhiFail_Over_ge1b.Fill(getMET(), weight);
+	  }
+	  else if (largestJetRecoError3<-50) {
+	    HminDeltaPhiFail_Under.Fill(getMET(), weight);
+	    if (nbSSVM >=1) HminDeltaPhiFail_Under_ge1b.Fill(getMET(), weight);
+	  }
+	  else {
+	    HminDeltaPhiFail_Close.Fill(getMET(), weight);
+	    if (nbSSVM >=1) HminDeltaPhiFail_Close_ge1b.Fill(getMET(), weight);
+	  }
 	}
 
 	if (passMinDeltaPhiAll) {
@@ -987,14 +1119,24 @@ void basicLoop::Nminus1plots()
 
 	//calculate scalar and vector sums of jet invisible energy (MC truth)
 	double jetInvisibleEnergyHT = getJetInvisibleEnergyHT(); //scalar sum
-	double jetInvisibleEnergyMHT = getJetInvisibleEnergyMHT(); //vector sum
 	double maxdp = getMaxDeltaPhiMET30(99);
-	if (passMinDeltaPhi && passMET) {//signal region; using All30 variant
+	if (passMinDeltaPhi && passMET) {//signal region
 	  HgenInvisibleEnergy_SR.Fill(jetInvisibleEnergyHT ,weight);
 	  HgenInvisibleMissingEnergy_SR.Fill(jetInvisibleEnergyMHT ,weight);
 	  HgenMET_SR.Fill(getGenMET() ,weight);
+	  if (nbSSVM>=1) HgenMET_SR_ge1b.Fill(getGenMET() ,weight);
 	  HmaxJetRecoError3_SR.Fill(largestJetRecoError3, weight);
 	  HmaxDeltaPhiMETjAll_SR.Fill(maxdp, weight);
+	  fillWithJetFlavor(&HjetFlavor_SR, weight, 30); //plot jet flavor
+	  //	  fillWithGenPDGId(&HgenPDGId_SR, weight, 30); //plot jet flavor
+	  if (nbSSVM >=1 ) {
+	    fillWithJetFlavor(&HjetFlavor_SR_ge1b, weight, 30); //plot jet flavor
+	    //	    fillWithGenPDGId(&HgenPDGId_SR_ge1b, weight, 30); //plot jet flavor
+	  }
+	  if (nbSSVM >=2 ) {
+	    fillWithJetFlavor(&HjetFlavor_SR_ge2b, weight, 30); //plot jet flavor
+	    //	    fillWithGenPDGId(&HgenPDGId_SR_ge2b, weight, 30); //plot jet flavor
+	  }
 	}
 	else if (!passMinDeltaPhi && passMET) { //region 'D'
 	  HgenInvisibleEnergy_D.Fill(jetInvisibleEnergyHT ,weight);
@@ -1002,6 +1144,8 @@ void basicLoop::Nminus1plots()
 	  HgenMET_D.Fill(getGenMET() ,weight);
 	  HmaxJetRecoError3_D.Fill(largestJetRecoError3, weight);
 	  HmaxDeltaPhiMETjAll_D.Fill(maxdp, weight);
+	  fillWithJetFlavor(&HjetFlavor_D, weight, 30); //plot jet flavor
+	  //	  fillWithGenPDGId(&HgenPDGId_D, weight, 30); //plot jet flavor
 	}
 	else if (passMinDeltaPhi && !passMET) { // "low MET" region
 	  HgenInvisibleEnergy_lowMET.Fill(jetInvisibleEnergyHT ,weight);
@@ -1009,6 +1153,8 @@ void basicLoop::Nminus1plots()
 	  HgenMET_lowMET.Fill(getGenMET() ,weight);
 	  HmaxJetRecoError3_lowMET.Fill(largestJetRecoError3, weight);
 	  HmaxDeltaPhiMETjAll_lowMET.Fill(maxdp, weight);
+	  fillWithJetFlavor(&HjetFlavor_lowMET, weight, 30); //plot jet flavor
+	  //	  fillWithGenPDGId(&HgenPDGId_lowMET, weight, 30); //plot jet flavor
 	}
 	else if (!passMinDeltaPhi && !passMET) { // "lowlow" region
 	  HgenInvisibleEnergy_lowlow.Fill(jetInvisibleEnergyHT ,weight);
@@ -1016,6 +1162,8 @@ void basicLoop::Nminus1plots()
 	  HgenMET_lowlow.Fill(getGenMET() ,weight);
 	  HmaxJetRecoError3_lowlow.Fill(largestJetRecoError3, weight);
 	  HmaxDeltaPhiMETjAll_lowlow.Fill(maxdp, weight);
+	  fillWithJetFlavor(&HjetFlavor_lowlow, weight, 30); //plot jet flavor
+	  //	  fillWithGenPDGId(&HgenPDGId_lowlow, weight, 30); //plot jet flavor
 	}
 	//in fact the ABCD regions might exclude the very low MET events, but i'm not excluding them here
 	else { cout<<"Found an event that did not fall into one of the ABCD regions!"<<endl; assert(0);}
@@ -1032,12 +1180,55 @@ void basicLoop::Nminus1plots()
 	Hjetphi1.Fill(leadJetPhi,weight);
 	Hjeteta1.Fill(leadJetEta,weight);
 
-	if      (largestJetRecoError3>50)  HdeltaPhiMETMismeasuredJet_Over.Fill(getDeltaPhiMismeasuredMET(3) , weight);
-	else if (largestJetRecoError3<-50) HdeltaPhiMETMismeasuredJet_Under.Fill(getDeltaPhiMismeasuredMET(3) , weight);
-	else                              {
+	for (unsigned int ijet=0; ijet<loosejetPt->size(); ++ijet) {
+	  if (loosejetGenPt->at(ijet) >30) {
+	    HjetResidual_Flavor_SR.Fill(loosejetFlavor->at(ijet),getLooseJetPt(ijet)-loosejetGenPt->at(ijet),weight);
+	    //	    HjetResidual_GenPDGId_SR.Fill(loosejetGenParticlePDGId->at(ijet),getLooseJetPt(ijet)-loosejetGenPt->at(ijet),weight);
+
+	    HjetInvEnergy_Flavor_SR.Fill(loosejetFlavor->at(ijet),loosejetInvisibleEnergy->at(ijet),weight);
+	    //	    HjetInvEnergy_GenPDGId_SR.Fill(loosejetGenParticlePDGId->at(ijet),loosejetInvisibleEnergy->at(ijet),weight);
+	  }
+	}
+
+	if      (largestJetRecoError3>50)  {
+	  HdeltaPhiMETMismeasuredJet_Over.Fill(getDeltaPhiMismeasuredMET(3) , weight);
+	  if (nbSSVM>=1) HdeltaPhiMETMismeasuredJet_Over_ge1b.Fill(getDeltaPhiMismeasuredMET(3) , weight);
+	}
+	else if (largestJetRecoError3<-50) {
+	  HdeltaPhiMETMismeasuredJet_Under.Fill(getDeltaPhiMismeasuredMET(3) , weight);
+	  if (nbSSVM>=1) HdeltaPhiMETMismeasuredJet_Under_ge1b.Fill(getDeltaPhiMismeasuredMET(3) , weight);
+	}
+	else {
 	  HdeltaPhiMETMismeasuredJet_Close.Fill(getDeltaPhiMismeasuredMET(3) , weight);
 	  HdeltaPhiMETMismeasuredJetAll_Close.Fill(getDeltaPhiMismeasuredMET(99) , weight);
 	  HmaxJetRecoErrorAll_Close.Fill(largestJetRecoErrorAll,weight);
+	  fillWithJetFlavor(&HjetFlavor_SR_Close, weight, 30); //plot jet flavor
+	  //	  fillWithGenPDGId(&HgenPDGId_SR_Close, weight, 30); //plot jet flavor
+
+	  HdeltaPhiMETMismeasuredJetAll_Close_HmaxJetRecoErrorAll_Close.Fill(largestJetRecoErrorAll,getDeltaPhiMismeasuredMET(99),weight);
+
+	  if (nbSSVM>=1) {
+	    HdeltaPhiMETMismeasuredJet_Close_ge1b.Fill(getDeltaPhiMismeasuredMET(3) , weight);
+	    HdeltaPhiMETMismeasuredJetAll_Close_ge1b.Fill(getDeltaPhiMismeasuredMET(99) , weight);
+	    HmaxJetRecoErrorAll_Close_ge1b.Fill(largestJetRecoErrorAll,weight);
+	  }
+
+	  if (fabs(largestJetRecoErrorAll) < 75) {
+	    HgenMET_SR_Close_noJetMismeasurement.Fill(getGenMET() ,weight);
+	    if (nbSSVM>=1)    HgenMET_SR_Close_noJetMismeasurement_ge1b.Fill(getGenMET() ,weight);
+	    HgenInvisibleMHT_SR_Close_noJetMismeasurement.Fill(jetInvisibleEnergyMHT,weight);
+	    fillWithJetFlavor(&HjetFlavor_SR_Close_noJetMismeasurement, weight, 30); //plot jet flavor
+	    //	    fillWithGenPDGId(&HgenPDGId_SR_Close_noJetMismeasurement, weight, 30); //plot jet flavor
+	    if (nbSSVM>=1) {
+	      fillWithJetFlavor(&HjetFlavor_SR_Close_noJetMismeasurement_ge1b, weight, 30); //plot jet flavor
+	      HgenInvisibleMHT_SR_Close_noJetMismeasurement_ge1b.Fill(jetInvisibleEnergyMHT,weight);
+	      //	      fillWithGenPDGId(&HgenPDGId_SR_Close_noJetMismeasurement_ge1b, weight, 30); //plot jet flavor
+	    }
+	    if (nbSSVM>=2) {
+	      fillWithJetFlavor(&HjetFlavor_SR_Close_noJetMismeasurement_ge2b, weight, 30); //plot jet flavor
+	      //	      fillWithGenPDGId(&HgenPDGId_SR_Close_noJetMismeasurement_ge2b, weight, 30); //plot jet flavor
+	    }
+	  }
 	}
 
 	if (nbSSVM >=1)  {
@@ -1057,9 +1248,10 @@ void basicLoop::Nminus1plots()
 		bjetpt1=getLooseJetPt(ib);
 		bjetphi1=loosejetPhi->at(ib);
 		bjeteta1=loosejetEta->at(ib);
-		break; //only interested in the lead b jet at the moment
 	      }
-	    }
+	      HtaggedJetFlavor_SR_ge1b.Fill( loosejetFlavor->at(ib),weight);
+	      //	      HtaggedJetGenPDGId_SR_ge1b.Fill( loosejetGenParticlePDGId->at(ib),weight);
+	    } //end of loop over good b jets
 	  }
 	  Hbjetpt1_ge1b.Fill(bjetpt1,weight);
 	  Hbjetphi1_ge1b.Fill(bjetphi1,weight);
