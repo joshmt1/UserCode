@@ -13,6 +13,7 @@
 #include <TFile.h>
 // ========================================== begin
 #include <TDatime.h>
+#include <TH1.h>
 //this file is in CVS here: http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/UserCode/joshmt/MiscUtil.cxx?view=log
 #include "MiscUtil.cxx"
 //this code will have to be regenerated when changing the ntuple structure
@@ -106,6 +107,8 @@ const double lumi=36.146; //386 Nov4ReReco Datasets - PATIFIED WITH 387
 class basicLoop {
 public :
   // ========================================== begin
+  //TO DO (sometime when there is time to validate it): change first item of each enum to be a different integer
+  //i think this provides safety against the user passing the wrong type of enum to the wrong set method
   enum CutScheme {kRA2=0, kSync1, kBaseline0, nCutSchemes}; //cut schemes must be implemented in setCutScheme,etc and in the list above
   CutScheme theCutScheme_;
   enum METType {kMHT=0, kMET, ktcMET, kpfMET};
@@ -746,6 +749,10 @@ public :
    float getJetInvisibleEnergyMHT(); //could add a pT cut as an argument
    float getLargestJetPtRecoError(unsigned int maxjets);
    float getDeltaPhiMismeasuredMET(unsigned int maxjets);
+
+   //for studying mc truth jet flavor (hiding the loop over jets from the user)
+   void fillWithJetFlavor(TH1D* hh, double w, double threshold);
+   void fillWithGenPDGId(TH1D* hh, double w, double threshold);
 
    //for systematics (return is a pair with METx, METy)
    std::pair<float, float> getJESAdjustedMETxy();
@@ -3070,11 +3077,36 @@ bool basicLoop::passCleaning() {
 
   if (theCleaningType_ == kNoCleaning) return true;
   else if (theCleaningType_ == kMuonCleaning) {
-    return (passesBadPFMuonFilter && passesInconsistentMuonPFCandidateFilter);
+    //this is a subtle point --
+    //the bad PF muon filter should be comparing reco muons (not PF) to the particle flow reco
+    //the inconsistent muon filter should use only the PF muons
+    return (passesBadPFMuonFilter && passesInconsistentMuonPFCandidateFilter_PF);
   }
   else {assert(0);}
 
   return false;
+}
+
+void basicLoop::fillWithJetFlavor(TH1D* hh, double w, double threshold) {
+
+  //fill histogram hh with true jet flavor of all jets above pt threshold
+  //use gen jets for threshold!
+  for (unsigned int ij=0; ij<loosejetFlavor->size() ; ++ij) {
+    if (loosejetGenPt->at(ij) > threshold) {
+      hh->Fill( loosejetFlavor->at(ij), w);
+    }
+  }
+}
+
+void basicLoop::fillWithGenPDGId(TH1D* hh, double w, double threshold) {
+
+  //fill histogram hh with gen pdg id of all jets above pt threshold
+  //use gen jets for threshold!
+  for (unsigned int ij=0; ij<loosejetGenParticlePDGId->size() ; ++ij) {
+    if (loosejetGenPt->at(ij) > threshold) {
+      hh->Fill( loosejetGenParticlePDGId->at(ij), w);
+    }
+  }
 }
 
 int basicLoop::getTopDecayCategory() {
