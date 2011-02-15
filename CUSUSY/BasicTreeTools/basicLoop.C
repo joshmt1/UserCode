@@ -61,7 +61,6 @@ void basicLoop::cutflow(bool writeFiles)
 
   std::vector<TString> textfilenames; //for the writeFiles option
   std::vector<ofstream*> textfiles;   //for the writeFiles option
-  //end of stuff for writeFiles option
   for (unsigned int i=0 ; i<cutTags_.size(); i++) {
     npass.push_back(0);
     if (writeFiles) {
@@ -191,7 +190,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   //open output file
   //FIXME hardcoded for dellcmscornell here
   //TString outfilename="/cu1/joshmt/ABCDtrees/ABCDtree.";
-  TString outfilename="/cu1/kreis/ABCDtrees/36_Jan20/ABCDtree.";
+  TString outfilename="/cu1/joshmt/ABCDtrees/11Feb10/ABCDtree.";
   outfilename+=getCutDescriptionString();
   outfilename+=".";    outfilename+=getBCutDescriptionString(); 
   outfilename+=".";    outfilename+=sampleName; 
@@ -214,6 +213,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   double minDeltaPhiMHT;
   double minDeltaRbj;
   double DeltaPhiMPTMET;
+  int nbGen;
 
   TTree ABCDtree("ABCDtree","ABCD tree");
   ABCDtree.Branch("weight",&weight,"weight/D");
@@ -229,6 +229,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   ABCDtree.Branch("minDeltaRbj",&minDeltaRbj,"minDeltaRbj/D");
   ABCDtree.Branch("DeltaPhiMPTMET",&DeltaPhiMPTMET,"DeltaPhiMPTMET/D");
   ABCDtree.Branch("nbSSVM", &nbSSVM, "nbSSVM/I");
+  ABCDtree.Branch("nbGen", &nbGen, "nbGen/I");
 
   startTimer();  //keep track of performance
   Long64_t nbytes = 0, nb = 0;
@@ -256,6 +257,8 @@ void basicLoop::ABCDtree(unsigned int dataindex)
 
     minDeltaRbj = getOverallMinDeltaR_bj();
     DeltaPhiMPTMET = getDeltaPhiMPTMET();
+
+    nbGen = countGenBJets(30); //threshold of 30 GeV on gen pT
 
     ABCDtree.Fill(); 
   }
@@ -310,6 +313,14 @@ void basicLoop::cutflowPlotter()
    std::map<TString, TH1D*> H_NBJets;
    std::map<TString, TH1D*> H_topDecayCategory;
 
+   //new plots to look at lepton quantities
+   std::map<TString, TH1D*> H_MuPt;
+   std::map<TString, TH1D*> H_MuEta;
+   std::map<TString, TH1D*> H_MuRelIso;
+   std::map<TString, TH1D*> H_EleEt;
+   std::map<TString, TH1D*> H_EleEta;
+   std::map<TString, TH1D*> H_EleRelIso;
+
    for (unsigned int i=0 ; i<cutTags_.size(); i++) {
      if (cutRequired(cutTags_[i])  ) {
        //name will indicate that the histogram is *after* the cut in the name
@@ -337,6 +348,23 @@ void basicLoop::cutflowPlotter()
        //only useful for top, obviously
        name="H_topDecayCategory_"; name += cutTags_[i];
        H_topDecayCategory[name]=new TH1D(name,name,nTopCategories-1,0.5,nTopCategories-0.5);
+
+       //new lepton plots
+       if (theLeptonType_ ==kPFLeptons) {
+	 name="H_MuPt_"; name += cutTags_[i];
+	 H_MuPt[name]=new TH1D(name,name,50,0,100);
+	 name="H_MuEta_"; name += cutTags_[i];
+	 H_MuEta[name]=new TH1D(name,name,50,-5,5);
+	 name="H_MuRelIso_"; name += cutTags_[i];
+	 H_MuRelIso[name]=new TH1D(name,name,50,0,1);
+	 
+	 name="H_EleEt_"; name += cutTags_[i];
+	 H_EleEt[name]=new TH1D(name,name,50,0,100);
+	 name="H_EleEta_"; name += cutTags_[i];
+	 H_EleEta[name]=new TH1D(name,name,50,-5,5);
+	 name="H_EleRelIso_"; name += cutTags_[i];
+	 H_EleRelIso[name]=new TH1D(name,name,50,0,1);
+       }
      }
    }
       
@@ -392,6 +420,26 @@ void basicLoop::cutflowPlotter()
 
 	  name="H_topDecayCategory_";	  name += cutTags_[i];
 	  H_topDecayCategory[name]->Fill(topcat,weight);
+
+	  //new lepton plots
+	  if (theLeptonType_ ==kPFLeptons ) {
+	    for (unsigned int imu=0; imu<muonPt_PF->size(); imu++) {
+	      name="H_MuPt_"; 	  name += cutTags_[i];
+	      H_MuPt[name]->Fill(muonPt_PF->at(imu),weight);
+	      name="H_MuEta_"; 	  name += cutTags_[i];
+	      H_MuEta[name]->Fill(muonEta_PF->at(imu),weight);
+	      name="H_MuRelIso_";   name += cutTags_[i];
+	      H_MuRelIso[name]->Fill((muonTrackIso_PF->at(imu) + muonHcalIso_PF->at(imu) + muonEcalIso_PF->at(imu))/muonPt_PF->at(imu),weight);
+	    }
+	    for (unsigned int iel=0; iel<eleEt_PF->size(); iel++) {
+	      name="H_EleEt_"; 	  name += cutTags_[i];
+	      H_EleEt[name]->Fill(eleEt_PF->at(iel),weight);
+	      name="H_EleEta_"; 	  name += cutTags_[i];
+	      H_EleEta[name]->Fill(eleEta_PF->at(iel),weight);
+	      name="H_EleRelIso_";   name += cutTags_[i];
+	      H_EleRelIso[name]->Fill((eleTrackIso_PF->at(iel) + eleHcalIso_PF->at(iel) + eleEcalIso_PF->at(iel))/eleEt_PF->at(iel),weight);
+	    }
+	  }
 	}
 	else if (cutRequired(cutTags_[i]) && !passCut(cutTags_[i]) ) break;
       }
@@ -638,6 +686,12 @@ void basicLoop::Nminus1plots()
    TH1D Hbjeteta1_ge1b("Hbjeteta1_ge1b","eta of lead b jet (>=1b)",nbins,-eta_max,eta_max);
    TH1D Hbjeteta1_ge2b("Hbjeteta1_ge2b","eta of lead b jet (>=2b)",nbins,-eta_max,eta_max);
    TH1D Hbjeteta1_eq1b("Hbjeteta1_eq1b","eta of lead b jet (==1b)",nbins,-eta_max,eta_max);
+
+   eta_max=5;
+   TH2D HjetResponse_SR("HjetResponse_SR","mean reco/gen pT",nbins,-eta_max,eta_max,nbins,-TMath::Pi(),TMath::Pi());
+   TH2D HjetCount_SR("HjetCount_SR","n jets",nbins,-eta_max,eta_max,nbins,-TMath::Pi(),TMath::Pi());
+   TH2D HjetResponse_SR_ge1b("HjetResponse_SR_ge1b","mean reco/gen pT",nbins,-eta_max,eta_max,nbins,-TMath::Pi(),TMath::Pi());
+   TH2D HjetCount_SR_ge1b("HjetCount_SR_ge1b","n jets",nbins,-eta_max,eta_max,nbins,-TMath::Pi(),TMath::Pi());
 
    //MC truth distributions
    TH1D HgenInvisibleEnergy_SR("HgenInvisibleEnergy_SR","MC truth invis energy (SR)",nbins,met_min,met_max);
@@ -1180,6 +1234,8 @@ void basicLoop::Nminus1plots()
 	Hjetphi1.Fill(leadJetPhi,weight);
 	Hjeteta1.Fill(leadJetEta,weight);
 
+
+
 	for (unsigned int ijet=0; ijet<loosejetPt->size(); ++ijet) {
 	  if (loosejetGenPt->at(ijet) >30) {
 	    HjetResidual_Flavor_SR.Fill(loosejetFlavor->at(ijet),getLooseJetPt(ijet)-loosejetGenPt->at(ijet),weight);
@@ -1187,6 +1243,13 @@ void basicLoop::Nminus1plots()
 
 	    HjetInvEnergy_Flavor_SR.Fill(loosejetFlavor->at(ijet),loosejetInvisibleEnergy->at(ijet),weight);
 	    //	    HjetInvEnergy_GenPDGId_SR.Fill(loosejetGenParticlePDGId->at(ijet),loosejetInvisibleEnergy->at(ijet),weight);
+
+	    HjetCount_SR.Fill( loosejetEta->at(ijet), loosejetPhi->at(ijet),weight);
+	    HjetResponse_SR.Fill( loosejetEta->at(ijet), loosejetPhi->at(ijet),weight*getLooseJetPt(ijet)/loosejetGenPt->at(ijet));
+	    if (nbSSVM>=1) {
+	      HjetCount_SR_ge1b.Fill( loosejetEta->at(ijet), loosejetPhi->at(ijet),weight);
+	      HjetResponse_SR_ge1b.Fill( loosejetEta->at(ijet), loosejetPhi->at(ijet),weight*getLooseJetPt(ijet)/loosejetGenPt->at(ijet));
+	    }
 	  }
 	}
 
