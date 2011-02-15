@@ -18,7 +18,7 @@
 #include "MiscUtil.cxx"
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
-// ---- this version is compatible with ntuple tag: V00-02-00 ----
+// ---- this version is compatible with ntuple tag: V00-02-00 and V00-02-01 ----
 #include <iostream>
 #include <vector>
 #include <set>
@@ -744,7 +744,7 @@ public :
    float getMETphi(); //return MET determined by theMETType_
    float getGenMET(); //return MET determined by theMETType_
    float getGenMETphi(); //return MET determined by theMETType_
-   
+   int countGenBJets(float threshold);  //count gen b jets using loosejetFlavor
    float getJetInvisibleEnergyHT(); //could add a pT cut as an argument
    float getJetInvisibleEnergyMHT(); //could add a pT cut as an argument
    float getLargestJetPtRecoError(unsigned int maxjets);
@@ -2064,6 +2064,15 @@ bool basicLoop::passPV() {
   return pass; 
 }
 
+int basicLoop::countGenBJets(float threshold) {
+  int nb=0;
+  for (unsigned int i=0; i<loosejetGenPt->size(); ++i) {
+    if ( (loosejetGenPt->at(i) > threshold)
+	 && ( abs(loosejetFlavor->at(i)) == 5 ) ) ++nb;
+  }
+  return nb;
+}
+
 int basicLoop::countBJets() {
   int nb=0;
 
@@ -3326,6 +3335,24 @@ TString basicLoop::getSampleName(TString inname) {
   else if (inname.Contains("/ZJets/"))                     return "ZJets";
   else if (inname.Contains("/Zinvisible/"))                return "Zinvisible";
 
+  else if (inname.Contains("/QCD-Pt0to5-PythiaZ2/"))       return "PythiaQCD0";
+  else if (inname.Contains("/QCD-Pt5to15-PythiaZ2/"))      return "PythiaQCD5";
+  else if (inname.Contains("/QCD-Pt15to30-PythiaZ2/"))     return "PythiaQCD15";
+  else if (inname.Contains("/QCD-Pt30to50-PythiaZ2/"))     return "PythiaQCD30";
+
+  else if (inname.Contains("/QCD-Pt50to80-PythiaZ2/"))     return "PythiaQCD50";
+  else if (inname.Contains("/QCD-Pt80to120-PythiaZ2/"))    return "PythiaQCD80";
+  else if (inname.Contains("/QCD-Pt120to170-PythiaZ2/"))   return "PythiaQCD120";
+  else if (inname.Contains("/QCD-Pt170to300-PythiaZ2/"))   return "PythiaQCD170";
+  else if (inname.Contains("/QCD-Pt300to470-PythiaZ2/"))   return "PythiaQCD300";
+  else if (inname.Contains("/QCD-Pt470to600-PythiaZ2/"))   return "PythiaQCD470";
+  else if (inname.Contains("/QCD-Pt600to800-PythiaZ2/"))   return "PythiaQCD600";
+  else if (inname.Contains("/QCD-Pt800to1000-PythiaZ2/"))  return "PythiaQCD800";
+  else if (inname.Contains("/QCD-Pt1000to1400-PythiaZ2/")) return "PythiaQCD1000";
+  else if (inname.Contains("/QCD-Pt1400to1800-PythiaZ2/")) return "PythiaQCD1400";
+  else if (inname.Contains("/QCD-Pt1800toInf-PythiaZ2/"))  return "PythiaQCD1800";
+
+
   else if (inname.Contains("/DATA/"))  {
     if (realDatasetNames_) {
       int lastslash=     inname.Last('/');
@@ -3410,6 +3437,24 @@ double basicLoop::getCrossSection( TString inname) {
   else if (inname.Contains("/Zinvisible/"))                return 4500; //!!! LO
   //tom had 4900...this might be NLO
   
+  else if (inname.Contains("/QCD-Pt0to5-PythiaZ2/"))       return 4.844e10;
+  else if (inname.Contains("/QCD-Pt5to15-PythiaZ2/"))      return 3.675e10;
+  else if (inname.Contains("/QCD-Pt15to30-PythiaZ2/"))     return 8.159e8;
+  else if (inname.Contains("/QCD-Pt30to50-PythiaZ2/"))     return 5.312e7;
+
+  else if (inname.Contains("/QCD-Pt50to80-PythiaZ2/"))     return 6.359e6;
+  else if (inname.Contains("/QCD-Pt80to120-PythiaZ2/"))    return 7.843e5;
+  else if (inname.Contains("/QCD-Pt120to170-PythiaZ2/"))   return 1.151e5;
+  else if (inname.Contains("/QCD-Pt170to300-PythiaZ2/"))   return 2.426e4;
+  else if (inname.Contains("/QCD-Pt300to470-PythiaZ2/"))   return 1.168e3;
+  else if (inname.Contains("/QCD-Pt470to600-PythiaZ2/"))   return 7.022e1;
+  else if (inname.Contains("/QCD-Pt600to800-PythiaZ2/"))   return 1.555e1;
+  else if (inname.Contains("QCD-Pt800to1000-PythiaZ2/"))   return 1.844;
+  else if (inname.Contains("QCD-Pt1000to1400-PythiaZ2/"))  return 3.321e-1;
+  else if (inname.Contains("QCD-Pt1400to1800-PythiaZ2/"))  return 1.087e-2;
+  else if (inname.Contains("QCD-Pt1800toInf-PythiaZ2/"))   return 3.575e-4;
+
+
   else if (inname.Contains("/DATA/"))                return -2;
 
   std::cout<<"Cannot find cross section for this sample!"<<std::endl;
