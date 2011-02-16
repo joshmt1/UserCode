@@ -44,16 +44,15 @@ void basicLoop::cutflow(bool writeFiles)
   printState();
 
   std::vector<int> npass;
-  int npass_eq1b=0; //special kludge for eq1b case
+  std::vector<double> sumw; //sum of weights
+  std::vector<double> sumw2; //sum of weights squared
+  int npass_eq1b=0;
+  double sumw_eq1b=0,sumw2_eq1b=0; //special kludge for eq1b case
 
   if (fChain == 0) return;
   
-  const   double sigma = getCrossSection(findInputName());
-  
   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
   
-  const   double   weight = isData_ ? 1 : lumi * sigma / double(nentries); //calculate weight
-
   Long64_t nbytes = 0, nb = 0;
   
   LoadTree(0);
@@ -63,6 +62,8 @@ void basicLoop::cutflow(bool writeFiles)
   std::vector<ofstream*> textfiles;   //for the writeFiles option
   for (unsigned int i=0 ; i<cutTags_.size(); i++) {
     npass.push_back(0);
+    sumw.push_back(0);
+    sumw2.push_back(0);
     if (writeFiles) {
       TString textfilename="/cu3/joshmt/cutflow.";  //FIXME hard-coded path
       textfilename+=getCutDescriptionString();
@@ -83,14 +84,19 @@ void basicLoop::cutflow(bool writeFiles)
     if (jentry%1000000==0) checkTimer(jentry,nentries);
     nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
+    const   double   weight = getWeight(nentries); //calculate weight
     //cout<<"== "<<jentry<<endl;
-  
+
     //i hate to do this, but I'm going to put a hack here to check the run number
     //    if (runNumber != 143962) continue;
 
     for (unsigned int i=0 ; i<cutTags_.size(); i++) {
       //cout<<i<<endl;
-      if (cutRequired(cutTags_[i]) && passCut(cutTags_[i]) )   npass.at(i) = npass.at(i) +1;
+      if (cutRequired(cutTags_[i]) && passCut(cutTags_[i]) ) {
+	npass.at(i) = npass.at(i) +1;
+	sumw.at(i) = sumw.at(i) + weight;
+	sumw2.at(i) = sumw2.at(i) + weight*weight;
+      }
       else if (cutRequired(cutTags_[i]) && !passCut(cutTags_[i]) ) break;
 
       //optional code to dump events to file
@@ -102,7 +108,11 @@ void basicLoop::cutflow(bool writeFiles)
       //if we reach this point then we have passed the cut. if the cut is >=1b, then we might also
       //pass the ==1b cut
       if ( cutRequired(cutTags_[i]) && cutTags_[i]=="cut1b") {
-	if (passCut("cutEq1b"))	++npass_eq1b;
+	if (passCut("cutEq1b"))	{
+	  ++npass_eq1b;
+	  sumw_eq1b+=weight;
+	  sumw2_eq1b+= weight*weight;
+	}
       }
     }
     
@@ -129,12 +139,15 @@ void basicLoop::cutflow(bool writeFiles)
     if (cutRequired(cutTags_[i])) {
       
       //error on n is sqrt n
-      double error = sqrt(npass.at(i));
-      double weighted = npass.at(i) * weight;
-      double weighted_error = error*weight;
+//       double error = sqrt(npass.at(i));
+//       double weighted = npass.at(i) * weight;
+//       double weighted_error = error*weight;
+
+      double weighted = sumw.at(i);
+      double weighted_error = sqrt(sumw2.at(i));
       
       char ccc[150];
-      sprintf(ccc,"%20s %15d | %.2f | Weighted = %f +/- %f",cutNames_[cutTags_[i]].Data(),npass.at(i),100*double(npass.at(i))/double(npass.at(0)),weighted,weighted_error);
+      sprintf(ccc,"%20s %15d | %.2f | Weighted = %f +/- %f",cutNames_[cutTags_[i]].Data(),npass.at(i),100*weighted/sumw.at(0),weighted,weighted_error);
       cout<<ccc<<endl;
 
       //now including a decription string too. not perfect but better than nothing
@@ -144,10 +157,10 @@ void basicLoop::cutflow(bool writeFiles)
       //special kludge for ==1b case
       //this is an ugly duplication of code, to be dealt with later
       if ( cutTags_[i]=="cut1b") {
-	error = sqrt(npass_eq1b);
-	weighted = npass_eq1b * weight;
-	weighted_error = error * weight;
-	sprintf(ccc,"%20s %15d | %.2f | Weighted = %f +/- %f","==1b",npass_eq1b,100*double(npass_eq1b)/double(npass.at(0)),weighted,weighted_error);
+	//	error = sqrt(npass_eq1b);
+	weighted = sumw_eq1b;
+	weighted_error = sqrt(sumw2_eq1b);
+	sprintf(ccc,"%20s %15d | %.2f | Weighted = %f +/- %f","==1b",npass_eq1b,100*sumw_eq1b/sumw.at(0),weighted,weighted_error);
 	cout<<ccc<<endl;
 	file <<"==1b"<<"\t"<<setprecision(20) << weighted<<"\t" << weighted_error<<endl;
 	fileU <<"==1b"<<"\t"<<setprecision(20) << npass_eq1b<<endl;
@@ -179,14 +192,12 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   TString inname=findInputName(); //uses fChain
   std::cout<<"Got an input file name as: "<<inname<<std::endl;
   
-  double sigma = getCrossSection(inname);
+  //  double sigma = getCrossSection(inname);
   TString sampleName = getSampleName(inname);
-  if (sigma<=0 && !isData_) return;
+  //  if (sigma<=0 && !isData_) return;
 
   if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
   
-  double   weight = isData_ ? 1 : lumi * sigma / double(nentries); //calculate weight
-
   //open output file
   //FIXME hardcoded for dellcmscornell here
   //TString outfilename="/cu1/joshmt/ABCDtrees/ABCDtree.";
@@ -214,7 +225,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   double minDeltaRbj;
   double DeltaPhiMPTMET;
   int nbGen;
-
+  double weight;
   TTree ABCDtree("ABCDtree","ABCD tree");
   ABCDtree.Branch("weight",&weight,"weight/D");
   ABCDtree.Branch("HT",&myHT,"HT/D");
@@ -240,6 +251,9 @@ void basicLoop::ABCDtree(unsigned int dataindex)
     nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
     if (Cut(ientry) < 0) continue; //jmt use cut
+
+    weight = getWeight(nentries); //calculate weight
+
     myHT = getHT();
     myMET = getMET();
     myMHT = getMHT();
@@ -285,13 +299,9 @@ void basicLoop::cutflowPlotter()
 
    std::cout<<"Got an input file name as: "<<findInputName()<<std::endl;
    
-   double sigma = getCrossSection();
    TString sampleName = getSampleName();
-   if (sigma<=0 && !isData_) {std::cout<<"Cross section problem! "<<sigma<<std::endl; return;}
 
    if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
-
-   double   weight = isData_ ? 1 : lumi * sigma / double(nentries); //calculate weight
 
    //open output file
    TString outfilename="cutflowPlots.";
@@ -376,6 +386,7 @@ void basicLoop::cutflowPlotter()
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) {assert(0);}
       nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+      double   weight = getWeight(nentries);
 
       //calculate some quantities
       //unlike in the old ::Loop, here be sure to plot the same quanities used
@@ -471,14 +482,13 @@ void basicLoop::Nminus1plots()
   TString inname=findInputName(); //uses fChain
   std::cout<<"Got an input file name as: "<<inname<<std::endl;
   
-  double sigma = getCrossSection(inname);
+  //  double sigma = getCrossSection(inname);
   TString sampleName = getSampleName(inname);
-  if (sigma<=0 && !isData_) return;
+  //  if (sigma<=0 && !isData_) return;
   
   if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
   
-  double   weight = isData_ ? 1 : lumi * sigma / double(nentries); //calculate weight
-  
+
   //open output file
   TString outfilename="Nminus1plots."; 
   outfilename+=getCutDescriptionString();
@@ -980,6 +990,8 @@ void basicLoop::Nminus1plots()
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) {assert(0);}
       nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+
+      double weight = getWeight(nentries);
 
       //calculate things
       HT = getHT();

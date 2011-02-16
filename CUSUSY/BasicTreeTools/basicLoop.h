@@ -440,6 +440,10 @@ public :
    Int_t           nElectrons_PF;
    Int_t           SUSY_nb;
    Float_t         qScale;
+// ========================================== begin
+   Double_t qScaleD;
+   Double_t mcWeight;
+// ========================================== end
    vector<int>     *topDecayCode;
    Int_t           flavorHistory;
 
@@ -668,6 +672,7 @@ public :
    TBranch        *b_nElectrons_PF;   //!
    TBranch        *b_SUSY_nb;   //!
    TBranch        *b_qScale;   //!
+   TBranch        *b_mcWeight;   // ========================================== begin. end
    TBranch        *b_topDecayCode;   //!
    TBranch        *b_flavorHistory;   //!
 
@@ -703,6 +708,7 @@ public :
    //some stuff that is used internally
    void fillTightJetInfo();
    void InitJets();
+   bool isV00_02_02();
 
    //performance timing
    void startTimer();
@@ -737,6 +743,7 @@ public :
 
    //calculate useful stuff and get useful info
    TString getSampleName(TString inname="") ;
+   double getWeight(Long64_t nentries);
    double getCrossSection(TString inname="") ;
    TString findInputName() ;
 
@@ -1378,7 +1385,13 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("elePassID_PF", &elePassID_PF, &b_elePassID_PF);
    fChain->SetBranchAddress("nElectrons_PF", &nElectrons_PF, &b_nElectrons_PF);
    fChain->SetBranchAddress("SUSY_nb", &SUSY_nb, &b_SUSY_nb);
-   fChain->SetBranchAddress("qScale", &qScale, &b_qScale);
+// ========================================== begin
+   if (isV00_02_02() )  {
+     fChain->SetBranchAddress("qScale", &qScaleD, &b_qScale);
+     fChain->SetBranchAddress("mcWeight", &mcWeight, &b_mcWeight);
+   }
+   else   fChain->SetBranchAddress("qScale", &qScale, &b_qScale);
+// ========================================== end
    fChain->SetBranchAddress("topDecayCode", &topDecayCode, &b_topDecayCode);
    fChain->SetBranchAddress("flavorHistory", &flavorHistory, &b_flavorHistory);
    Notify();
@@ -3352,6 +3365,8 @@ TString basicLoop::getSampleName(TString inname) {
   else if (inname.Contains("/QCD-Pt1400to1800-PythiaZ2/")) return "PythiaQCD1400";
   else if (inname.Contains("/QCD-Pt1800toInf-PythiaZ2/"))  return "PythiaQCD1800";
 
+  else if (inname.Contains("/QCD-Pt15to3000-PythiaZ2-Flat-PU2010/"))  return "PythiaPUQCDFlat";
+
 
   else if (inname.Contains("/DATA/"))  {
     if (realDatasetNames_) {
@@ -3454,6 +3469,7 @@ double basicLoop::getCrossSection( TString inname) {
   else if (inname.Contains("QCD-Pt1400to1800-PythiaZ2/"))  return 1.087e-2;
   else if (inname.Contains("QCD-Pt1800toInf-PythiaZ2/"))   return 3.575e-4;
 
+  else if (inname.Contains("/QCD-Pt15to3000-PythiaZ2-Flat-PU2010/"))  return 2.213e+10;
 
   else if (inname.Contains("/DATA/"))                return -2;
 
@@ -3462,6 +3478,26 @@ double basicLoop::getCrossSection( TString inname) {
   return -1;
   
 }
+
+double basicLoop::getWeight(Long64_t nentries) {
+  if (isData_) return 1;
+
+  const   double sigma = getCrossSection(findInputName());
+
+  double w = lumi * sigma / double(nentries);
+
+  if (findInputName().Contains("/QCD-Pt15to3000-PythiaZ2-Flat-PU2010/"))    w *= mcWeight;
+
+  return  w;
+}
+
+
+bool basicLoop::isV00_02_02() {
+
+  TString n=findInputName();
+  return n.Contains("V00-02-02");
+}
+
 
 TString basicLoop::findInputName() {
    // ===== do something tricky to figure out which sample this is ======
