@@ -1,6 +1,10 @@
 Release notes
 --
 
+V00-02-03 - slightly bigger revamp. remove some unused variables and add jet E and pz
+
+V00-02-02 - added mcWeight variable for Flat samples (never made it into CVS)
+
 V00-02-01 - identical to V00-02-00 except a bug fix in branch loosejetGenParticlePDGId
 
 V00-02-00 - 
