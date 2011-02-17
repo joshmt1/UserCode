@@ -157,10 +157,8 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                         muPtMin = cms.double( 10.0 ),
                                         muEtaMax = cms.double( 2.4 ),
                                         eleEtMin = cms.double( 15.0 ),
-                                        eleEtaMax = cms.double( 2.4 ),
+                                        eleEtaMax = cms.double( 2.4 )
 
-                                        mhtMin = cms.double( 150.0 ), #RA2 Reference Selection
-                                        metMin = cms.double( 150.0 )
 )
 
 process.TFileService = cms.Service("TFileService", fileName = cms.string('BasicNtuple.root') )

@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.14 2011/01/21 16:38:55 winstrom Exp $
+// $Id: BasicTreeMaker.h,v 1.15 2011/01/21 17:40:55 joshmt Exp $
 //
 //
 
@@ -140,9 +140,6 @@ private:
   double eleEtMin_ ;
   double eleEtaMax_;
 
-  double mhtMin_;
-  double metMin_;
- 
   //bookkeeping
   //  bool jetInfoFilled_;
   //  bool leptonInfoFilled_;
@@ -153,14 +150,11 @@ private:
   ULong64_t eventNumber;
   ULong64_t lumiSection;
 
-  std::vector<std::string> cutNames;
-  std::vector<bool> cutResults;
-
   std::vector<bool> passTrigger;
   std::vector<unsigned int> hltPrescale;
-  int SUSYtriggerIndex;
 
   //primary vertex info
+  bool pv_pass;
   std::vector<bool> pv_isFake;
   std::vector<float>  pv_z;
   std::vector<float>  pv_ndof;
@@ -242,6 +236,10 @@ string is the jetAlgorithmTag
   std::map< std::string,  std::vector<float> > loosejetEt;
   std::map< std::string,  std::vector<float> > loosejetEta;
   std::map< std::string,  std::vector<float> > loosejetPhi;
+
+  std::map< std::string,  std::vector<float> > loosejetPz;
+  std::map< std::string,  std::vector<float> > loosejetE;
+
   std::map< std::string,  std::vector<bool> > loosejetPassLooseID;
   std::map< std::string,  std::vector<bool> > loosejetPassTightID;
   std::map< std::string,  std::vector<float> > loosejetEnergyFracHadronic;
@@ -265,14 +263,6 @@ string is the jetAlgorithmTag
   std::map< std::string,  std::map < std::string, std::vector<float> > > loosejetBTagDisc;
 
 
-  int nbSSVM;
-
-  float HT;
-  float MHT;
-  float MHTphi;
-  float DeltaPhi_JetMHT1;
-  float DeltaPhi_JetMHT2;
-  float DeltaPhi_JetMHT3;
   //MET info
   std::map< std::string, float> MET;
   std::map< std::string, float> METphi;
@@ -288,7 +278,8 @@ string is the jetAlgorithmTag
 
   //MC info
   int SUSY_nb;
-  float qScale;
+  double qScale;
+  double mcWeight;
   std::vector<int> topDecayCode;
   int flavorHistory;
 
