@@ -2183,3 +2183,30 @@ void basicLoop::lookForPrescalePass()
    cout<<"same, after NJet and HT cuts        = "<<postCutCount<<endl;
 
 }
+
+void basicLoop::njetmass() //just for debugging
+{
+   if (fChain == 0) return;
+
+   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+
+   Long64_t nbytes = 0, nb = 0, npass=0;
+   startTimer();  //keep track of performance
+   for (Long64_t jentry=0; jentry< nentries;jentry++) {
+      Long64_t ientry = LoadTree(jentry);
+      if (ientry < 0) break;
+      if (jentry%1000000==0) checkTimer(jentry,nentries);
+      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+
+      if (Cut(ientry) < 0) continue; //jmt use cut
+
+      std::pair<double,double> masses = getMassWtop();
+      cout<<masses.first<<" "<<masses.second<<endl;
+
+      npass++;
+      if (npass >50) break;
+   }
+   stopTimer(nentries);
+
+
+}

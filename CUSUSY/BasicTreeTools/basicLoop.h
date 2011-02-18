@@ -154,8 +154,8 @@ public :
 
   std::vector<TString> cutTags_;
   std::map<TString, TString> cutNames_; //key is a cutTag. these should be "human readable" but should not have any spaces
-  //  std::map<TString, int> cutMap_; //key is a cutTag, value is the position in the ntuple CutResults
   std::vector<TString> ignoredCut_; //allow more than 1 ignored cut!
+  std::vector<TString> requiredCut_; //new feature to *turn on* a cut that is usually not required by a given cut scheme
   //if theCutFlow changes, be sure to change cutnames_ as well
 
   std::set<jmt::eventID> specifiedEvents_;
@@ -700,6 +700,7 @@ public :
    virtual void Nminus1plots();
    void cutflow(bool writeFiles=false);
    void cutflowPlotter();
+   void njetmass();
 
    //below here are == functions in basicLoop.h ==
    //these are utilities that e.g. calculate useful quantities for a given event
@@ -728,6 +729,8 @@ public :
    void setCleaningType(tailCleaningType cleanuptype);
    void setIgnoredCut(const TString cutTag);
    void resetIgnoredCut() ;
+   void setRequiredCut(const TString cutTag);
+   void resetRequiredCut() ;
    void setBCut(unsigned int nb);
    void setEleReq(int ne); //change Cut suffix to Req because it is an == requirement, not >=
    void setMuonReq(int nmu);
@@ -820,9 +823,12 @@ public :
 
    void lookForPrescalePass();
 
-   //   std::pair<double, double> getMassWt();
+   //for calculating the mass of jet combinations
+   std::pair<double, double> getMassWtop(); //first is W mass, second it top mass
    //   double calc_m2j( unsigned int j1i, unsigned int j2i);
-   //   double calc_m3j( unsigned int j1i, unsigned int j2i, unsigned int j3i);
+   double calc_mNj( std::vector<unsigned int> );
+   double calc_mNj( unsigned int j1i, unsigned int j2i);
+   double calc_mNj( unsigned int j1i, unsigned int j2i, unsigned int j3i);
 
 
    double getDeltaPhiMPTMET();
@@ -918,8 +924,8 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
    //set isData_
    if (  getSampleName(findInputName()) == "data") {cout<<"Sample is real data!"<<endl; isData_=true;}
 
-   if (  (findInputName()).Contains("/V00-01-") ) {
-     std::cout<<"Sorry, I am only compatible with V00-02-xx ntuples!"<<std::endl;
+   if (  (findInputName()).Contains("/V00-01-")  || (findInputName()).Contains("/V00-02-00") || (findInputName()).Contains("/V00-02-01")|| (findInputName()).Contains("/V00-02-02") ) {
+     std::cout<<"Sorry, I am only compatible with V00-02-03 ntuples!"<<std::endl;
      assert(0);
    }
    // ========================================== end
@@ -1498,6 +1504,10 @@ doing it this way is a dirty hack, but it is so much easier than implementing a 
     //now the tags
     // important...this is the correct order
     cutTags_.push_back("cutInclusive");cutNames_[ cutTags_.back()] = "Inclusive";
+
+    cutTags_.push_back("cut2SUSYb"); cutNames_[ cutTags_.back()] = "==2SUSYb";
+    cutTags_.push_back("cut4SUSYb"); cutNames_[ cutTags_.back()] = "==4SUSYb";
+
     cutTags_.push_back("cutTrigger"); cutNames_[cutTags_.back()]="Trigger";
     cutTags_.push_back("cutPV"); cutNames_[cutTags_.back()]="PV";
     cutTags_.push_back("cutHT"); cutNames_[cutTags_.back()]="HT";
@@ -1561,6 +1571,11 @@ bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to
     if ( cutTag == ignoredCut_.at(i) ) return false;
   }
 
+  //check if we are *requiring* this cut (special from the normal scheme)
+  for (unsigned int i = 0; i< requiredCut_.size() ; i++) {
+    if ( cutTag == requiredCut_.at(i) ) return true;
+  }
+
   bool cutIsRequired=false;
 
   //RA2
@@ -1608,6 +1623,10 @@ bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to
   }
   else if (theCutScheme_==kBaseline0) {
     if      (cutTag == "cutInclusive")  cutIsRequired =  true;
+
+    else if (cutTag == "cut2SUSYb")  cutIsRequired = false;
+    else if (cutTag == "cut4SUSYb")  cutIsRequired = false;
+
     else if (cutTag == "cutTrigger")  cutIsRequired = true;
     else if (cutTag == "cutPV")  cutIsRequired =  true;
     else if (cutTag == "cutHT")  cutIsRequired =  true;
@@ -2026,13 +2045,15 @@ bool basicLoop::passCut(const TString cutTag) {
 
   if (cutTag == "cutCleaning") return passCleaning();
 
+  if (cutTag == "cut2SUSYb") return (SUSY_nb == 2);
+  if (cutTag == "cut4SUSYb") return (SUSY_nb == 4);
+
   //no longer storing cut results in ntuple!
-  if (cutTag=="cutInclusive") return true;
-  else {
+  if (cutTag!="cutInclusive") {
     cout<<"[passCut] should not have reached this point! "<<cutTag<<endl;
     assert(0);
   }
-  return false;
+  return true;
 }
 
 bool basicLoop::passPV() {
@@ -3104,11 +3125,11 @@ bool basicLoop::passCleaning() {
   return false;
 }
 
-/*
-std::pair<double, double> basicLoop::getMassWt() {
 
-  double bestM2j=1e9, bestM2j_j1pt=0, bestM2j_j2pt=0;
-  double bestM3j=1e9, bestM3j_j3pt=0;
+std::pair<double, double> basicLoop::getMassWtop() {
+
+  double bestM2j=1e9;//, bestM2j_j1pt=0, bestM2j_j2pt=0;
+  double bestM3j=1e9;//, bestM3j_j3pt=0;
 
   //adopting this code from Owen -- note the loop goes to the second to last jet only
   for (unsigned int j1i = 0; j1i < loosejetPt->size() -1; j1i++) {
@@ -3124,12 +3145,12 @@ std::pair<double, double> basicLoop::getMassWt() {
 
 	  if (passSSVM(j2i)) continue; //veto b jets
 
-	  double m2j = calc_m2j(j1i,j2i);
+	  double m2j = calc_mNj(j1i,j2i);
 	  if ( fabs(m2j- mW_) < fabs(bestM2j - mW_) ) {
 
 	    bestM2j = m2j;
-	    bestM2j_j1pt = getLoosejetPt(j1i);
-	    bestM2j_j2pt = getLoosejetPt(j2i);
+	    // bestM2j_j1pt = getLooseJetPt(j1i);
+	    //bestM2j_j2pt = getLooseJetPt(j2i);
 
 	    for ( unsigned int j3i=0; j3i<loosejetPt->size(); j3i++) {
 
@@ -3137,11 +3158,11 @@ std::pair<double, double> basicLoop::getMassWt() {
 
 	      if ( isGoodJet30(j3i) && passSSVM(j3i)) { //owen uses 10 GeV pT cut
 
-		double m3j = calc_m3j(j1i,j2i,j3i);
+		double m3j = calc_mNj(j1i,j2i,j3i);
 
 		if ( fabs(m3j-mtop_) < fabs(bestM3j-mtop_) ) {
 		  bestM3j=m3j;
-		  bestM3j_j3pt = getLoosejetPt(j3i);
+		  //bestM3j_j3pt = getLooseJetPt(j3i);
 		}
 
 	      } //is j3 good b jet
@@ -3161,31 +3182,55 @@ std::pair<double, double> basicLoop::getMassWt() {
 }
 
 
-double basicLoop::calc_m2j( unsigned int j1i, unsigned int j2i) {
+double basicLoop::calc_mNj( unsigned int j1i, unsigned int j2i) {
+  std::vector<unsigned int> v;
 
-  double m2j=-1;
-
-  if (j1i == j2i) return m2j;
-  
-  double sumE = loosejetE->at(j1i) + loosejetE->at(j2i) ;
-
-  double sumPx = getLooseJetPt(j1i)*cos(loosejetPhi->at(j1i)) + getLooseJetPt(j2i)*cos(loosejetPhi->at(j2i));
-  double sumPy = getLooseJetPt(j1i)*sin(loosejetPhi->at(j1i)) + getLooseJetPt(j2i)*sin(loosejetPhi->at(j2i));
-  double sumPz = loosejetPz->at(j1i) + loosejetPz->at(j2i) ;
-  
-  double sumP2 = sumPx*sumPx + sumPy*sumPy + sumPz*sumPz ;
-
-  if ((sumE*sumE) < sumP2 ) return -2. ;
-
-  return sqrt( sumE*sumE - sumP2 ) ;
-
+  v.push_back(j1i);
+  v.push_back(j2i);
+  return calc_mNj(v);
 }
 
-double basicLoop::calc_m3j( unsigned int j1i, unsigned int j2i, unsigned int j3i) {
+double basicLoop::calc_mNj( unsigned int j1i, unsigned int j2i, unsigned int j3i) {
+  std::vector<unsigned int> v;
 
-
+  v.push_back(j1i);
+  v.push_back(j2i);
+  v.push_back(j3i);
+  return calc_mNj(v);
 }
-*/
+
+double basicLoop::calc_mNj( std::vector<unsigned int> jNi ) {
+
+//we could use an std::set which enforces that the elements are unique
+  for (unsigned int i=0; i<jNi.size()-1; i++) {
+    for (unsigned int j=i+1; j<jNi.size(); j++) {
+      if (jNi.at(i) == jNi.at(j)) {
+	cout<<"Problem in calc_mNj!"<<endl;
+	return -1;
+      }
+    }
+  }
+
+  double sumE =0;
+  double sumPx=0;
+  double sumPy=0;
+  double sumPz=0;
+
+  for (unsigned int i=0; i<jNi.size(); i++)   {
+    unsigned int j1i = jNi.at(i);
+    sumE += loosejetE->at( j1i ); 
+
+    sumPx += getLooseJetPt(j1i)*cos(loosejetPhi->at(j1i));
+    sumPy += getLooseJetPt(j1i)*sin(loosejetPhi->at(j1i));
+    sumPz += loosejetPz->at(j1i);
+  }
+
+   double sumP2 = sumPx*sumPx + sumPy*sumPy + sumPz*sumPz ;
+
+   if ( (sumE*sumE) < sumP2 ) return -2. ;
+
+   return sqrt( sumE*sumE - sumP2 );
+}
 
 void basicLoop::fillWithJetFlavor(TH1D* hh, double w, double threshold) {
 
@@ -3666,8 +3711,24 @@ void basicLoop::setIgnoredCut(const TString cutTag) {
 
 }
 
+void basicLoop::setRequiredCut(const TString cutTag) {
+
+  bool ok=false;
+  for (unsigned int i=0; i<cutTags_.size() ; i++) {
+    if (cutTags_[i] == cutTag) {ok=true; break;}
+  }
+  if (!ok) {cout<<"Invalid cutIndex"<<endl; return;}
+
+  requiredCut_.push_back(cutTag);
+
+}
+
 void basicLoop::resetIgnoredCut() {
   ignoredCut_.clear();
+}
+
+void basicLoop::resetRequiredCut() {
+  requiredCut_.clear();
 }
 
 void basicLoop::specifyEvent(ULong64_t run, ULong64_t lumisection, ULong64_t event) {
@@ -3744,6 +3805,11 @@ TString basicLoop::getCutDescriptionString() {
     //it would be more robust to use .find() instead of []
     cuts += jmt::fortranize( cutNames_[ignoredCut_.at(icut)]);
   }
+  for (unsigned int icut=0; icut<requiredCut_.size() ; icut++) {
+    cuts+="_With";
+    //it would be more robust to use .find() instead of []
+    cuts += jmt::fortranize( cutNames_[requiredCut_.at(icut)]);
+  }
   return cuts; 
 }
 
@@ -3773,6 +3839,9 @@ void basicLoop::printState() {
   cout<<"Tail cleanup set to:  "<<tailCleaningNames_[theCleaningType_]<<endl;
   for (unsigned int i = 0; i< ignoredCut_.size() ; i++) {
     cout<<"Will ignore cut:    "<<cutNames_[ignoredCut_.at(i)]<<endl;
+  }
+  for (unsigned int i = 0; i< requiredCut_.size() ; i++) {
+    cout<<"Will require cut:   "<<cutNames_[requiredCut_.at(i)]<<endl;
   }
   
 }
