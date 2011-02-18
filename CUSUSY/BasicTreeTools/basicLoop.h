@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Mon Jan 24 14:59:57 2011 by ROOT version 5.22/00d
+// Fri Feb 18 11:40:32 2011 by ROOT version 5.22/00d
 // from TTree tree/tree
-// found on file: /cu1/joshmt/BasicNtuples/V00-02-00/TTbarJets/BasicNtuple.root
+// found on file: /cu1/joshmt/BasicNtuples/V00-02-03/TTbarJets/BasicNtuple.root
 //////////////////////////////////////////////////////////
 
 #ifndef basicLoop_h
@@ -102,6 +102,10 @@ const char *tailCleaningNames_[] = {"NoCleaning","MuonCleaning"};
 //in 1/pb
 //const double lumi=36.143; //Don's number for 386 Nov4ReReco
 const double lumi=36.146; //386 Nov4ReReco Datasets - PATIFIED WITH 387
+
+const double mW_ = 80.399;
+const double mtop_ = 172.0;
+
 // ========================================== end
 
 class basicLoop {
@@ -150,7 +154,7 @@ public :
 
   std::vector<TString> cutTags_;
   std::map<TString, TString> cutNames_; //key is a cutTag. these should be "human readable" but should not have any spaces
-  std::map<TString, int> cutMap_; //key is a cutTag, value is the position in the ntuple CutResults
+  //  std::map<TString, int> cutMap_; //key is a cutTag, value is the position in the ntuple CutResults
   std::vector<TString> ignoredCut_; //allow more than 1 ignored cut!
   //if theCutFlow changes, be sure to change cutnames_ as well
 
@@ -178,8 +182,10 @@ public :
   vector<int>     *tightJetIndex;
   vector<int>     *looseJetIndex;
   vector<float>   *loosejetPt;
+  vector<float>   *loosejetPz;
   vector<float>   *loosejetPtUncorr;
   vector<float>   *loosejetEt;
+  vector<float>   *loosejetE;
   vector<float>   *loosejetEta;
   vector<float>   *loosejetPhi;
   vector<bool>    *loosejetPassLooseID;
@@ -210,6 +216,7 @@ public :
    vector<float>   *loosejetJECUncPlus;
    vector<float>   *loosejetJECUncMinus;
 
+   Int_t nbSSVM;
   // ========================================== end
 
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
@@ -222,10 +229,9 @@ public :
    Float_t         bsx;
    Float_t         bsy;
    Float_t         bsz;
-   vector<bool>    *cutResults;
    vector<bool>    *passTrigger;
    vector<unsigned int> *hltPrescale;
-   Int_t           SUSYtriggerIndex;
+   Bool_t          pv_pass;
    vector<bool>    *pv_isFake;
    vector<float>   *pv_z;
    vector<float>   *pv_rho;
@@ -234,8 +240,10 @@ public :
    vector<int>     *tightJetIndex_calo;
    vector<int>     *looseJetIndex_calo;
    vector<float>   *loosejetPt_calo;
+   vector<float>   *loosejetPz_calo;
    vector<float>   *loosejetPtUncorr_calo;
    vector<float>   *loosejetEt_calo;
+   vector<float>   *loosejetE_calo;
    vector<float>   *loosejetEta_calo;
    vector<float>   *loosejetPhi_calo;
    vector<bool>    *loosejetPassLooseID_calo;
@@ -265,8 +273,10 @@ public :
    vector<int>     *tightJetIndex_JPT;
    vector<int>     *looseJetIndex_JPT;
    vector<float>   *loosejetPt_JPT;
+   vector<float>   *loosejetPz_JPT;
    vector<float>   *loosejetPtUncorr_JPT;
    vector<float>   *loosejetEt_JPT;
+   vector<float>   *loosejetE_JPT;
    vector<float>   *loosejetEta_JPT;
    vector<float>   *loosejetPhi_JPT;
    vector<bool>    *loosejetPassLooseID_JPT;
@@ -296,8 +306,10 @@ public :
    vector<int>     *tightJetIndex_PF;
    vector<int>     *looseJetIndex_PF;
    vector<float>   *loosejetPt_PF;
+   vector<float>   *loosejetPz_PF;
    vector<float>   *loosejetPtUncorr_PF;
    vector<float>   *loosejetEt_PF;
+   vector<float>   *loosejetE_PF;
    vector<float>   *loosejetEta_PF;
    vector<float>   *loosejetPhi_PF;
    vector<bool>    *loosejetPassLooseID_PF;
@@ -324,13 +336,6 @@ public :
    vector<float>   *loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_PF;
    vector<float>   *loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_PF;
    vector<float>   *loosejetBTagDisc_simpleSecondaryVertexBJetTags_PF;
-   Int_t           nbSSVM;
-   Float_t         HT;
-   Float_t         MHT;
-   Float_t         MHTphi;
-   Float_t         DeltaPhi_JetMHT1;
-   Float_t         DeltaPhi_JetMHT2;
-   Float_t         DeltaPhi_JetMHT3;
    Float_t         caloMET;
    Float_t         caloMETphi;
    Float_t         caloMETsig;
@@ -439,11 +444,8 @@ public :
    vector<bool>    *elePassID_PF;
    Int_t           nElectrons_PF;
    Int_t           SUSY_nb;
-   Float_t         qScale;
-// ========================================== begin
-   Double_t qScaleD;
-   Double_t mcWeight;
-// ========================================== end
+   Double_t        qScale;
+   Double_t        mcWeight;
    vector<int>     *topDecayCode;
    Int_t           flavorHistory;
 
@@ -454,10 +456,9 @@ public :
    TBranch        *b_bsx;   //!
    TBranch        *b_bsy;   //!
    TBranch        *b_bsz;   //!
-   TBranch        *b_cutResults;   //!
    TBranch        *b_passTrigger;   //!
    TBranch        *b_hltPrescale;   //!
-   TBranch        *b_SUSYtriggerIndex;   //!
+   TBranch        *b_pv_pass;   //!
    TBranch        *b_pv_isFake;   //!
    TBranch        *b_pv_z;   //!
    TBranch        *b_pv_rho;   //!
@@ -466,8 +467,10 @@ public :
    TBranch        *b_tightJetIndex_calo;   //!
    TBranch        *b_looseJetIndex_calo;   //!
    TBranch        *b_loosejetPt_calo;   //!
+   TBranch        *b_loosejetPz_calo;   //!
    TBranch        *b_loosejetPtUncorr_calo;   //!
    TBranch        *b_loosejetEt_calo;   //!
+   TBranch        *b_loosejetE_calo;   //!
    TBranch        *b_loosejetEta_calo;   //!
    TBranch        *b_loosejetPhi_calo;   //!
    TBranch        *b_loosejetPassLooseID_calo;   //!
@@ -497,8 +500,10 @@ public :
    TBranch        *b_tightJetIndex_JPT;   //!
    TBranch        *b_looseJetIndex_JPT;   //!
    TBranch        *b_loosejetPt_JPT;   //!
+   TBranch        *b_loosejetPz_JPT;   //!
    TBranch        *b_loosejetPtUncorr_JPT;   //!
    TBranch        *b_loosejetEt_JPT;   //!
+   TBranch        *b_loosejetE_JPT;   //!
    TBranch        *b_loosejetEta_JPT;   //!
    TBranch        *b_loosejetPhi_JPT;   //!
    TBranch        *b_loosejetPassLooseID_JPT;   //!
@@ -528,8 +533,10 @@ public :
    TBranch        *b_tightJetIndex_PF;   //!
    TBranch        *b_looseJetIndex_PF;   //!
    TBranch        *b_loosejetPt_PF;   //!
+   TBranch        *b_loosejetPz_PF;   //!
    TBranch        *b_loosejetPtUncorr_PF;   //!
    TBranch        *b_loosejetEt_PF;   //!
+   TBranch        *b_loosejetE_PF;   //!
    TBranch        *b_loosejetEta_PF;   //!
    TBranch        *b_loosejetPhi_PF;   //!
    TBranch        *b_loosejetPassLooseID_PF;   //!
@@ -556,13 +563,6 @@ public :
    TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_PF;   //!
    TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_PF;   //!
    TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexBJetTags_PF;   //!
-   TBranch        *b_nbSSVM;   //!
-   TBranch        *b_HT;   //!
-   TBranch        *b_MHT;   //!
-   TBranch        *b_MHTphi;   //!
-   TBranch        *b_DeltaPhi_JetMHT1;   //!
-   TBranch        *b_DeltaPhi_JetMHT2;   //!
-   TBranch        *b_DeltaPhi_JetMHT3;   //!
    TBranch        *b_caloMET;   //!
    TBranch        *b_caloMETphi;   //!
    TBranch        *b_caloMETsig;   //!
@@ -672,12 +672,11 @@ public :
    TBranch        *b_nElectrons_PF;   //!
    TBranch        *b_SUSY_nb;   //!
    TBranch        *b_qScale;   //!
-   TBranch        *b_mcWeight;   // ========================================== begin. end
+   TBranch        *b_mcWeight;   //!
    TBranch        *b_topDecayCode;   //!
    TBranch        *b_flavorHistory;   //!
 
    basicLoop(TTree *tree=0, TTree *infotree=0);    // ========================================== begin, end
-
    virtual ~basicLoop();
    virtual Int_t    Cut(Long64_t entry);
    virtual Int_t    GetEntry(Long64_t entry);
@@ -821,6 +820,11 @@ public :
 
    void lookForPrescalePass();
 
+   //   std::pair<double, double> getMassWt();
+   //   double calc_m2j( unsigned int j1i, unsigned int j2i);
+   //   double calc_m3j( unsigned int j1i, unsigned int j2i, unsigned int j3i);
+
+
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
    double getMinDeltaPhiMET(unsigned int maxjets) ;
@@ -863,13 +867,12 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
      realDatasetNames_(false),
      starttime_(0),
      specialCutDescription_(""),
+     nbSSVM(0),
      printedHLT_(false),
      lastTriggerPass_("")
 //====================== end
-
 {
-
-   // ========================================== begin
+  // ========================================== begin
   //don't do the default root thing of loading a default tree
   if (tree == 0 || infotree==0) {
     cout<<"One of the required input trees has not been provided as an argument to the constructor of basicLoop!"<<endl;
@@ -881,7 +884,6 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
   // ========================================== end
 
    Init(tree);
-
    // ========================================== begin
    specifiedEvents_.clear();
 
@@ -931,7 +933,6 @@ basicLoop::~basicLoop()
   //if (!fChain) return;
   // delete fChain->GetCurrentFile();
   // ========================================== end
-
 }
 
 Int_t basicLoop::GetEntry(Long64_t entry)
@@ -948,7 +949,6 @@ Int_t basicLoop::GetEntry(Long64_t entry)
    return n;
   // ========================================== end
 }
-
 Long64_t basicLoop::LoadTree(Long64_t entry)
 {
 // Set the environment to read one entry
@@ -975,7 +975,6 @@ void basicLoop::Init(TTree *tree)
    // (once per file to be processed).
 
    // Set object pointer
-   cutResults = 0;
    passTrigger = 0;
    hltPrescale = 0;
    pv_isFake = 0;
@@ -986,8 +985,10 @@ void basicLoop::Init(TTree *tree)
    tightJetIndex_calo = 0;
    looseJetIndex_calo = 0;
    loosejetPt_calo = 0;
+   loosejetPz_calo = 0;
    loosejetPtUncorr_calo = 0;
    loosejetEt_calo = 0;
+   loosejetE_calo = 0;
    loosejetEta_calo = 0;
    loosejetPhi_calo = 0;
    loosejetPassLooseID_calo = 0;
@@ -1017,8 +1018,10 @@ void basicLoop::Init(TTree *tree)
    tightJetIndex_JPT = 0;
    looseJetIndex_JPT = 0;
    loosejetPt_JPT = 0;
+   loosejetPz_JPT = 0;
    loosejetPtUncorr_JPT = 0;
    loosejetEt_JPT = 0;
+   loosejetE_JPT = 0;
    loosejetEta_JPT = 0;
    loosejetPhi_JPT = 0;
    loosejetPassLooseID_JPT = 0;
@@ -1048,8 +1051,10 @@ void basicLoop::Init(TTree *tree)
    tightJetIndex_PF = 0;
    looseJetIndex_PF = 0;
    loosejetPt_PF = 0;
+   loosejetPz_PF = 0;
    loosejetPtUncorr_PF = 0;
    loosejetEt_PF = 0;
+   loosejetE_PF = 0;
    loosejetEta_PF = 0;
    loosejetPhi_PF = 0;
    loosejetPassLooseID_PF = 0;
@@ -1168,10 +1173,9 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("bsx", &bsx, &b_bsx);
    fChain->SetBranchAddress("bsy", &bsy, &b_bsy);
    fChain->SetBranchAddress("bsz", &bsz, &b_bsz);
-   fChain->SetBranchAddress("cutResults", &cutResults, &b_cutResults);
    fChain->SetBranchAddress("passTrigger", &passTrigger, &b_passTrigger);
    fChain->SetBranchAddress("hltPrescale", &hltPrescale, &b_hltPrescale);
-   fChain->SetBranchAddress("SUSYtriggerIndex", &SUSYtriggerIndex, &b_SUSYtriggerIndex);
+   fChain->SetBranchAddress("pv_pass", &pv_pass, &b_pv_pass);
    fChain->SetBranchAddress("pv_isFake", &pv_isFake, &b_pv_isFake);
    fChain->SetBranchAddress("pv_z", &pv_z, &b_pv_z);
    fChain->SetBranchAddress("pv_rho", &pv_rho, &b_pv_rho);
@@ -1180,8 +1184,10 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("tightJetIndex_calo", &tightJetIndex_calo, &b_tightJetIndex_calo);
    fChain->SetBranchAddress("looseJetIndex_calo", &looseJetIndex_calo, &b_looseJetIndex_calo);
    fChain->SetBranchAddress("loosejetPt_calo", &loosejetPt_calo, &b_loosejetPt_calo);
+   fChain->SetBranchAddress("loosejetPz_calo", &loosejetPz_calo, &b_loosejetPz_calo);
    fChain->SetBranchAddress("loosejetPtUncorr_calo", &loosejetPtUncorr_calo, &b_loosejetPtUncorr_calo);
    fChain->SetBranchAddress("loosejetEt_calo", &loosejetEt_calo, &b_loosejetEt_calo);
+   fChain->SetBranchAddress("loosejetE_calo", &loosejetE_calo, &b_loosejetE_calo);
    fChain->SetBranchAddress("loosejetEta_calo", &loosejetEta_calo, &b_loosejetEta_calo);
    fChain->SetBranchAddress("loosejetPhi_calo", &loosejetPhi_calo, &b_loosejetPhi_calo);
    fChain->SetBranchAddress("loosejetPassLooseID_calo", &loosejetPassLooseID_calo, &b_loosejetPassLooseID_calo);
@@ -1211,8 +1217,10 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("tightJetIndex_JPT", &tightJetIndex_JPT, &b_tightJetIndex_JPT);
    fChain->SetBranchAddress("looseJetIndex_JPT", &looseJetIndex_JPT, &b_looseJetIndex_JPT);
    fChain->SetBranchAddress("loosejetPt_JPT", &loosejetPt_JPT, &b_loosejetPt_JPT);
+   fChain->SetBranchAddress("loosejetPz_JPT", &loosejetPz_JPT, &b_loosejetPz_JPT);
    fChain->SetBranchAddress("loosejetPtUncorr_JPT", &loosejetPtUncorr_JPT, &b_loosejetPtUncorr_JPT);
    fChain->SetBranchAddress("loosejetEt_JPT", &loosejetEt_JPT, &b_loosejetEt_JPT);
+   fChain->SetBranchAddress("loosejetE_JPT", &loosejetE_JPT, &b_loosejetE_JPT);
    fChain->SetBranchAddress("loosejetEta_JPT", &loosejetEta_JPT, &b_loosejetEta_JPT);
    fChain->SetBranchAddress("loosejetPhi_JPT", &loosejetPhi_JPT, &b_loosejetPhi_JPT);
    fChain->SetBranchAddress("loosejetPassLooseID_JPT", &loosejetPassLooseID_JPT, &b_loosejetPassLooseID_JPT);
@@ -1242,8 +1250,10 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("tightJetIndex_PF", &tightJetIndex_PF, &b_tightJetIndex_PF);
    fChain->SetBranchAddress("looseJetIndex_PF", &looseJetIndex_PF, &b_looseJetIndex_PF);
    fChain->SetBranchAddress("loosejetPt_PF", &loosejetPt_PF, &b_loosejetPt_PF);
+   fChain->SetBranchAddress("loosejetPz_PF", &loosejetPz_PF, &b_loosejetPz_PF);
    fChain->SetBranchAddress("loosejetPtUncorr_PF", &loosejetPtUncorr_PF, &b_loosejetPtUncorr_PF);
    fChain->SetBranchAddress("loosejetEt_PF", &loosejetEt_PF, &b_loosejetEt_PF);
+   fChain->SetBranchAddress("loosejetE_PF", &loosejetE_PF, &b_loosejetE_PF);
    fChain->SetBranchAddress("loosejetEta_PF", &loosejetEta_PF, &b_loosejetEta_PF);
    fChain->SetBranchAddress("loosejetPhi_PF", &loosejetPhi_PF, &b_loosejetPhi_PF);
    fChain->SetBranchAddress("loosejetPassLooseID_PF", &loosejetPassLooseID_PF, &b_loosejetPassLooseID_PF);
@@ -1270,13 +1280,6 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_PF", &loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_PF, &b_loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_PF);
    fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_PF", &loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_PF, &b_loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_PF);
    fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexBJetTags_PF", &loosejetBTagDisc_simpleSecondaryVertexBJetTags_PF, &b_loosejetBTagDisc_simpleSecondaryVertexBJetTags_PF);
-   fChain->SetBranchAddress("nbSSVM", &nbSSVM, &b_nbSSVM);
-   fChain->SetBranchAddress("HT", &HT, &b_HT);
-   fChain->SetBranchAddress("MHT", &MHT, &b_MHT);
-   fChain->SetBranchAddress("MHTphi", &MHTphi, &b_MHTphi);
-   fChain->SetBranchAddress("DeltaPhi_JetMHT1", &DeltaPhi_JetMHT1, &b_DeltaPhi_JetMHT1);
-   fChain->SetBranchAddress("DeltaPhi_JetMHT2", &DeltaPhi_JetMHT2, &b_DeltaPhi_JetMHT2);
-   fChain->SetBranchAddress("DeltaPhi_JetMHT3", &DeltaPhi_JetMHT3, &b_DeltaPhi_JetMHT3);
    fChain->SetBranchAddress("caloMET", &caloMET, &b_caloMET);
    fChain->SetBranchAddress("caloMETphi", &caloMETphi, &b_caloMETphi);
    fChain->SetBranchAddress("caloMETsig", &caloMETsig, &b_caloMETsig);
@@ -1385,13 +1388,8 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("elePassID_PF", &elePassID_PF, &b_elePassID_PF);
    fChain->SetBranchAddress("nElectrons_PF", &nElectrons_PF, &b_nElectrons_PF);
    fChain->SetBranchAddress("SUSY_nb", &SUSY_nb, &b_SUSY_nb);
-// ========================================== begin
-   if (isV00_02_02() )  {
-     fChain->SetBranchAddress("qScale", &qScaleD, &b_qScale);
-     fChain->SetBranchAddress("mcWeight", &mcWeight, &b_mcWeight);
-   }
-   else   fChain->SetBranchAddress("qScale", &qScale, &b_qScale);
-// ========================================== end
+   fChain->SetBranchAddress("qScale", &qScale, &b_qScale);
+   fChain->SetBranchAddress("mcWeight", &mcWeight, &b_mcWeight);
    fChain->SetBranchAddress("topDecayCode", &topDecayCode, &b_topDecayCode);
    fChain->SetBranchAddress("flavorHistory", &flavorHistory, &b_flavorHistory);
    Notify();
@@ -1425,7 +1423,7 @@ bool basicLoop::setCutScheme(CutScheme cutscheme) {
 
   cutNames_.clear();
   cutTags_.clear();
-  cutMap_.clear();
+  //  cutMap_.clear();
 
   //cutNames and cutTags are required to 'line up' with each other.
   //one is for printability, the other is for unambiguous typing
@@ -1452,9 +1450,9 @@ bool basicLoop::setCutScheme(CutScheme cutscheme) {
   cutTags_.push_back("cut3b");  cutNames_[cutTags_.back()]=">=3b";
 
   //read the above comment...this must be here (not lower)
-  for (unsigned int i=0;i<cutTags_.size(); i++) {
-    cutMap_[cutTags_[i]] = i;
-  }
+  //  for (unsigned int i=0;i<cutTags_.size(); i++) {
+  //    cutMap_[cutTags_[i]] = i;
+  //  }
   
   if (theCutScheme_==kSync1) {
     cutNames_.clear();
@@ -2028,15 +2026,13 @@ bool basicLoop::passCut(const TString cutTag) {
 
   if (cutTag == "cutCleaning") return passCleaning();
 
-  //we want to avoid using the precomputed cut flow for the basline0 scheme
-  if (theCutScheme_==kBaseline0 && cutTag!="cutInclusive") {
-    cout<<"[passCut] should not have reached this point for Baseline0 scheme! "<<cutTag<<endl;;
+  //no longer storing cut results in ntuple!
+  if (cutTag=="cutInclusive") return true;
+  else {
+    cout<<"[passCut] should not have reached this point! "<<cutTag<<endl;
     assert(0);
   }
-
-  //in case this is not an exception, return the cut result stored in the ntuple
-  int cutIndex = cutMap_[cutTag];
-  return cutResults->at(cutIndex);
+  return false;
 }
 
 bool basicLoop::passPV() {
@@ -2046,10 +2042,9 @@ bool basicLoop::passPV() {
   //the PV selector only looks at the first PV. I think this is wrong.
   //so this function should be used instead
 
-  //update...Don endorses the PVSelector method.
-  bool ntupleResult = cutResults->at( cutMap_["cutPV"]);
-  return ntupleResult;
-  //never run the code down here!
+  //this is precomputed PVSelector result
+  return pv_pass;
+  //never run the code down here (except for special checks)
 
   bool pass=false;
   for (unsigned int ipv = 0; ipv<pv_isFake->size(); ipv++) {
@@ -3109,6 +3104,89 @@ bool basicLoop::passCleaning() {
   return false;
 }
 
+/*
+std::pair<double, double> basicLoop::getMassWt() {
+
+  double bestM2j=1e9, bestM2j_j1pt=0, bestM2j_j2pt=0;
+  double bestM3j=1e9, bestM3j_j3pt=0;
+
+  //adopting this code from Owen -- note the loop goes to the second to last jet only
+  for (unsigned int j1i = 0; j1i < loosejetPt->size() -1; j1i++) {
+
+    if ( isGoodJet30(j1i)) { //owen is using pT>30 cut
+
+      //use exactly the same logic as Owen, to avoid bugs
+      if (passSSVM(j1i) ) continue; //veto b jets
+
+      //note how owen does the loop indexing here
+      for (unsigned int j2i =j1i+1; j2i<loosejetPt->size(); j2i++) {
+	if ( isGoodJet30(j1i)) { //owen is using a pT>10 cut here!
+
+	  if (passSSVM(j2i)) continue; //veto b jets
+
+	  double m2j = calc_m2j(j1i,j2i);
+	  if ( fabs(m2j- mW_) < fabs(bestM2j - mW_) ) {
+
+	    bestM2j = m2j;
+	    bestM2j_j1pt = getLoosejetPt(j1i);
+	    bestM2j_j2pt = getLoosejetPt(j2i);
+
+	    for ( unsigned int j3i=0; j3i<loosejetPt->size(); j3i++) {
+
+	      if (j3i==j1i || j3i==j2i) continue;
+
+	      if ( isGoodJet30(j3i) && passSSVM(j3i)) { //owen uses 10 GeV pT cut
+
+		double m3j = calc_m3j(j1i,j2i,j3i);
+
+		if ( fabs(m3j-mtop_) < fabs(bestM3j-mtop_) ) {
+		  bestM3j=m3j;
+		  bestM3j_j3pt = getLoosejetPt(j3i);
+		}
+
+	      } //is j3 good b jet
+	    } //loop over j3
+
+	  } // compare with W mass
+
+	} //jet 2 is good
+      } //j2i
+
+    } //if jet is good
+
+  } //j1i
+
+  return make_pair(bestM2j,bestM3j);
+
+}
+
+
+double basicLoop::calc_m2j( unsigned int j1i, unsigned int j2i) {
+
+  double m2j=-1;
+
+  if (j1i == j2i) return m2j;
+  
+  double sumE = loosejetE->at(j1i) + loosejetE->at(j2i) ;
+
+  double sumPx = getLooseJetPt(j1i)*cos(loosejetPhi->at(j1i)) + getLooseJetPt(j2i)*cos(loosejetPhi->at(j2i));
+  double sumPy = getLooseJetPt(j1i)*sin(loosejetPhi->at(j1i)) + getLooseJetPt(j2i)*sin(loosejetPhi->at(j2i));
+  double sumPz = loosejetPz->at(j1i) + loosejetPz->at(j2i) ;
+  
+  double sumP2 = sumPx*sumPx + sumPy*sumPy + sumPz*sumPz ;
+
+  if ((sumE*sumE) < sumP2 ) return -2. ;
+
+  return sqrt( sumE*sumE - sumP2 ) ;
+
+}
+
+double basicLoop::calc_m3j( unsigned int j1i, unsigned int j2i, unsigned int j3i) {
+
+
+}
+*/
+
 void basicLoop::fillWithJetFlavor(TH1D* hh, double w, double threshold) {
 
   //fill histogram hh with true jet flavor of all jets above pt threshold
@@ -3241,8 +3319,10 @@ void basicLoop::InitJets() {
     tightJetIndex = tightJetIndex_calo;
     looseJetIndex = looseJetIndex_calo;
     loosejetPt = loosejetPt_calo;
+    loosejetPz = loosejetPz_calo;
     loosejetPtUncorr = loosejetPtUncorr_calo;
     loosejetEt = loosejetEt_calo;
+    loosejetE = loosejetE_calo;
     loosejetEta = loosejetEta_calo;
     loosejetPhi = loosejetPhi_calo;
     loosejetPassLooseID = loosejetPassLooseID_calo;
@@ -3278,8 +3358,10 @@ void basicLoop::InitJets() {
     tightJetIndex = tightJetIndex_PF;
     looseJetIndex = looseJetIndex_PF;
     loosejetPt = loosejetPt_PF;
+    loosejetPz = loosejetPz_PF;
     loosejetPtUncorr = loosejetPtUncorr_PF;
     loosejetEt = loosejetEt_PF;
+    loosejetE = loosejetE_PF;
     loosejetEta = loosejetEta_PF;
     loosejetPhi = loosejetPhi_PF;
     loosejetPassLooseID = loosejetPassLooseID_PF;

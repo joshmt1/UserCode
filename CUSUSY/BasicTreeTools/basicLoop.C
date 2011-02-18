@@ -994,7 +994,7 @@ void basicLoop::Nminus1plots()
       double weight = getWeight(nentries);
 
       //calculate things
-      HT = getHT();
+      double HT = getHT();
       int njets = nGoodJets(); //update to use baseline0
       double minDeltaPhi_j_MET = getMinDeltaPhiMET(3);
       double minDeltaPhi_j_MET_All = getMinDeltaPhiMET(99);
@@ -1621,8 +1621,8 @@ void basicLoop::Loop(unsigned int dataindex)
 
       int njets = nGoodJets(); //update to use baseline0
 
-      MHT = getMHT(); //here we overwrite an ntuple variable!
-      HT = getHT(); //here we overwrite an ntuple variable!
+      double MHT = getMHT();
+      double HT = getHT();
 
       if (Cut(ientry) < 0) continue; //jmt use cut
 
