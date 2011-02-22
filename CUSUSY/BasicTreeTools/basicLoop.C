@@ -283,6 +283,180 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   
 }
 
+void basicLoop::reducedTree(TString outputpath)
+{
+   if (fChain == 0) return;
+
+  /*
+I'm getting weary of waiting for Nminus1plots to run, and then losing
+the correlations between the variables, control of the binning, etc.
+
+What I'd really like is a tree with an entry for (nearly) every event, but small enough
+that it plots fast. An intermediate step between my basicNtuples and final plots.
+
+This is an experiment. We will have to see if it is practical.
+I think it is reasonable to apply a trigger and HT requirement in order to
+keep the file size/time required down a bit.
+
+Each event will have ready-to-plot observables (i.e. no jet-based info; only event-based info)
+
+I realize that this can be limiting, also. Without jet-based info, there is no way to plot certain things (jet response as
+a function of eta,phi) later.
+  */
+
+   resetIgnoredCut();
+   setBCut(0);
+   printState();
+
+   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+  if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
+
+  TString sampleName = getSampleName(findInputName());
+  
+  //open output file
+  TString outfilename="reducedTree."; 
+  outfilename+=getCutDescriptionString();
+  outfilename+=".";    outfilename+=sampleName; 
+  outfilename+=".root";
+  if (outputpath[outputpath.Length()-1] != '/') outputpath += "/";
+  outfilename.Prepend(outputpath);
+  TFile fout(outfilename,"RECREATE");
+  
+  //we're making an ntuple, so size matters -- use float not double
+  double weight; //one exception to the float rule
+  float HT, MHT, MET, METphi, minDeltaPhi, minDeltaPhiAll, minDeltaPhiAll30,minDeltaPhi30_eta5_noIdAll;
+  float deltaPhiMETMismeasuredJet, deltaPhiMPTMET, deltaPhib1b2;
+  float jetpt1,jetphi1, jeteta1;//, bjetpt1, bjetphi1, bjeteta1; //should add these back at some point
+  float genInvisibleHT, genInvisibleMHT, genMET,genMETphi;
+  float maxJetRecoError3, maxJetRecoErrorAll;
+  float deltaPhiMETMismeasuredJetAll;
+
+  bool cutHT,cutPV,cutTrigger; //these will always be true
+  bool cut3Jets,cutEleVeto,cutMuVeto,cutMET,cutDeltaPhi,cutCleaning;
+
+  //SUSY_nb //copy straight from ntuple!
+  int nbGen;
+  int topDecayCategory;
+
+  //some sort of compilation of the number of mistagged jets
+  //etc...
+
+  int njets, nElectrons, nMuons, nbjets;
+
+  // define the TTree
+  TTree reducedTree("reducedTree","tree with minimal cuts");
+  reducedTree.Branch("weight",&weight,"weight/D");
+
+  reducedTree.Branch("cutHT",&cutHT,"cutHT/O");
+  reducedTree.Branch("cutPV",&cutPV,"cutPV/O");
+  reducedTree.Branch("cutTrigger",&cutTrigger,"cutTrigger/O");
+  reducedTree.Branch("cut3Jets",&cut3Jets,"cut3Jets/O");
+  reducedTree.Branch("cutEleVeto",&cutEleVeto,"cutEleVeto/O");
+  reducedTree.Branch("cutMuVeto",&cutMuVeto,"cutMuVeto/O");
+  reducedTree.Branch("cutMET",&cutMET,"cutMET/O");
+  reducedTree.Branch("cutDeltaPhi",&cutDeltaPhi,"cutDeltaPhi/O");
+  reducedTree.Branch("cutCleaning",&cutCleaning,"cutCleaning/O");
+
+  reducedTree.Branch("nbGen",&nbGen,"nbGen/I");
+  reducedTree.Branch("SUSY_nb",&SUSY_nb,"SUSY_nb/I");
+  reducedTree.Branch("topDecayCategory",&topDecayCategory,"topDecayCategory/I");
+
+  reducedTree.Branch("njets",&njets,"njets/I");
+  reducedTree.Branch("nbjets",&nbjets,"nbjets/I");
+  reducedTree.Branch("nElectrons",&nElectrons,"nElectrons/I");
+  reducedTree.Branch("nMuons",&nMuons,"nMuons/I");
+
+  reducedTree.Branch("HT",&HT,"HT/F");
+  reducedTree.Branch("MET",&MET,"MET/F");
+  reducedTree.Branch("METphi",&METphi,"METphi/F");
+  reducedTree.Branch("MHT",&MHT,"MHT/F");
+
+  reducedTree.Branch("bestWMass",&bestWMass_,"bestWMass/F");
+  reducedTree.Branch("bestTopMass",&bestTopMass_,"bestTopMass/F");
+  reducedTree.Branch("topCosHel",&topCosHel_,"topCosHel/F");
+  reducedTree.Branch("WCosHel",&WCosHel_,"WCosHel/F");
+
+  reducedTree.Branch("minDeltaPhiAll",&minDeltaPhiAll,"minDeltaPhiAll/F");
+  reducedTree.Branch("minDeltaPhiAll30",&minDeltaPhiAll30,"minDeltaPhiAll30/F");
+  reducedTree.Branch("minDeltaPhi30_eta5_noIdAll",&minDeltaPhi30_eta5_noIdAll,"minDeltaPhi30_eta5_noIdAll/F");
+
+  reducedTree.Branch("jetpt1",&jetpt1,"jetpt1/F");
+  reducedTree.Branch("jeteta1",&jeteta1,"jeteta1/F");
+  reducedTree.Branch("jetphi1",&jetphi1,"jetphi1/F");
+
+  reducedTree.Branch("genInvisibleHT",&genInvisibleHT,"genInvisibleHT/F");
+  reducedTree.Branch("genInvisibleMHT",&genInvisibleMHT,"genInvisibleMHT/F");
+  reducedTree.Branch("genMET",&genMET,"genMET/F");
+  reducedTree.Branch("genMETphi",&genMETphi,"genMETphi/F");
+
+  reducedTree.Branch("maxJetRecoError3",&maxJetRecoError3,"maxJetRecoError3/F");
+  reducedTree.Branch("maxJetRecoErrorAll",&maxJetRecoErrorAll,"maxJetRecoErrorAll/F");
+  reducedTree.Branch("deltaPhiMETMismeasuredJetAll",&deltaPhiMETMismeasuredJetAll,"deltaPhiMETMismeasuredJetAll/F");
+  // end of TTree block
+
+  Long64_t nbytes = 0, nb = 0;
+  startTimer();  //keep track of performance
+  for (Long64_t jentry=0; jentry<nentries;jentry++) {
+    Long64_t ientry = LoadTree(jentry);
+    if (ientry < 0) break;
+    if (jentry%1000000==0) checkTimer(jentry,nentries);
+    nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+    
+    //HLT + HT (and PV)
+    if (passCut("cutTrigger") && passCut("cutPV") && passCut("cutHT") ) {
+      weight = getWeight(nentries);
+
+      cutHT = true; cutPV = true; cutTrigger = true;      
+      cut3Jets = passCut("cut3Jets");
+      cutEleVeto = passCut("cutEleVeto");
+      cutMuVeto = passCut("cutMuVeto");
+      cutMET = passCut("cutMET");
+      cutDeltaPhi = passCut("cutDeltaPhi");
+      cutCleaning = passCut("cutCleaning");
+
+      njets = nGoodJets();
+      nElectrons = countEleSync1();
+      nMuons = countMuSync1();
+      nbjets = countBJets();
+      nbGen = countGenBJets(30);
+      HT=getHT();
+      MET=getMET();
+      MHT=getMHT();
+      METphi = getMETphi();
+      minDeltaPhi = getMinDeltaPhiMET(3);
+      minDeltaPhiAll = getMinDeltaPhiMET(99);
+      minDeltaPhiAll30 = getMinDeltaPhiMET30(99);
+      minDeltaPhi30_eta5_noIdAll = getMinDeltaPhiMET30_eta5_noId(99);
+      deltaPhiMETMismeasuredJet = getDeltaPhiMismeasuredMET(3);
+      deltaPhiMPTMET = getDeltaPhiMPTMET();
+      
+      deltaPhib1b2=getDeltaPhib1b2(); //now safe for any number of b tags
+
+      jetpt1 = jetPtOfN(1);
+      jetphi1 = jetPhiOfN(1);
+      jeteta1 = jetEtaOfN(1);
+
+      genInvisibleHT =  getJetInvisibleEnergyHT();      
+      genInvisibleMHT = getJetInvisibleEnergyMHT();
+      genMET = getGenMET();
+      genMETphi = getGenMETphi();
+      maxJetRecoError3 = getLargestJetPtRecoError(3); //look at only the first 3 jets
+      maxJetRecoErrorAll  = getLargestJetPtRecoError(99);
+
+      deltaPhiMETMismeasuredJetAll = getDeltaPhiMismeasuredMET(99);
+
+      topDecayCategory = getTopDecayCategory();
+      fillWTop(); //fill W,top masses and helicity angles
+
+      reducedTree.Fill();
+    }
+  }
+  stopTimer(nentries);
+  fout.Write();
+  fout.Close();
+
+}
+
 /*
 experimental new loop -- for use with Baseline0 cut scheme
 
@@ -2181,32 +2355,5 @@ void basicLoop::lookForPrescalePass()
 
    cout<<"N pass prescaled and fail HT150U_v3 = "<<preCutCount<<endl;
    cout<<"same, after NJet and HT cuts        = "<<postCutCount<<endl;
-
-}
-
-void basicLoop::njetmass() //just for debugging
-{
-   if (fChain == 0) return;
-
-   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
-
-   Long64_t nbytes = 0, nb = 0, npass=0;
-   startTimer();  //keep track of performance
-   for (Long64_t jentry=0; jentry< nentries;jentry++) {
-      Long64_t ientry = LoadTree(jentry);
-      if (ientry < 0) break;
-      if (jentry%1000000==0) checkTimer(jentry,nentries);
-      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
-
-      if (Cut(ientry) < 0) continue; //jmt use cut
-
-      std::pair<double,double> masses = getMassWtop();
-      cout<<masses.first<<" "<<masses.second<<endl;
-
-      npass++;
-      if (npass >50) break;
-   }
-   stopTimer(nentries);
-
 
 }

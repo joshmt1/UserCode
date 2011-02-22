@@ -14,6 +14,8 @@
 // ========================================== begin
 #include <TDatime.h>
 #include <TH1.h>
+#include <TLorentzVector.h>
+#include <TVector3.h>
 //this file is in CVS here: http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/UserCode/joshmt/MiscUtil.cxx?view=log
 #include "MiscUtil.cxx"
 //this code will have to be regenerated when changing the ntuple structure
@@ -100,7 +102,6 @@ const char *unclusteredMetUncNames_[] = {"METunc0","METdown","METup"};
 const char *tailCleaningNames_[] = {"NoCleaning","MuonCleaning"};
 
 //in 1/pb
-//const double lumi=36.143; //Don's number for 386 Nov4ReReco
 const double lumi=36.146; //386 Nov4ReReco Datasets - PATIFIED WITH 387
 
 const double mW_ = 80.399;
@@ -217,6 +218,7 @@ public :
    vector<float>   *loosejetJECUncMinus;
 
    Int_t nbSSVM;
+   float WCosHel_,topCosHel_,bestWMass_,bestTopMass_;
   // ========================================== end
 
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
@@ -694,13 +696,13 @@ public :
    virtual void     screendump();
    virtual void     nbLoop();
    virtual void     ABCDtree(unsigned int dataindex=0);
+   virtual void reducedTree(TString outputpath);
    virtual void triggerPlot();
    virtual void triggerPlotData();
    virtual void triggerTest();
    virtual void Nminus1plots();
    void cutflow(bool writeFiles=false);
    void cutflowPlotter();
-   void njetmass();
 
    //below here are == functions in basicLoop.h ==
    //these are utilities that e.g. calculate useful quantities for a given event
@@ -708,7 +710,6 @@ public :
    //some stuff that is used internally
    void fillTightJetInfo();
    void InitJets();
-   bool isV00_02_02();
 
    //performance timing
    void startTimer();
@@ -796,6 +797,8 @@ public :
    bool passBadJetVeto(); //n bad jets == 0 or not
 
    float getLooseJetPt(unsigned int ijet); //includes JES
+   float getLooseJetPx(unsigned int ijet);
+   float getLooseJetPy(unsigned int ijet);
    float getLooseJetPtUncorr(unsigned int ijet); //includes JER
    bool isGoodJet_Sync1(unsigned int ijet);
    bool isGoodJet(unsigned int ijet); //index here is on the loose jet list
@@ -823,13 +826,12 @@ public :
 
    void lookForPrescalePass();
 
-   //for calculating the mass of jet combinations
-   std::pair<double, double> getMassWtop(); //first is W mass, second it top mass
-   //   double calc_m2j( unsigned int j1i, unsigned int j2i);
+   //for calculating the mass, cosHel of jet combinations
+   void fillWTop(); //first is W mass, second it top mass
    double calc_mNj( std::vector<unsigned int> );
    double calc_mNj( unsigned int j1i, unsigned int j2i);
    double calc_mNj( unsigned int j1i, unsigned int j2i, unsigned int j3i);
-
+   void calcCosHel( unsigned int j1i, unsigned int j2i, unsigned int j3i) ; //top, W cosHel
 
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
@@ -874,6 +876,10 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
      starttime_(0),
      specialCutDescription_(""),
      nbSSVM(0),
+     WCosHel_(-99),
+     topCosHel_(-99),
+     bestWMass_(1e9),
+     bestTopMass_(1e9),
      printedHLT_(false),
      lastTriggerPass_("")
 //====================== end
@@ -948,6 +954,10 @@ Int_t basicLoop::GetEntry(Long64_t entry)
 // ========================================== begin
    Int_t n=fChain->GetEntry(entry);
 
+   WCosHel_=-99;
+   topCosHel_=-99;
+   bestWMass_=1e9;
+   bestTopMass_=1e9;
    //this order is critical!
    InitJets();
    fillTightJetInfo();
@@ -2666,6 +2676,9 @@ double basicLoop::getDeltaPhib1b2() {
     }
   }
 
+  //make the code safe for events with less than 2 b tags
+  if (phis.size() < 2) return -99;
+
   //this is then invariant between cut schemes and such
   return getDeltaPhi(phis.at(0),phis.at(1));
 }
@@ -3126,7 +3139,9 @@ bool basicLoop::passCleaning() {
 }
 
 
-std::pair<double, double> basicLoop::getMassWtop() {
+void basicLoop::fillWTop() {
+
+  // cout<<" == event =="<<endl;
 
   double bestM2j=1e9;//, bestM2j_j1pt=0, bestM2j_j2pt=0;
   double bestM3j=1e9;//, bestM3j_j3pt=0;
@@ -3162,7 +3177,10 @@ std::pair<double, double> basicLoop::getMassWtop() {
 
 		if ( fabs(m3j-mtop_) < fabs(bestM3j-mtop_) ) {
 		  bestM3j=m3j;
+		  //owen had this line outside the if, but i don't understand that
+		  calcCosHel(j1i,j2i,j3i);
 		  //bestM3j_j3pt = getLooseJetPt(j3i);
+		  //		  cout<<"New best!"<<endl;
 		}
 
 	      } //is j3 good b jet
@@ -3177,7 +3195,8 @@ std::pair<double, double> basicLoop::getMassWtop() {
 
   } //j1i
 
-  return make_pair(bestM2j,bestM3j);
+  bestWMass_ = bestM2j;
+  bestTopMass_ = bestM3j;
 
 }
 
@@ -3230,6 +3249,105 @@ double basicLoop::calc_mNj( std::vector<unsigned int> jNi ) {
    if ( (sumE*sumE) < sumP2 ) return -2. ;
 
    return sqrt( sumE*sumE - sumP2 );
+}
+
+float basicLoop::getLooseJetPx( unsigned int ijet ) {
+  return getLooseJetPt(ijet) * cos(loosejetPhi->at(ijet));
+}
+float basicLoop::getLooseJetPy( unsigned int ijet ) {
+  return getLooseJetPt(ijet) * sin(loosejetPhi->at(ijet));
+}
+
+//-- first two jets are from W.  third is b jet.
+void basicLoop::calcCosHel( unsigned int j1i, unsigned int j2i, unsigned int j3i) {
+
+   //bool verb(true) ;
+   bool verb(false) ;
+   if ( verb ) { printf( "\n" ) ; }
+
+   if ( j1i == j2i || j1i == j3i || j2i == j3i) {
+     WCosHel_ = -99;
+     topCosHel_ = -99;
+     return;
+   }
+
+   double   sumPx = getLooseJetPx(j1i) + getLooseJetPx(j2i) + getLooseJetPx(j3i);
+   double   sumPy = getLooseJetPy(j1i) + getLooseJetPy(j2i) + getLooseJetPy(j3i);
+   double   sumPz = loosejetPz->at(j1i) + loosejetPz->at(j2i) + loosejetPz->at(j3i); 
+
+   //--- ignore quark masses.
+   double j1Elab = sqrt( pow( getLooseJetPx(j1i), 2) + pow( getLooseJetPy(j1i), 2) + pow( loosejetPz->at(j1i), 2) ) ;
+   double j2Elab = sqrt( pow( getLooseJetPx(j2i), 2) + pow( getLooseJetPy(j2i), 2) + pow( loosejetPz->at(j2i), 2) ) ;
+   double j3Elab = sqrt( pow( getLooseJetPx(j3i), 2) + pow( getLooseJetPy(j3i), 2) + pow( loosejetPz->at(j3i), 2) ) ;
+
+   double sumP2 = sumPx*sumPx + sumPy*sumPy + sumPz*sumPz ;
+   double sumP = sqrt( sumP2 ) ;
+
+   //--- assume the top mass when computing the energy.
+
+   double sumE = sqrt( mtop_*mtop_ + sumP2 ) ;
+
+   double betatop = sumP / sumE ;
+   double gammatop = 1. / sqrt( 1. - betatop*betatop ) ;
+
+   TLorentzVector j1p4lab( getLooseJetPx(j1i), getLooseJetPy(j1i), loosejetPz->at(j1i), j1Elab );
+   TLorentzVector j2p4lab( getLooseJetPx(j2i), getLooseJetPy(j2i), loosejetPz->at(j2i), j2Elab );
+   TLorentzVector j3p4lab( getLooseJetPx(j3i), getLooseJetPy(j3i), loosejetPz->at(j3i), j3Elab );
+
+   if ( verb ) printf( " calc_wcoshel: betatop = %5.3f,  gammatop = %6.4f\n", betatop, gammatop ) ;
+
+   double betatopx = sumPx / sumE ;
+   double betatopy = sumPy / sumE ;
+   double betatopz = sumPz / sumE ;
+
+   TVector3 betatopvec( betatopx, betatopy, betatopz ) ;
+   TVector3 negbetatopvec = -1.0 * betatopvec ;
+
+   TLorentzVector j1p4trf( j1p4lab ) ;
+   TLorentzVector j2p4trf( j2p4lab ) ;
+   TLorentzVector j3p4trf( j3p4lab ) ;
+   if (verb) { 
+      printf(" calc_wcoshel: j1 tlorentzvector before boost:  %6.1f,  %6.1f,  %6.1f,   %6.1f\n",
+          j1p4trf.Px(), j1p4trf.Py(), j1p4trf.Pz(), j1p4trf.E() ) ;
+   }
+   j1p4trf.Boost( negbetatopvec ) ;
+   j2p4trf.Boost( negbetatopvec ) ;
+   j3p4trf.Boost( negbetatopvec ) ;
+   if (verb) { 
+      printf(" calc_wcoshel: j1 tlorentzvector after  boost:  %6.1f,  %6.1f,  %6.1f,   %6.1f\n",
+          j1p4trf.Px(), j1p4trf.Py(), j1p4trf.Pz(), j1p4trf.E() ) ;
+   }
+
+
+   topCosHel_ = j3p4trf.Vect().Dot( betatopvec ) / ( betatopvec.Mag() * j3p4trf.Vect().Mag() ) ;
+   if ( verb ) { printf(" calc_wcoshel: top cos hel = %6.3f\n", topCosHel_ ) ; }
+
+   //-- now boost j1 and j2 into W frame from top RF.
+
+   TVector3 j1j2p3trf = j1p4trf.Vect() + j2p4trf.Vect() ;
+
+   //-- Use W mass to compute energy
+   double j1j2Etrf = sqrt( mW_*mW_ + j1j2p3trf.Mag2() );
+   TLorentzVector j1j2p4trf( j1j2p3trf, j1j2Etrf ) ;
+   TVector3 betawvec = j1j2p4trf.BoostVector() ;
+   TVector3 negbetawvec = -1.0 * betawvec ;
+
+   TLorentzVector j1p4wrf( j1p4trf ) ;
+   TLorentzVector j2p4wrf( j2p4trf ) ;
+   j1p4wrf.Boost( negbetawvec ) ;
+   j2p4wrf.Boost( negbetawvec ) ;
+   WCosHel_ = j1p4wrf.Vect().Dot( betawvec ) / ( betawvec.Mag() * j1p4wrf.Vect().Mag() ) ;
+   if (verb) {
+      printf(" calc_wcoshel: j1p4 in W rf: %6.1f,  %6.1f,  %6.1f,   %6.1f\n",
+          j1p4wrf.Px(), j1p4wrf.Py(), j1p4wrf.Pz(), j1p4wrf.E() ) ;
+      printf(" calc_wcoshel: j2p4 in W rf: %6.1f,  %6.1f,  %6.1f,   %6.1f\n",
+          j2p4wrf.Px(), j2p4wrf.Py(), j2p4wrf.Pz(), j2p4wrf.E() ) ;
+      TLorentzVector j1j2wrf = j1p4wrf + j2p4wrf ;
+      printf(" calc_wcoshel: j1j2 mass in W rf: %7.2f\n", j1j2wrf.M() ) ;
+      printf(" calc_wcoshel: w cos hel = = %6.3f\n", WCosHel_ ) ;
+   }
+
+   //   cout<<"cosHel calculator (t,W): "<<tcoshel<<" "<<wcoshel<<endl;
 }
 
 void basicLoop::fillWithJetFlavor(TH1D* hh, double w, double threshold) {
@@ -3616,13 +3734,6 @@ double basicLoop::getWeight(Long64_t nentries) {
   if (findInputName().Contains("/QCD-Pt15to3000-PythiaZ2-Flat-PU2010/"))    w *= mcWeight;
 
   return  w;
-}
-
-
-bool basicLoop::isV00_02_02() {
-
-  TString n=findInputName();
-  return n.Contains("V00-02-02");
 }
 
 
