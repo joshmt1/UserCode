@@ -450,6 +450,7 @@ public :
    Double_t        mcWeight;
    vector<int>     *topDecayCode;
    Int_t           flavorHistory;
+   Int_t ZDecayMode; //====== begin end
 
    // List of branches
    TBranch        *b_runNumber;   //!
@@ -677,6 +678,7 @@ public :
    TBranch        *b_mcWeight;   //!
    TBranch        *b_topDecayCode;   //!
    TBranch        *b_flavorHistory;   //!
+   TBranch        *b_ZDecayMode;   // ===== begin end
 
    basicLoop(TTree *tree=0, TTree *infotree=0);    // ========================================== begin, end
    virtual ~basicLoop();
@@ -710,6 +712,7 @@ public :
    //some stuff that is used internally
    void fillTightJetInfo();
    void InitJets();
+   bool isV00_02_04() {return findInputName().Contains("V00-02-04");}
 
    //performance timing
    void startTimer();
@@ -1177,6 +1180,7 @@ void basicLoop::Init(TTree *tree)
    eleIDRobustTight_PF = 0;
    elePassID_PF = 0;
    topDecayCode = 0;
+   ZDecayMode=-1;//============= begin end
    // Set branch addresses and branch pointers
    if (!tree) return;
    fChain = tree;
@@ -1408,6 +1412,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("mcWeight", &mcWeight, &b_mcWeight);
    fChain->SetBranchAddress("topDecayCode", &topDecayCode, &b_topDecayCode);
    fChain->SetBranchAddress("flavorHistory", &flavorHistory, &b_flavorHistory);
+   if (isV00_02_04())  fChain->SetBranchAddress("ZDecayMode", &ZDecayMode, &b_ZDecayMode); // ========== begin end
    Notify();
 }
 

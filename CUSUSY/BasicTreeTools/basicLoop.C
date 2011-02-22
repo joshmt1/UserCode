@@ -343,6 +343,10 @@ a function of eta,phi) later.
 
   int njets, nElectrons, nMuons, nbjets;
 
+  //event count histo
+  TH1D Heventcount("Heventcount","number of events processed, passed",2,0,2);
+  Heventcount.SetBinContent(1,0);
+  Heventcount.SetBinContent(2,0);
   // define the TTree
   TTree reducedTree("reducedTree","tree with minimal cuts");
   reducedTree.Branch("weight",&weight,"weight/D");
@@ -392,6 +396,8 @@ a function of eta,phi) later.
   reducedTree.Branch("maxJetRecoError3",&maxJetRecoError3,"maxJetRecoError3/F");
   reducedTree.Branch("maxJetRecoErrorAll",&maxJetRecoErrorAll,"maxJetRecoErrorAll/F");
   reducedTree.Branch("deltaPhiMETMismeasuredJetAll",&deltaPhiMETMismeasuredJetAll,"deltaPhiMETMismeasuredJetAll/F");
+
+  reducedTree.Branch("ZDecayMode",&ZDecayMode,"ZDecayMode/I");
   // end of TTree block
 
   Long64_t nbytes = 0, nb = 0;
@@ -401,9 +407,12 @@ a function of eta,phi) later.
     if (ientry < 0) break;
     if (jentry%1000000==0) checkTimer(jentry,nentries);
     nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+
+    Heventcount.SetBinContent(1, Heventcount.GetBinContent(1)+1);
     
     //HLT + HT (and PV)
     if (passCut("cutTrigger") && passCut("cutPV") && passCut("cutHT") ) {
+      Heventcount.SetBinContent(2, Heventcount.GetBinContent(2)+1);
       weight = getWeight(nentries);
 
       cutHT = true; cutPV = true; cutTrigger = true;      
