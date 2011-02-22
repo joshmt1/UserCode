@@ -22,7 +22,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.28 2011/02/07 09:46:04 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.29 2011/02/17 13:28:15 joshmt Exp $
 //
 //
 
@@ -344,6 +344,8 @@ BasicTreeMaker::findTopDecayMode( const reco::Candidate & cand) {
 void
 BasicTreeMaker::fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
+  //std::cout<<" == fillMCInfo =="<<std::endl;
+
   // === get the process qscale (pthat) ===
 
   edm::Handle<GenEventInfoProduct> genEventInfo;
@@ -367,9 +369,20 @@ BasicTreeMaker::fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSet
       int topcode = findTopDecayMode(TCand);
       topDecayCode.push_back(topcode);
     }
-
+    else if (abs(TCand.pdgId())== 23 && TCand.status()==3) { //find Z
+      //      std::cout<<"Found a status 3 Z"<<std::endl;
+      for (unsigned int iz=0; iz<TCand.numberOfDaughters(); ++iz) {
+	//	std::cout<<TCand.daughter(iz)->pdgId()<<"\t"<<TCand.daughter(iz)->status()<<std::endl;
+	if ( TCand.daughter(iz)->status()==3 ) {
+	  int Zdau = 	abs(TCand.daughter(iz)->pdgId());
+	  if  ( Zdau >= 11 && Zdau <= 18 ) {
+	    ZDecayMode=Zdau;
+	    break;
+	  }
+	}
+      }
+    } //end Z block
   }
-
 
   // === fill flavor history info ===
   edm::Handle<unsigned int> path;
@@ -1152,6 +1165,7 @@ BasicTreeMaker::resetTreeVariables() {
   qScale=0;
   mcWeight=0;
   topDecayCode.clear();
+  ZDecayMode=-99;
   flavorHistory=-99;
 
   runNumber=0;
@@ -1477,6 +1491,7 @@ BasicTreeMaker::beginJob()
   tree_->Branch("qScale",&qScale,"qScale/D");
   tree_->Branch("mcWeight",&mcWeight,"mcWeight/D");
   tree_->Branch("topDecayCode",&topDecayCode);
+  tree_->Branch("ZDecayMode",&ZDecayMode,"ZDecayMode/I");
   tree_->Branch("flavorHistory",&flavorHistory,"flavorHistory/I");
 
   thetimer_->start();

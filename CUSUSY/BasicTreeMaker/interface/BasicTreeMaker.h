@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.15 2011/01/21 17:40:55 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.16 2011/02/17 13:28:16 joshmt Exp $
 //
 //
 
@@ -281,6 +281,7 @@ string is the jetAlgorithmTag
   double qScale;
   double mcWeight;
   std::vector<int> topDecayCode;
+  int ZDecayMode;
   int flavorHistory;
 
 };
