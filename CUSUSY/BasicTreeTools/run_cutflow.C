@@ -9,10 +9,11 @@ use:
 root -b -l -q run_cutflow.C++
 */
 
-const TString version = "V00-02-00";
+const TString version = "V00-02-03";
 
 //const TString extrapath = "SUSYPATv8_363"; //pass an empty string unless you need something else
 const TString extrapath = "";
+const TString ecalDeadCellPath = "/cu1/joshmt/ECALDeadCellNtuples/"; //hard coded for dellcmscornell
 
 void run_cutflow()
 {
@@ -39,41 +40,48 @@ void run_cutflow()
 
   for (int ifile=0; ifile<nfiles; ifile++) {
     TString samplefiles = dirlist->At(ifile)->GetTitle();
-    //for the first iteration I had this stupid subdirectory in there
-    if (version=="V00-00-01")  samplefiles+="/Spring10/*.root";
-    else                       samplefiles+="/*.root";
+    //before tacking on the *.root, let's grab the full sample name
+    TString samplename = samplefiles( samplefiles.Last('/')+1, samplefiles.Length() );
+    samplefiles+="/*.root";
 
-    cout<<"About to start on files: "<<samplefiles<<endl;
+    cout<<"About to start on sample: "<<samplename<<endl;
 
     if (samplefiles.Contains("DATA")) continue; //skip data (use run_cutflow_data.C)
 
-    //if (!(samplefiles.Contains("TTbar") )) continue; //hack to skip some samples
-    
+    //    if (!samplefiles.Contains("PU")) continue;
+
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
     ch.Add(samplefiles);
     info.Add(samplefiles);
+    //    cout<<    ch.GetEntries()<<endl; continue; //for quickly checking the number of entries in the samples
 
-    basicLoop looper(&ch,&info);
+    //fetch ecal dead cell info
+    TFile fEcal(ecalDeadCellPath + samplename + "/deadCellFilterProfile.root"); //hadd files together into one
+    TTree* ecalTree = fEcal.IsZombie() ? 0 : (TTree*) fEcal.Get("filter");
+
+    basicLoop looper(&ch,&info,ecalTree);
 
     //    looper.setSpecialCutDescription("noJetID");
 
     looper.setCutScheme(basicLoop::kBaseline0);
     looper.setMETType(basicLoop::kpfMET);
     looper.setMETRange(basicLoop::kHigh); //signal region
-    //looper.setMETRange(basicLoop::kMedium); //50-100 GeV region
+    //looper.setMETRange(basicLoop::kMedhigh);
     looper.setJetType(basicLoop::kPF);
     looper.setLeptonType(basicLoop::kPFLeptons);
     looper.setDPType(basicLoop::kminDP);
 
-    looper.setCleaningType(basicLoop::kMuonCleaning);
+    looper.setCleaningType(basicLoop::kMuonEcalCleaning);
+
+    //    looper.setMETuncType(basicLoop::kMETuncUp);
 
     looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
 
     //    looper.setMuonReq(1); //inverted muon veto
+    //    looper.setRequiredCut("cut4SUSYb");
 
     looper.cutflow(false); //true means write verbose event count files
   }
-
 
 }

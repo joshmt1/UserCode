@@ -99,7 +99,7 @@ const char *jesTypeNames_[] = {"JES0","JESup","JESdown"};
 const char *jerTypeNames_[] = {"JER0","JERbias","JERup"}; //this one is weird -- 0==0==down, bias=0.1, up=0.2
 const char *unclusteredMetUncNames_[] = {"METunc0","METdown","METup"};
 
-const char *tailCleaningNames_[] = {"NoCleaning","MuonCleaning"};
+const char *tailCleaningNames_[] = {"NoCleaning","MuonCleaning","MuonEcalCleaning"};
 
 //in 1/pb
 const double lumi=36.146; //386 Nov4ReReco Datasets - PATIFIED WITH 387
@@ -132,7 +132,7 @@ public :
   JERType theJERType_;
   enum METuncType {kMETunc0=0,kMETuncDown,kMETuncUp};
   METuncType theMETuncType_;
-  enum tailCleaningType {kNoCleaning=0, kMuonCleaning};
+  enum tailCleaningType {kNoCleaning=0, kMuonCleaning, kMuonEcalCleaning};
   tailCleaningType theCleaningType_;
 
   unsigned int nBcut_;
@@ -160,6 +160,8 @@ public :
   //if theCutFlow changes, be sure to change cutnames_ as well
 
   std::set<jmt::eventID> specifiedEvents_;
+  std::set<jmt::eventID> ecalVetoEvents_;
+  bool loadedEcalTree_;
 
   enum TopDecayCategory {kTTbarUnknown=0,kAllLeptons=1,kAllHadronic=2,kOneElectron=3,kOneMuon=4,kOneTauE=5,kOneTauMu=6,kOneTauHadronic=7,kAllTau=8,kTauPlusLepton=9, nTopCategories=10};
 
@@ -669,7 +671,7 @@ public :
    TBranch        *b_flavorHistory;   //!
    TBranch        *b_ZDecayMode;   // ===== begin end
 
-   basicLoop(TTree *tree=0, TTree *infotree=0);    // ========================================== begin, end
+   basicLoop(TTree *tree=0, TTree *infotree=0, TTree *ecaltree=0);    // ========================================== begin, end
    virtual ~basicLoop();
    virtual Int_t    Cut(Long64_t entry);
    virtual Int_t    GetEntry(Long64_t entry);
@@ -702,6 +704,7 @@ public :
    void fillTightJetInfo();
    void InitJets();
    bool isV00_02_04() {return findInputName().Contains("V00-02-04");}
+   void fillEcalVetoList(TTree* ecaltree);
 
    //performance timing
    void startTimer();
@@ -776,6 +779,7 @@ public :
 
    bool passTauVeto();
    bool passCleaning();
+   bool passEcalDeadCellCleaning();
 
    bool passSSVM(int i); //index is for loose jets
 
@@ -848,7 +852,8 @@ public :
 
 #ifdef basicLoop_cxx
 //====================== begin
-basicLoop::basicLoop(TTree *tree, TTree *infotree)
+//ecaltree is a tree of events failing the ECAL Dead Cell Filter
+basicLoop::basicLoop(TTree *tree, TTree *infotree, TTree *ecaltree)
   :  theCutScheme_(kRA2),
      theMETType_(kMET),
      theMETRange_(kHigh),
@@ -864,6 +869,7 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
      nmu_(0),
      isData_(false),
      realDatasetNames_(false),
+     loadedEcalTree_(false),
      starttime_(0),
      specialCutDescription_(""),
      nbSSVM(0),
@@ -888,6 +894,7 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree)
 
    Init(tree);
    // ========================================== begin
+   if (ecaltree != 0) fillEcalVetoList(ecaltree); else ecalVetoEvents_.clear();
    specifiedEvents_.clear();
 
    triggerList_.clear();
@@ -3121,9 +3128,32 @@ bool basicLoop::passCleaning() {
     //the inconsistent muon filter should use only the PF muons
     return (passesBadPFMuonFilter && passesInconsistentMuonPFCandidateFilter_PF);
   }
+  else if (theCleaningType_ ==kMuonEcalCleaning) {
+    bool passMuon = passesBadPFMuonFilter && passesInconsistentMuonPFCandidateFilter_PF;
+    bool passEcal = passEcalDeadCellCleaning();
+    return passMuon && passEcal;
+  }
   else {assert(0);}
 
   return false;
+}
+
+bool basicLoop::passEcalDeadCellCleaning() {
+  //the same logic as eventIsSpecificed(), just inverted
+
+  if (ecalVetoEvents_.empty()) return true;
+
+  jmt::eventID thisevent;
+  thisevent.run = runNumber;
+  thisevent.ls = lumiSection;
+  thisevent.ev = eventNumber;
+
+  if ( ecalVetoEvents_.find( thisevent) != ecalVetoEvents_.end()) {
+    //    cout<<"failed BE filter: "<<runNumber<<" "<<lumiSection<<" "<<eventNumber<<endl;
+    return false;
+  }
+
+  return true;
 }
 
 
@@ -3745,6 +3775,8 @@ void basicLoop::setMuonReq(int nmu) {
 }
 
 void basicLoop::setCleaningType( tailCleaningType cleanuptype) {
+  if (cleanuptype == kMuonEcalCleaning) assert(loadedEcalTree_);
+
   theCleaningType_ = cleanuptype;
 }
 
@@ -3807,12 +3839,12 @@ void basicLoop::specifyEvent(ULong64_t run, ULong64_t lumisection, ULong64_t eve
 
 bool basicLoop::eventIsSpecified() {
   //check if the current event is on the specified list
-  //if the list is empty, just return true
 
   //this implementation does not allow for a wildcard-type search (e.g. all of one lumi section)
   //can think about it....
 
-  if (specifiedEvents_.empty()) return true;
+  //this used to be 'return true'. Isn't that backwards?
+  if (specifiedEvents_.empty()) return false;
 
   jmt::eventID thisevent;
   thisevent.run = runNumber;
@@ -3824,6 +3856,49 @@ bool basicLoop::eventIsSpecified() {
   return false;
 }
 
+void basicLoop::fillEcalVetoList(TTree* ecaltree) {
+
+  ecalVetoEvents_.clear();
+
+  //variables in tree
+  Int_t run,ls,ev;
+  std::vector<int> *cutFlowFlag=0;
+  std::vector<std::string> *cutFlowStr =0;
+
+  ecaltree->SetBranchAddress("run",&run);
+  ecaltree->SetBranchAddress("event",&ev);
+  ecaltree->SetBranchAddress("lumi",&ls);
+  ecaltree->SetBranchAddress("cutFlowFlag",&cutFlowFlag);
+  ecaltree->SetBranchAddress("cutFlowStr",&cutFlowStr);
+
+  /*
+note that this is way more complexity than we actually need. I wrote out to the tree
+only the failed events, so we don't really need to check the value in the tree for each event.
+But this structure is more general.
+  */
+
+  //loop over tree
+  for (Long64_t i = 0; i < ecaltree->GetEntries(); ++i ) {
+    ecaltree->GetEvent(i);
+    for (unsigned int j = 0 ; j< cutFlowStr->size(); ++j) {
+      if (TString(cutFlowStr->at(j).c_str()) == "BE") {
+	if ( cutFlowFlag->at(j) == 1) { //event failed BE filter
+	  jmt::eventID theEvent;
+	  theEvent.run = run;
+	  theEvent.ls=ls;
+	  theEvent.ev = ev;
+	  ecalVetoEvents_.insert(theEvent);
+	}
+	else {
+	  cout<<"unexpected result in fillEcalVetoList! event passed BE filter!"<<endl;
+	}
+      }
+    }
+  }
+
+  cout<<"Added "<<ecalVetoEvents_.size()<< " events to the ECAL veto list!"<<endl;
+  loadedEcalTree_=true;
+}
 
 TString basicLoop::getCutDescriptionString() {
 
