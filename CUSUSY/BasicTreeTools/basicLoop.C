@@ -381,6 +381,7 @@ a function of eta,phi) later.
   reducedTree.Branch("topCosHel",&topCosHel_,"topCosHel/F");
   reducedTree.Branch("WCosHel",&WCosHel_,"WCosHel/F");
 
+  reducedTree.Branch("minDeltaPhi",&minDeltaPhi,"minDeltaPhi/F");
   reducedTree.Branch("minDeltaPhiAll",&minDeltaPhiAll,"minDeltaPhiAll/F");
   reducedTree.Branch("minDeltaPhiAll30",&minDeltaPhiAll30,"minDeltaPhiAll30/F");
   reducedTree.Branch("minDeltaPhi30_eta5_noIdAll",&minDeltaPhi30_eta5_noIdAll,"minDeltaPhi30_eta5_noIdAll/F");
