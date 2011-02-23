@@ -91,7 +91,8 @@ void basicLoop::cutflow(bool writeFiles)
     //    if (runNumber != 143962) continue;
 
     for (unsigned int i=0 ; i<cutTags_.size(); i++) {
-      //cout<<i<<endl;
+      //note -- this is stupid: passCut() gets called twice for every failed cut
+      //but in a test, a better coding doesn't actually speed things up, so leave it unchanged for now
       if (cutRequired(cutTags_[i]) && passCut(cutTags_[i]) ) {
 	npass.at(i) = npass.at(i) +1;
 	sumw.at(i) = sumw.at(i) + weight;
