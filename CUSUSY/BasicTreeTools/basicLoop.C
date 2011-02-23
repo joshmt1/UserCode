@@ -222,7 +222,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   double minDeltaPhiMET30_eta5All;
   double minDeltaPhiMET30_eta5_noIdAll;
   double minDeltaPhiMHT;
-  double minDeltaRbj;
+  //double minDeltaRbj;
   double DeltaPhiMPTMET;
   int nbGen;
   double weight;
@@ -237,7 +237,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   ABCDtree.Branch("minDeltaPhiMET30_eta5All",&minDeltaPhiMET30_eta5All,"minDeltaPhiMET30_eta5All/D");
   ABCDtree.Branch("minDeltaPhiMET30_eta5_noIdAll",&minDeltaPhiMET30_eta5_noIdAll,"minDeltaPhiMET30_eta5_noIdAll/D");
   ABCDtree.Branch("minDeltaPhiMHT",&minDeltaPhiMHT,"minDeltaPhiMHT/D");
-  ABCDtree.Branch("minDeltaRbj",&minDeltaRbj,"minDeltaRbj/D");
+  //  ABCDtree.Branch("minDeltaRbj",&minDeltaRbj,"minDeltaRbj/D");
   ABCDtree.Branch("DeltaPhiMPTMET",&DeltaPhiMPTMET,"DeltaPhiMPTMET/D");
   ABCDtree.Branch("nbSSVM", &nbSSVM, "nbSSVM/I");
   ABCDtree.Branch("nbGen", &nbGen, "nbGen/I");
@@ -269,7 +269,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
     minDeltaPhiMHT = getMinDeltaPhiMET(3);
     setMETType( userMETType);
 
-    minDeltaRbj = getOverallMinDeltaR_bj();
+    //    minDeltaRbj = getOverallMinDeltaR_bj(); //function needs update!
     DeltaPhiMPTMET = getDeltaPhiMPTMET();
 
     nbGen = countGenBJets(30); //threshold of 30 GeV on gen pT

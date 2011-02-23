@@ -166,18 +166,7 @@ public :
   TDatime* starttime_;
   TString specialCutDescription_;
 
-  //tight jet info
-  //no longer in ntuple, so we will create them on the fly for each event
-  //I will fill these for the jet type selected by theJetType_
-  vector<float>   jetPt;
-  vector<float>   jetEta;
-  vector<float>   jetPhi;
-  vector<int>     jetFlavor;
-  vector<float>   jetBTagDisc_trackCountingHighPurBJetTags;
-  vector<float>   jetBTagDisc_trackCountingHighEffBJetTags;
-  vector<float>   jetBTagDisc_simpleSecondaryVertexHighEffBJetTags;
-  vector<float>   jetBTagDisc_simpleSecondaryVertexHighPurBJetTags;
-  vector<float>   jetBTagDisc_simpleSecondaryVertexBJetTags;
+  //removing code that fills "tight jet" info for each event.
 
   //pointers to the jet info of the default jet type
   vector<int>     *tightJetIndex;
@@ -848,9 +837,8 @@ public :
    double getUncorrectedHT(const double threshold);
    int getTopDecayCategory();
    double getMinDeltaPhi_bj(unsigned int bindex);
-   double getOverallMinDeltaR_bj();
-   double getMinDeltaR_bj(unsigned int bindex);
-   bool passBCut( unsigned int bindex);
+   //   double getOverallMinDeltaR_bj();
+   //   double getMinDeltaR_bj(unsigned int bindex);
    double getDeltaPhi(double phi1, double phi2);
    // ========================================== end
 
@@ -1975,11 +1963,12 @@ bool basicLoop::passCut(const TString cutTag) {
   if (cutTag=="cut3Jets" && theJetType_==kPF && theCutScheme_==kRA2) return (tightJetIndex->size() >= 3);
 
   if (cutTag=="cutHT" && theJetType_==kPF && theCutScheme_==kRA2) {
+    cout<<"WARNING -- RA2 cut scheme needs reimplementation!"<<endl;
     //calculate HT
     double pfHT = 0;
-    for (unsigned int i=0; i<tightJetIndex->size(); i++){
-      pfHT+=jetPt.at(i);
-    }
+    //    for (unsigned int i=0; i<tightJetIndex->size(); i++){
+    //      pfHT+=jetPt.at(i);
+    //    }
     return (pfHT>300.);
   }
   else if (cutTag=="cutHT" && theCutScheme_==kSync1) return getHT_Sync1() >300;
@@ -2006,13 +1995,13 @@ bool basicLoop::passCut(const TString cutTag) {
     float phi_of_MET = getMETphi();
     
     // FIXME loose jet def'n has changed! this needs a careful update
-    int nloosejets = loosejetPhi_calo->size();
+    int nloosejets = loosejetPhi->size();
     //need to calculate DeltaPhi between jets and MET
     //for RA2 and MHT, this is done with *loose* jets!
     double dp0=0,dp1=0,dp2=0;
-    if (nloosejets>0) {dp0=getDeltaPhi( loosejetPhi_calo->at(0), phi_of_MET);} else {return false;}
-    if (nloosejets>1) {dp1=getDeltaPhi( loosejetPhi_calo->at(1), phi_of_MET);} else {return false;}
-    if (nloosejets>2) {dp2=getDeltaPhi( loosejetPhi_calo->at(2), phi_of_MET);} else {return false;}
+    if (nloosejets>0) {dp0=getDeltaPhi( loosejetPhi->at(0), phi_of_MET);} else {return false;}
+    if (nloosejets>1) {dp1=getDeltaPhi( loosejetPhi->at(1), phi_of_MET);} else {return false;}
+    if (nloosejets>2) {dp2=getDeltaPhi( loosejetPhi->at(2), phi_of_MET);} else {return false;}
     //here is the implementation of the DeltaPhi cuts
     if ( dp0 >0.3 && dp1 >0.5 && dp2 >0.3 ) { return true; } else {return false;}
   }
@@ -2530,6 +2519,8 @@ code is now bifurcated to:
   }
   //here is the "legacy" way of doing things
   else {
+    cout<<"WARNING -- getMinDeltaPhiMET needs reimplementation for legacy cut schemes!"<<endl;
+    /*
     unsigned int njets=  jetPhi.size();
     if (njets < maxjets) maxjets = njets;
     
@@ -2540,6 +2531,7 @@ code is now bifurcated to:
       if (dp<mindp) mindp=dp;
       
     }
+    */
   }
 
   return mindp;
@@ -2648,13 +2640,17 @@ double basicLoop::getMinDeltaPhibMET() {
   //get the minimum angle between a b jet and MET
   /* uses default tight jets and default MET */
 
+  cout<<"WARNING -- getMinDeltaPhibMET() needs reimplemenation"<<endl;
+  
   double mindp=99;
+/*
   for (unsigned int i=0; i<jetPhi.size(); i++) {
     if (passBCut(i) ) {
       double dp =  getDeltaPhi( jetPhi.at(i), getMETphi());
       if (dp<mindp) mindp=dp;
     }
   }
+*/
   return mindp;
 }
 
@@ -2662,19 +2658,19 @@ double basicLoop::getDeltaPhib1b2() {
   //get the angle between the lead 2 b jets
   /* legacy code uses tight jets ; kBaseline0 uses loose jets and b cuts*/
 
+  assert(theCutScheme_==kBaseline0);
+
   std::vector<float> phis;
 
   //careful...we're using tight jets for one case and loose jets for the other
-  unsigned int maxj = theCutScheme_==kBaseline0 ? loosejetPhi->size() : jetPhi.size();
+  unsigned int maxj = loosejetPhi->size() ;
 
   for (unsigned int i=0; i< maxj; i++) {
-    bool isGoodB=false;
-    if (theCutScheme_==kBaseline0)  isGoodB =  isGoodJet30(i) && passSSVM(i);
-    else                            isGoodB = passBCut(i);
-     
+    bool isGoodB = isGoodJet30(i) && passSSVM(i);
+    
     if (isGoodB ) {
       
-      float thisJetPhi = theCutScheme_==kBaseline0 ? loosejetPhi->at(i) : jetPhi.at(i) ;
+      float thisJetPhi = loosejetPhi->at(i) ;
       phis.push_back( thisJetPhi);
 
       if (phis.size() == 2) break;
@@ -2706,23 +2702,6 @@ double basicLoop::getDeltaPhiMPTMET() {
    return getDeltaPhi(getMETphi(), MPTphi);
 }
 
-bool basicLoop::passBCut( unsigned int bindex) {
-  //bindex is taken to be the index of a tight jet
-
-  //use tagger simpleSecondaryVertexHighEffBJetTags
-  //which in older samples is called simpleSecondaryVertexBJetTags
-
-  bool pass=false;
-  float oldval=jetBTagDisc_simpleSecondaryVertexBJetTags.at(bindex);
-  float newval=jetBTagDisc_simpleSecondaryVertexHighEffBJetTags.at(bindex);
-
-  //if the tagger is not valid, there seems to be a value -1000 returned by CMSSW
-  //so clearly that will fail the cut
-  if ( (oldval >=1.74) || (newval >=1.74)) pass=true;
-
-  return  pass;
-}
-
 double basicLoop::getDeltaPhi(double phi1, double phi2) {
 
   return acos(cos(phi1-phi2));
@@ -2734,10 +2713,12 @@ this function assumes that bindex is of a b jet. it doesn't verify it
   */
 
   //using tight jets
+  cout<<"WARNING -- getMinDeltaPhi_bj needs reimplementation for Baseline0"<<endl;
+  double minDeltaPhi=99;
+  /*
 
   double bphi = jetPhi.at(bindex);
 
-  double minDeltaPhi=99;
   //loop over the jets
   for (unsigned int jindex=0; jindex<jetPhi.size(); jindex++) {
     if ( !passBCut(jindex) ) { //only look at non-b jets
@@ -2745,16 +2726,17 @@ this function assumes that bindex is of a b jet. it doesn't verify it
       if (dp < minDeltaPhi) minDeltaPhi = dp;
     }
   }
-
+  */
   return minDeltaPhi;
 }
 
-double basicLoop::getOverallMinDeltaR_bj() {
+//double basicLoop::getOverallMinDeltaR_bj() {
   /*
 this code was written for a study that proved to be not-so-useful
 still uses the 'tight' jets stored by the ntuple maker
   */
 
+/*
   double minDeltaR_bj=999;
   //note that all tight jet vectors should have the same size
   for (unsigned int ib = 0; ib< jetPhi.size(); ib++) {
@@ -2785,6 +2767,7 @@ double basicLoop::getMinDeltaR_bj(unsigned int bindex) {
 
   return minDeltaR;
 }
+*/
 
 float basicLoop::getMHT() {
   //use isGoodJet() to recalculate it for the specified jet type
@@ -3182,8 +3165,7 @@ void basicLoop::fillWTop() {
 
 		if ( fabs(m3j-mtop_) < fabs(bestM3j-mtop_) ) {
 		  bestM3j=m3j;
-		  //owen had this line outside the if, but i don't understand that
-		  calcCosHel(j1i,j2i,j3i);
+		  calcCosHel(j1i,j2i,j3i); //update helicity angles
 		  //bestM3j_j3pt = getLooseJetPt(j3i);
 		  //		  cout<<"New best!"<<endl;
 		}
@@ -3432,48 +3414,14 @@ int basicLoop::getTopDecayCategory() {
 void basicLoop::fillTightJetInfo() {
 
   /*
-for kBaseline0 I do not use this tight jet info
-I am _not_ updating this to use the JES uncertainties!
+this function is now rather misnamed, since I have removed the tight jet variables
+
+but we still use the nbSSVM, so it is critical to call this for every event!
   */
 
-  //first clear old values
-  jetPt.clear();
-  jetEta.clear();
-  jetPhi.clear();
-  jetFlavor.clear();
-  jetBTagDisc_trackCountingHighPurBJetTags.clear();
-  jetBTagDisc_trackCountingHighEffBJetTags.clear();
-  jetBTagDisc_simpleSecondaryVertexHighEffBJetTags.clear();
-  jetBTagDisc_simpleSecondaryVertexHighPurBJetTags.clear();
-  jetBTagDisc_simpleSecondaryVertexBJetTags.clear();
-
-  //did a test where i commented this loop out. didn't help much with code speed.
-  //now fill with new values
-  for (unsigned int i=0; i<tightJetIndex->size(); i++) {
-    int j = tightJetIndex->at(i);
-
-    jetPt.push_back( loosejetPt->at( j ) );
-    jetEta.push_back( loosejetEta->at( j ) );
-    jetPhi.push_back( loosejetPhi->at( j ) );
-    jetFlavor.push_back( loosejetFlavor->at( j ) );
-
-    jetBTagDisc_trackCountingHighPurBJetTags.push_back( loosejetBTagDisc_trackCountingHighPurBJetTags->at( j ) );
-    jetBTagDisc_trackCountingHighEffBJetTags.push_back( loosejetBTagDisc_trackCountingHighEffBJetTags->at( j ) );
-
-    jetBTagDisc_simpleSecondaryVertexHighPurBJetTags.push_back( loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags->at( j ) );
-    jetBTagDisc_simpleSecondaryVertexHighEffBJetTags.push_back( loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags->at( j ) );
-
-    jetBTagDisc_simpleSecondaryVertexBJetTags.push_back( loosejetBTagDisc_simpleSecondaryVertexBJetTags->at( j ) );
-  }
-
-  //recover the nbSSVM variable (filled incorrectly in the ntuple)
-  //  cout<<nbSSVM<<" ";
-  nbSSVM=0;
   if (theCutScheme_==kBaseline0) nbSSVM = countBJets();
   else {
-    for ( unsigned int i=0; i<jetPt.size(); i++) {
-      if (passBCut(i)) nbSSVM++;
-    }
+    assert(0);
   }
 
 }
