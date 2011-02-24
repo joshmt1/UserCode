@@ -3762,7 +3762,7 @@ double basicLoop::getCrossSection( TString inname) {
   else if (inname.Contains("/ZJets/"))                     return 3048; //!!! NNLO
   //i don't think we've processed DY->ll (10<m_ll<50)
 
-  else if (inname.Contains("/Zinvisible/"))                return 5715; //NNLO, taken from RA1 note
+  else if (inname.Contains("/Zinvisible/"))                return 5760; //NNLO, taken from RA2 note //RA1 uses 5715
   
   else if (inname.Contains("/QCD-Pt0to5-PythiaZ2/"))       return 4.844e10;
   else if (inname.Contains("/QCD-Pt5to15-PythiaZ2/"))      return 3.675e10;
