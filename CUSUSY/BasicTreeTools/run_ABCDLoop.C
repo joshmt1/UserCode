@@ -6,17 +6,12 @@
 #include "basicLoop.C"
 /*
 Usage:
-root -b -l -q run_basicLoop.C++
+root -b -l -q run_ABCDLoop.C++
 
-these are not needed (assuming this macro is compiled) because of the include above
-(Not a solution that I love, but it works)
-
-.L basicLoop.C++
-
-gSystem->Load("basicLoop_C.so");
-
+Updated for ECAL dead cell cleaning!
 */
-const TString version = "V00-02-00";
+const TString version = "V00-02-03";
+const TString ecalDeadCellPath = "/cu1/joshmt/ECALDeadCellNtuples/"; //hard coded for dellcmscornell
 
 void run_ABCDLoop()
 {
@@ -41,28 +36,24 @@ void run_ABCDLoop()
 
   for (int ifile=0; ifile<nfiles; ifile++) {
     TString samplefiles = dirlist->At(ifile)->GetTitle();
-    //for the first iteration I had this stupid subdirectory in there
-    if (version=="V00-00-01")  samplefiles+="/Spring10/*.root";
-    else                       samplefiles+="/*.root";
+    //before tacking on the *.root, let's grab the full sample name
+    TString samplename = samplefiles( samplefiles.Last('/')+1, samplefiles.Length() );
+    samplefiles+="/*.root";
 
-    cout<<"About to start on files: "<<samplefiles<<endl;
+    if(samplefiles.Contains("DATA")) continue;
+    cout<<"About to start on sample: "<<samplename<<endl;
 
+    //if(!samplefiles.Contains("LM")) continue;
 
-    if(!(samplefiles.Contains("LM13")
-	 || samplefiles.Contains("TTbar")
-	 || samplefiles.Contains("Zinv")
-	 || samplefiles.Contains("WJets")
-	 || samplefiles.Contains("ZJets")
-	 || samplefiles.Contains("SingleTop"))) continue; //hack to skip some samples   
-
-
-    //    if(!samplefiles.Contains("LM13")) continue;
+    //fetch ecal dead cell info
+    TFile fEcal(ecalDeadCellPath + samplename + "/deadCellFilterProfile.root"); //hadd files together into one
+    TTree* ecalTree = fEcal.IsZombie() ? 0 : (TTree*) fEcal.Get("filter");
 
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
     ch.Add(samplefiles);
     info.Add(samplefiles);
-    basicLoop looper(&ch,&info);
+    basicLoop looper(&ch,&info,ecalTree);
     
     //important! this is where cuts are defined
     //looper.setCutScheme(basicLoop::kRA2); //usually this is kRA2
@@ -71,7 +62,7 @@ void run_ABCDLoop()
     looper.setMETType(basicLoop::kpfMET);
     looper.setLeptonType(basicLoop::kPFLeptons);
     looper.setJetType(basicLoop::kPF);
-    looper.setCleaningType(basicLoop::kMuonCleaning);
+    looper.setCleaningType(basicLoop::kMuonEcalCleaning);
 
     looper.setBCut(0);
     
