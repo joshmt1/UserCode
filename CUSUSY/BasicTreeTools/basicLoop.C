@@ -202,7 +202,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   //open output file
   //FIXME hardcoded for dellcmscornell here
   //TString outfilename="/cu1/joshmt/ABCDtrees/ABCDtree.";
-  TString outfilename="/cu1/joshmt/ABCDtrees/11Feb10/ABCDtree.";
+  TString outfilename="/cu1/joshmt/ABCDtrees/11Feb24/ABCDtree.";
   outfilename+=getCutDescriptionString();
   outfilename+=".";    outfilename+=getBCutDescriptionString(); 
   outfilename+=".";    outfilename+=sampleName; 
@@ -243,6 +243,33 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   ABCDtree.Branch("nbSSVM", &nbSSVM, "nbSSVM/I");
   ABCDtree.Branch("nbGen", &nbGen, "nbGen/I");
 
+  //new variables from Luke
+  double lambda1_allJets;
+  double lambda2_allJets;
+  double determinant_allJets;
+  double lambda1_allJetsPlusMET;
+  double lambda2_allJetsPlusMET;
+  double determinant_allJetsPlusMET;
+  double lambda1_topThreeJets;
+  double lambda2_topThreeJets;
+  double determinant_topThreeJets;
+  double lambda1_topThreeJetsPlusMET;
+  double lambda2_topThreeJetsPlusMET;
+  double determinant_topThreeJetsPlusMET;
+  ABCDtree.Branch("lambda1_allJets",&lambda1_allJets,"lambda1_allJets/D");
+  ABCDtree.Branch("lambda2_allJets",&lambda2_allJets,"lambda2_allJets/D");
+  ABCDtree.Branch("determinant_allJets",&determinant_allJets,"determinant_allJets/D");
+  ABCDtree.Branch("lambda1_allJetsPlusMET",&lambda1_allJetsPlusMET,"lambda1_allJetsPlusMET/D");
+  ABCDtree.Branch("lambda2_allJetsPlusMET",&lambda2_allJetsPlusMET,"lambda2_allJetsPlusMET/D");
+  ABCDtree.Branch("determinant_allJetsPlusMET",&determinant_allJetsPlusMET,"determinant_allJetsPlusMET/D");
+  ABCDtree.Branch("lambda1_topThreeJets",&lambda1_topThreeJets,"lambda1_topThreeJets/D");
+  ABCDtree.Branch("lambda2_topThreeJets",&lambda2_topThreeJets,"lambda2_topThreeJets/D");
+  ABCDtree.Branch("determinant_topThreeJets",&determinant_topThreeJets,"determinant_topThreeJets/D");
+  ABCDtree.Branch("lambda1_topThreeJetsPlusMET",&lambda1_topThreeJetsPlusMET,"lambda1_topThreeJetsPlusMET/D");
+  ABCDtree.Branch("lambda2_topThreeJetsPlusMET",&lambda2_topThreeJetsPlusMET,"lambda2_topThreeJetsPlusMET/D");
+  ABCDtree.Branch("determinant_topThreeJetsPlusMET",&determinant_topThreeJetsPlusMET,"determinant_topThreeJetsPlusMET/D");
+  // ============ end new variables from Luke
+
   startTimer();  //keep track of performance
   Long64_t nbytes = 0, nb = 0;
   for (Long64_t jentry=0; jentry<nentries;jentry++) {
@@ -274,6 +301,12 @@ void basicLoop::ABCDtree(unsigned int dataindex)
     DeltaPhiMPTMET = getDeltaPhiMPTMET();
 
     nbGen = countGenBJets(30); //threshold of 30 GeV on gen pT
+
+    //fill new variables from Luke
+    getSphericityJetMET(lambda1_allJets,lambda2_allJets,determinant_allJets,99,false);
+    getSphericityJetMET(lambda1_allJetsPlusMET,lambda2_allJetsPlusMET,determinant_allJetsPlusMET,99,true);
+    getSphericityJetMET(lambda1_topThreeJets,lambda2_topThreeJets,determinant_topThreeJets,3,false);
+    getSphericityJetMET(lambda1_topThreeJetsPlusMET,lambda2_topThreeJetsPlusMET,determinant_topThreeJetsPlusMET,3,true);
 
     ABCDtree.Fill(); 
   }
@@ -331,9 +364,11 @@ a function of eta,phi) later.
   float genInvisibleHT, genInvisibleMHT, genMET,genMETphi;
   float maxJetRecoError3, maxJetRecoErrorAll;
   float deltaPhiMETMismeasuredJetAll;
+  float deltaPhiTopTwoJets;
 
   bool cutHT,cutPV,cutTrigger; //these will always be true
   bool cut3Jets,cutEleVeto,cutMuVeto,cutMET,cutDeltaPhi,cutCleaning;
+  bool passBadPFMuon, passInconsistentMuon, passEcalCleaning;
 
   //SUSY_nb //copy straight from ntuple!
   int nbGen;
@@ -343,6 +378,19 @@ a function of eta,phi) later.
   //etc...
 
   int njets, nElectrons, nMuons, nbjets;
+  //new variables from Luke
+  float lambda1_allJets;
+  float lambda2_allJets;
+  float determinant_allJets;
+  float lambda1_allJetsPlusMET;
+  float lambda2_allJetsPlusMET;
+  float determinant_allJetsPlusMET;
+  float lambda1_topThreeJets;
+  float lambda2_topThreeJets;
+  float determinant_topThreeJets;
+  float lambda1_topThreeJetsPlusMET;
+  float lambda2_topThreeJetsPlusMET;
+  float determinant_topThreeJetsPlusMET;
 
   //event count histo
   TH1D Heventcount("Heventcount","number of events processed, passed",2,0,2);
@@ -361,6 +409,11 @@ a function of eta,phi) later.
   reducedTree.Branch("cutMET",&cutMET,"cutMET/O");
   reducedTree.Branch("cutDeltaPhi",&cutDeltaPhi,"cutDeltaPhi/O");
   reducedTree.Branch("cutCleaning",&cutCleaning,"cutCleaning/O");
+
+  //break the cleaning into the constiuent parts
+  reducedTree.Branch("passEcalCleaning",&passEcalCleaning,"passEcalCleaning/O");
+  reducedTree.Branch("passInconsistentMuon",&passInconsistentMuon,"passInconsistentMuon/O");
+  reducedTree.Branch("passBadPFMuon",&passBadPFMuon,"passBadPFMuon/O");
 
   reducedTree.Branch("nbGen",&nbGen,"nbGen/I");
   reducedTree.Branch("SUSY_nb",&SUSY_nb,"SUSY_nb/I");
@@ -381,6 +434,8 @@ a function of eta,phi) later.
   reducedTree.Branch("topCosHel",&topCosHel_,"topCosHel/F");
   reducedTree.Branch("WCosHel",&WCosHel_,"WCosHel/F");
 
+  reducedTree.Branch("deltaPhiTopTwoJets",&deltaPhiTopTwoJets,"deltaPhiTopTwoJets/F");
+
   reducedTree.Branch("minDeltaPhi",&minDeltaPhi,"minDeltaPhi/F");
   reducedTree.Branch("minDeltaPhiAll",&minDeltaPhiAll,"minDeltaPhiAll/F");
   reducedTree.Branch("minDeltaPhiAll30",&minDeltaPhiAll30,"minDeltaPhiAll30/F");
@@ -397,7 +452,20 @@ a function of eta,phi) later.
 
   reducedTree.Branch("maxJetRecoError3",&maxJetRecoError3,"maxJetRecoError3/F");
   reducedTree.Branch("maxJetRecoErrorAll",&maxJetRecoErrorAll,"maxJetRecoErrorAll/F");
+
   reducedTree.Branch("deltaPhiMETMismeasuredJetAll",&deltaPhiMETMismeasuredJetAll,"deltaPhiMETMismeasuredJetAll/F");
+  reducedTree.Branch("lambda1_allJets",&lambda1_allJets,"lambda1_allJets/F");
+  reducedTree.Branch("lambda2_allJets",&lambda2_allJets,"lambda2_allJets/F");
+  reducedTree.Branch("determinant_allJets",&determinant_allJets,"determinant_allJets/F");
+  reducedTree.Branch("lambda1_allJetsPlusMET",&lambda1_allJetsPlusMET,"lambda1_allJetsPlusMET/F");
+  reducedTree.Branch("lambda2_allJetsPlusMET",&lambda2_allJetsPlusMET,"lambda2_allJetsPlusMET/F");
+  reducedTree.Branch("determinant_allJetsPlusMET",&determinant_allJetsPlusMET,"determinant_allJetsPlusMET/F");
+  reducedTree.Branch("lambda1_topThreeJets",&lambda1_topThreeJets,"lambda1_topThreeJets/F");
+  reducedTree.Branch("lambda2_topThreeJets",&lambda2_topThreeJets,"lambda2_topThreeJets/F");
+  reducedTree.Branch("determinant_topThreeJets",&determinant_topThreeJets,"determinant_topThreeJets/F");
+  reducedTree.Branch("lambda1_topThreeJetsPlusMET",&lambda1_topThreeJetsPlusMET,"lambda1_topThreeJetsPlusMET/F");
+  reducedTree.Branch("lambda2_topThreeJetsPlusMET",&lambda2_topThreeJetsPlusMET,"lambda2_topThreeJetsPlusMET/F");
+  reducedTree.Branch("determinant_topThreeJetsPlusMET",&determinant_topThreeJetsPlusMET,"determinant_topThreeJetsPlusMET/F");
 
   reducedTree.Branch("ZDecayMode",&ZDecayMode,"ZDecayMode/I");
   // end of TTree block
@@ -425,6 +493,10 @@ a function of eta,phi) later.
       cutDeltaPhi = passCut("cutDeltaPhi");
       cutCleaning = passCut("cutCleaning");
 
+      passBadPFMuon = passesBadPFMuonFilter;
+      passInconsistentMuon = passesInconsistentMuonPFCandidateFilter_PF;
+      passEcalCleaning = passEcalDeadCellCleaning();
+
       njets = nGoodJets();
       nElectrons = countEleSync1();
       nMuons = countMuSync1();
@@ -442,6 +514,7 @@ a function of eta,phi) later.
       deltaPhiMPTMET = getDeltaPhiMPTMET();
       
       deltaPhib1b2=getDeltaPhib1b2(); //now safe for any number of b tags
+      deltaPhiTopTwoJets = getDeltaPhiTopTwoJets();
 
       jetpt1 = jetPtOfN(1);
       jetphi1 = jetPhiOfN(1);
@@ -458,6 +531,12 @@ a function of eta,phi) later.
 
       topDecayCategory = getTopDecayCategory();
       fillWTop(); //fill W,top masses and helicity angles
+
+      //fill new variables from Luke
+      getSphericityJetMET(lambda1_allJets,lambda2_allJets,determinant_allJets,99,false);
+      getSphericityJetMET(lambda1_allJetsPlusMET,lambda2_allJetsPlusMET,determinant_allJetsPlusMET,99,true);
+      getSphericityJetMET(lambda1_topThreeJets,lambda2_topThreeJets,determinant_topThreeJets,3,false);
+      getSphericityJetMET(lambda1_topThreeJetsPlusMET,lambda2_topThreeJetsPlusMET,determinant_topThreeJetsPlusMET,3,true);
 
       reducedTree.Fill();
     }
@@ -887,6 +966,9 @@ void basicLoop::Nminus1plots()
    TH2D HjetCount_SR("HjetCount_SR","n jets",nbins,-eta_max,eta_max,nbins,-TMath::Pi(),TMath::Pi());
    TH2D HjetResponse_SR_ge1b("HjetResponse_SR_ge1b","mean reco/gen pT",nbins,-eta_max,eta_max,nbins,-TMath::Pi(),TMath::Pi());
    TH2D HjetCount_SR_ge1b("HjetCount_SR_ge1b","n jets",nbins,-eta_max,eta_max,nbins,-TMath::Pi(),TMath::Pi());
+
+   TH2D HjetResponseFailBE_SR("HjetResponseFailBE_SR","mean reco/gen pT",nbins,-eta_max,eta_max,nbins,-TMath::Pi(),TMath::Pi());
+   TH2D HjetCountFailBE_SR("HjetCountFailBE_SR","n jets",nbins,-eta_max,eta_max,nbins,-TMath::Pi(),TMath::Pi());
 
    //MC truth distributions
    TH1D HgenInvisibleEnergy_SR("HgenInvisibleEnergy_SR","MC truth invis energy (SR)",nbins,met_min,met_max);
@@ -1421,6 +1503,18 @@ void basicLoop::Nminus1plots()
       }
       resetIgnoredCut();
       
+      setIgnoredCut("cutCleaning");
+      //study the cleaning cuts more carefully
+      for (unsigned int ijet=0; ijet<loosejetPt->size(); ++ijet) {
+	if (loosejetGenPt->at(ijet) >30) {
+	  if (!passEcalDeadCellCleaning()) { //study only events that fail ECAL cleaning
+	    HjetCountFailBE_SR.Fill( loosejetEta->at(ijet), loosejetPhi->at(ijet),weight);
+	    HjetResponseFailBE_SR.Fill( loosejetEta->at(ijet), loosejetPhi->at(ijet),weight*getLooseJetPt(ijet)/loosejetGenPt->at(ijet));
+	  }
+	}
+      }
+      resetIgnoredCut();
+
       //finally, apply all cuts (no b tagging)
       if (Cut(ientry) >= 0) {
 

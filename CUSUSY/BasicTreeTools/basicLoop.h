@@ -16,11 +16,13 @@
 #include <TH1.h>
 #include <TLorentzVector.h>
 #include <TVector3.h>
+#include "TMatrixT.h"
+#include "TMatrixDEigen.h"
 //this file is in CVS here: http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/UserCode/joshmt/MiscUtil.cxx?view=log
 #include "MiscUtil.cxx"
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
-// ---- this version is compatible with ntuple tag: V00-02-00 and V00-02-01 ----
+// ---- this version is compatible with ntuple tag: V00-02-03 and V00-02-04 ----
 #include <iostream>
 #include <vector>
 #include <set>
@@ -38,7 +40,7 @@ can handle this cut properly. (see note below)
 
 
 notes on the schemes:
-RA2 -- the legacy scheme. still uses some info precomputed in the ntuple.
+RA2 -- the legacy scheme. no longer trustworthy
 Sync1 -- cuts for first sync exercise. Recomputes (almost?) every cut.
 Baseline0 -- *must* recompute every cut (except the PV, which I take from the ntuple). "Baseline" analysis cuts as laid out by me on the joint Twiki.
 
@@ -813,6 +815,8 @@ public :
    float getMHT();
    float getMHTphi();
 
+   float getDeltaPhiTopTwoJets();
+
    bool passPV();
 
    bool passHLT(); bool printedHLT_; 
@@ -828,6 +832,13 @@ public :
    double calc_mNj( unsigned int j1i, unsigned int j2i);
    double calc_mNj( unsigned int j1i, unsigned int j2i, unsigned int j3i);
    void calcCosHel( unsigned int j1i, unsigned int j2i, unsigned int j3i) ; //top, W cosHel
+
+   //event shape variables from Luke
+   void getSphericityJetMET(double & lambda1, double & lambda2, double & det,
+			    const int jetmax, bool addMET);
+
+   void getSphericityJetMET(float & lambda1, float & lambda2, float & det,
+			    const int jetmax, bool addMET);
 
    double getDeltaPhiMPTMET();
    double getMinDeltaPhibMET() ;
@@ -2714,6 +2725,22 @@ double basicLoop::getDeltaPhi(double phi1, double phi2) {
   return acos(cos(phi1-phi2));
 }
 
+float basicLoop::getDeltaPhiTopTwoJets() {
+
+  float phi1=0,phi2=0;
+  int ngood=0;
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+    if (isGoodJet(i)) {
+      ngood++;
+      if (ngood==1) phi1 = loosejetPhi->at(i);
+      if (ngood==2) phi2 = loosejetPhi->at(i);
+      else break;
+    }
+  }
+
+  return getDeltaPhi(phi1,phi2);
+}
+
 double basicLoop::getMinDeltaPhi_bj(unsigned int bindex) {
   /*
 this function assumes that bindex is of a b jet. it doesn't verify it
@@ -2949,6 +2976,64 @@ bool basicLoop::isBadJet(unsigned int ijet) {
   return true;
 }
 
+void basicLoop::getSphericityJetMET(float & lambda1, float & lambda2, float & det,
+				    const int jetmax, bool addMET) {
+  double l1,l2,d;
+  getSphericityJetMET(l1,l2,d,jetmax,addMET);
+
+  lambda1 = l1;
+  lambda2 = l2;
+  det = d;
+
+}
+
+//event shape variables from Luke
+void basicLoop::getSphericityJetMET(double & lambda1, double & lambda2, double & det,
+				    const int jetmax, bool addMET) {
+
+
+  TMatrixD top3Jets(2,2);
+  double top3JetsScale = 0;
+  
+  unsigned int njets=  loosejetPt->size();
+  int ngoodj=0;
+  for (unsigned int i=0; i<njets ; i++) {
+    if ( isGoodJet(i) ) {
+      ++ngoodj;
+      double phi = loosejetPhi->at(i);
+      double eT = getLooseJetPt(i);
+      double eX = eT*cos(phi);
+      double eY = eT*sin(phi);
+      if(ngoodj <= jetmax) {
+	top3Jets[0][0] += eX*eX/eT;
+	top3Jets[0][1] += eX*eY/eT;
+	top3Jets[1][0] += eX*eY/eT;
+	top3Jets[1][1] += eY*eY/eT;
+	top3JetsScale += eT;
+      }
+      else break;
+    }
+  }
+
+  if (addMET) {
+    double phi = getMETphi();
+    double eT = getMET();
+    double eX = eT*cos(phi);
+    double eY = eT*sin(phi);
+  
+    top3Jets[0][0] += eX*eX/eT;
+    top3Jets[0][1] += eX*eY/eT;
+    top3Jets[1][0] += eX*eY/eT;
+    top3Jets[1][1] += eY*eY/eT;
+    top3JetsScale += eT;
+  }
+  top3Jets*=1/top3JetsScale;
+  TMatrixDEigen top3JetsEigen(top3Jets);
+  lambda1 = top3JetsEigen.GetEigenValuesRe()[0];
+  lambda2 = top3JetsEigen.GetEigenValuesRe()[1];
+  det = top3Jets.Determinant();
+
+}
 
 
 float basicLoop::getJetInvisibleEnergyHT() {
