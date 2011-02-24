@@ -361,6 +361,8 @@ a function of eta,phi) later.
   float HT, MHT, MET, METphi, minDeltaPhi, minDeltaPhiAll, minDeltaPhiAll30,minDeltaPhi30_eta5_noIdAll;
   float deltaPhiMETMismeasuredJet, deltaPhiMPTMET, deltaPhib1b2;
   float jetpt1,jetphi1, jeteta1;//, bjetpt1, bjetphi1, bjeteta1; //should add these back at some point
+  float jetpt2,jetphi2, jeteta2;//, bjetpt2, bjetphi2, bjeteta2; //should add these back at some point
+  float jetpt3,jetphi3, jeteta3;//, bjetpt3, bjetphi3, bjeteta3; //should add these back at some point
   float genInvisibleHT, genInvisibleMHT, genMET,genMETphi;
   float maxJetRecoError3, maxJetRecoErrorAll;
   float deltaPhiMETMismeasuredJetAll;
@@ -445,6 +447,14 @@ a function of eta,phi) later.
   reducedTree.Branch("jeteta1",&jeteta1,"jeteta1/F");
   reducedTree.Branch("jetphi1",&jetphi1,"jetphi1/F");
 
+  reducedTree.Branch("jetpt2",&jetpt2,"jetpt2/F");
+  reducedTree.Branch("jeteta2",&jeteta2,"jeteta2/F");
+  reducedTree.Branch("jetphi2",&jetphi2,"jetphi2/F");
+
+  reducedTree.Branch("jetpt3",&jetpt3,"jetpt3/F");
+  reducedTree.Branch("jeteta3",&jeteta3,"jeteta3/F");
+  reducedTree.Branch("jetphi3",&jetphi3,"jetphi3/F");
+
   reducedTree.Branch("genInvisibleHT",&genInvisibleHT,"genInvisibleHT/F");
   reducedTree.Branch("genInvisibleMHT",&genInvisibleMHT,"genInvisibleMHT/F");
   reducedTree.Branch("genMET",&genMET,"genMET/F");
@@ -519,6 +529,14 @@ a function of eta,phi) later.
       jetpt1 = jetPtOfN(1);
       jetphi1 = jetPhiOfN(1);
       jeteta1 = jetEtaOfN(1);
+
+      jetpt2 = jetPtOfN(2);
+      jetphi2 = jetPhiOfN(2);
+      jeteta2 = jetEtaOfN(2);
+
+      jetpt3 = jetPtOfN(3);
+      jetphi3 = jetPhiOfN(3);
+      jeteta3 = jetEtaOfN(3);
 
       genInvisibleHT =  getJetInvisibleEnergyHT();      
       genInvisibleMHT = getJetInvisibleEnergyMHT();
