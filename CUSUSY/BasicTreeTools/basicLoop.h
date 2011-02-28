@@ -764,6 +764,7 @@ public :
    //for systematics (return is a pair with METx, METy)
    std::pair<float, float> getJESAdjustedMETxy();
    std::pair<float, float> getJERAdjustedMETxy();
+   std::pair<float, float> getJERAdjustedMHTxy();
    std::pair<float,float> getUnclusteredSmearedMETxy() ;
 
    bool cutRequired(TString cutTag) ;
@@ -2354,7 +2355,7 @@ std::pair<float,float> basicLoop::getJERAdjustedMETxy() {
     myMET= pfMET;
     myMETphi= pfMETphi;
   }
-  //  else if (theMETType_ == kMHT) {  } //not implemented
+  else if (theMETType_ == kMHT)  return getJERAdjustedMHTxy();
   else {  assert(0);  }
 
   float myMETx = myMET * cos(myMETphi);
@@ -2803,11 +2804,10 @@ double basicLoop::getMinDeltaR_bj(unsigned int bindex) {
 }
 */
 
-float basicLoop::getMHT() {
-  //use isGoodJet() to recalculate it for the specified jet type
-
-  double mhtx=0;
-  double mhty=0;
+std::pair<float,float> basicLoop::getJERAdjustedMHTxy() {
+  //no difference from MHT calculation -- just return both pieces
+  float mhtx=0;
+  float mhty=0;
 
   for (unsigned int i=0; i<loosejetPt->size(); i++) {
     if (isGoodJet( i ) ) {
@@ -2817,24 +2817,19 @@ float basicLoop::getMHT() {
     }
   }
   
-  return sqrt(mhtx*mhtx + mhty*mhty);
+  return make_pair(mhtx,mhty);
+}
+
+float basicLoop::getMHT() {
+  std::pair<float,float> mht=getJERAdjustedMHTxy();
+  
+  return sqrt(mht.first*mht.first + mht.second*mht.second);
 }
 
 float basicLoop::getMHTphi() {
-  //use isGoodJet() to recalculate it for the specified jet type
+  std::pair<float,float> mht=getJERAdjustedMHTxy();
 
-  double mhtx=0;
-  double mhty=0;
-
-  for (unsigned int i=0; i<loosejetPt->size(); i++) {
-    if (isGoodJet( i ) ) {
-
-      mhtx -= getLooseJetPt(i) * cos(loosejetPhi->at(i));
-      mhty -= getLooseJetPt(i) * sin(loosejetPhi->at(i));
-    }
-  }
-
-  return atan2(mhty,mhtx);
+  return atan2(mht.second,mht.first);
 }
 
 float basicLoop::getHT() {

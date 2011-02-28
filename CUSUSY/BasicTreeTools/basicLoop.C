@@ -1521,13 +1521,16 @@ void basicLoop::Nminus1plots()
       }
       resetIgnoredCut();
       
+      //it turns out that this plot is not very useful!
       setIgnoredCut("cutCleaning");
       //study the cleaning cuts more carefully
-      for (unsigned int ijet=0; ijet<loosejetPt->size(); ++ijet) {
-	if (loosejetGenPt->at(ijet) >30) {
-	  if (!passEcalDeadCellCleaning()) { //study only events that fail ECAL cleaning
-	    HjetCountFailBE_SR.Fill( loosejetEta->at(ijet), loosejetPhi->at(ijet),weight);
-	    HjetResponseFailBE_SR.Fill( loosejetEta->at(ijet), loosejetPhi->at(ijet),weight*getLooseJetPt(ijet)/loosejetGenPt->at(ijet));
+      if (Cut(ientry) >= 0) {
+	for (unsigned int ijet=0; ijet<loosejetPt->size(); ++ijet) {
+	  if (loosejetGenPt->at(ijet) >30) {
+	    if (!passEcalDeadCellCleaning()) { //study only events that fail ECAL cleaning
+	      HjetCountFailBE_SR.Fill( loosejetEta->at(ijet), loosejetPhi->at(ijet),weight);
+	      HjetResponseFailBE_SR.Fill( loosejetEta->at(ijet), loosejetPhi->at(ijet),weight*getLooseJetPt(ijet)/loosejetGenPt->at(ijet));
+	    }
 	  }
 	}
       }
