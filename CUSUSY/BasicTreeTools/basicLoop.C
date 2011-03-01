@@ -358,11 +358,14 @@ a function of eta,phi) later.
   
   //we're making an ntuple, so size matters -- use float not double
   double weight; //one exception to the float rule
+  //copy run, ev, lumi directly from ntuple
   float HT, MHT, MET, METphi, minDeltaPhi, minDeltaPhiAll, minDeltaPhiAll30,minDeltaPhi30_eta5_noIdAll;
   float deltaPhiMETMismeasuredJet, deltaPhiMPTMET, deltaPhib1b2;
   float jetpt1,jetphi1, jeteta1;//, bjetpt1, bjetphi1, bjeteta1; //should add these back at some point
   float jetpt2,jetphi2, jeteta2;//, bjetpt2, bjetphi2, bjeteta2; //should add these back at some point
   float jetpt3,jetphi3, jeteta3;//, bjetpt3, bjetphi3, bjeteta3; //should add these back at some point
+  float eleet1;
+  float muonpt1;
   float genInvisibleHT, genInvisibleMHT, genMET,genMETphi;
   float maxJetRecoError3, maxJetRecoErrorAll;
   float deltaPhiMETMismeasuredJetAll;
@@ -402,6 +405,10 @@ a function of eta,phi) later.
   TTree reducedTree("reducedTree","tree with minimal cuts");
   reducedTree.Branch("weight",&weight,"weight/D");
 
+  reducedTree.Branch("runNumber",&runNumber,"runNumber/l");
+  reducedTree.Branch("lumiSection",&lumiSection,"lumiSection/l");
+  reducedTree.Branch("eventNumber",&eventNumber,"eventNumber/l");
+
   reducedTree.Branch("cutHT",&cutHT,"cutHT/O");
   reducedTree.Branch("cutPV",&cutPV,"cutPV/O");
   reducedTree.Branch("cutTrigger",&cutTrigger,"cutTrigger/O");
@@ -412,7 +419,7 @@ a function of eta,phi) later.
   reducedTree.Branch("cutDeltaPhi",&cutDeltaPhi,"cutDeltaPhi/O");
   reducedTree.Branch("cutCleaning",&cutCleaning,"cutCleaning/O");
 
-  //break the cleaning into the constiuent parts
+  //break the cleaning into the constituent parts
   reducedTree.Branch("passEcalCleaning",&passEcalCleaning,"passEcalCleaning/O");
   reducedTree.Branch("passInconsistentMuon",&passInconsistentMuon,"passInconsistentMuon/O");
   reducedTree.Branch("passBadPFMuon",&passBadPFMuon,"passBadPFMuon/O");
@@ -442,6 +449,9 @@ a function of eta,phi) later.
   reducedTree.Branch("minDeltaPhiAll",&minDeltaPhiAll,"minDeltaPhiAll/F");
   reducedTree.Branch("minDeltaPhiAll30",&minDeltaPhiAll30,"minDeltaPhiAll30/F");
   reducedTree.Branch("minDeltaPhi30_eta5_noIdAll",&minDeltaPhi30_eta5_noIdAll,"minDeltaPhi30_eta5_noIdAll/F");
+
+  reducedTree.Branch("eleet1",&eleet1,"eleet1/F");
+  reducedTree.Branch("muonpt1",&muonpt1,"muonpt1/F");
 
   reducedTree.Branch("jetpt1",&jetpt1,"jetpt1/F");
   reducedTree.Branch("jeteta1",&jeteta1,"jeteta1/F");
@@ -508,8 +518,8 @@ a function of eta,phi) later.
       passEcalCleaning = passEcalDeadCellCleaning();
 
       njets = nGoodJets();
-      nElectrons = countEleSync1();
-      nMuons = countMuSync1();
+      nElectrons = countEle();
+      nMuons = countMu();
       nbjets = countBJets();
       nbGen = countGenBJets(30);
       HT=getHT();
@@ -525,6 +535,15 @@ a function of eta,phi) later.
       
       deltaPhib1b2=getDeltaPhib1b2(); //now safe for any number of b tags
       deltaPhiTopTwoJets = getDeltaPhiTopTwoJets();
+
+      if (nElectrons>=1) {
+	eleet1 = eleet1_; //this is filled when i call countEle(). a hack to be cleaned up later
+      }
+      else {eleet1=-1;}
+      if (nMuons>=1) {
+	muonpt1 = muonpt1_; //this is filled when i call countMu(). a hack to be cleaned up later
+      }
+      else {muonpt1=-1;}
 
       jetpt1 = jetPtOfN(1);
       jetphi1 = jetPhiOfN(1);
@@ -641,22 +660,20 @@ void basicLoop::cutflowPlotter()
        name="H_topDecayCategory_"; name += cutTags_[i];
        H_topDecayCategory[name]=new TH1D(name,name,nTopCategories-1,0.5,nTopCategories-0.5);
 
-       //new lepton plots
-       if (theLeptonType_ ==kPFLeptons) {
-	 name="H_MuPt_"; name += cutTags_[i];
-	 H_MuPt[name]=new TH1D(name,name,50,0,100);
-	 name="H_MuEta_"; name += cutTags_[i];
-	 H_MuEta[name]=new TH1D(name,name,50,-5,5);
-	 name="H_MuRelIso_"; name += cutTags_[i];
-	 H_MuRelIso[name]=new TH1D(name,name,50,0,1);
-	 
-	 name="H_EleEt_"; name += cutTags_[i];
-	 H_EleEt[name]=new TH1D(name,name,50,0,100);
-	 name="H_EleEta_"; name += cutTags_[i];
-	 H_EleEta[name]=new TH1D(name,name,50,-5,5);
-	 name="H_EleRelIso_"; name += cutTags_[i];
-	 H_EleRelIso[name]=new TH1D(name,name,50,0,1);
-       }
+       name="H_MuPt_"; name += cutTags_[i];
+       H_MuPt[name]=new TH1D(name,name,50,0,100);
+       name="H_MuEta_"; name += cutTags_[i];
+       H_MuEta[name]=new TH1D(name,name,50,-5,5);
+       name="H_MuRelIso_"; name += cutTags_[i];
+       H_MuRelIso[name]=new TH1D(name,name,50,0,1);
+       
+       name="H_EleEt_"; name += cutTags_[i];
+       H_EleEt[name]=new TH1D(name,name,50,0,100);
+       name="H_EleEta_"; name += cutTags_[i];
+       H_EleEta[name]=new TH1D(name,name,50,-5,5);
+       name="H_EleRelIso_"; name += cutTags_[i];
+       H_EleRelIso[name]=new TH1D(name,name,50,0,1);
+
      }
    }
       
@@ -678,8 +695,8 @@ void basicLoop::cutflowPlotter()
     
       int njets = nGoodJets();
       int nbjets = countBJets();
-      int nelectrons = countEleSync1();
-      int nmuons = countMuSync1();
+      int nelectrons = countEle();
+      int nmuons = countMu();
       float met = getMET() ;
       float minDeltaPhi = getMinDeltaPhiMET(3);
 
@@ -731,6 +748,24 @@ void basicLoop::cutflowPlotter()
 	      H_EleEta[name]->Fill(eleEta_PF->at(iel),weight);
 	      name="H_EleRelIso_";   name += cutTags_[i];
 	      H_EleRelIso[name]->Fill((eleTrackIso_PF->at(iel) + eleHcalIso_PF->at(iel) + eleEcalIso_PF->at(iel))/eleEt_PF->at(iel),weight);
+	    }
+	  }
+	  else if (theLeptonType_==kNormal) {
+	    for (unsigned int imu=0; imu<muonPt->size(); imu++) {
+	      name="H_MuPt_"; 	  name += cutTags_[i];
+	      H_MuPt[name]->Fill(muonPt->at(imu),weight);
+	      name="H_MuEta_"; 	  name += cutTags_[i];
+	      H_MuEta[name]->Fill(muonEta->at(imu),weight);
+	      name="H_MuRelIso_";   name += cutTags_[i];
+	      H_MuRelIso[name]->Fill((muonTrackIso->at(imu) + muonHcalIso->at(imu) + muonEcalIso->at(imu))/muonPt->at(imu),weight);
+	    }
+	    for (unsigned int iel=0; iel<eleEt->size(); iel++) {
+	      name="H_EleEt_"; 	  name += cutTags_[i];
+	      H_EleEt[name]->Fill(eleEt->at(iel),weight);
+	      name="H_EleEta_"; 	  name += cutTags_[i];
+	      H_EleEta[name]->Fill(eleEta->at(iel),weight);
+	      name="H_EleRelIso_";   name += cutTags_[i];
+	      H_EleRelIso[name]->Fill((eleTrackIso->at(iel) + eleHcalIso->at(iel) + eleEcalIso->at(iel))/eleEt->at(iel),weight);
 	    }
 	  }
 	}
@@ -1291,8 +1326,8 @@ void basicLoop::Nminus1plots()
       double leadJetPhi= jetPhiOfN(1);
       double leadJetEta= jetEtaOfN(1);
 
-      int nelectrons=countEleSync1();
-      int nmuons=countMuSync1();
+      int nelectrons=countEle();
+      int nmuons=countMu();
 
       //HT
       setIgnoredCut("cutHT");

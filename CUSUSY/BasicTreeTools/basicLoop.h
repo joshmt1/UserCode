@@ -93,7 +93,8 @@ const char *METTypeNames_[]={"MHT", "MET",  "tcMET", "pfMET"};
 const char *METRangeNames_[]={"med",  "high", "wide", "medhigh"}; //'no cut' is not given, because the cut can always be skipped!
 
 const char *jetTypeNames_[]={"calo","PF", "JPT"};
-const char *leptonTypeNames_[]={"RegLep","PFLep"};
+const char *leptonTypeNames_[]={"RegLep","PFLep","PFLepRA2"};
+//the RA2 lepton scheme is not a perfect copy of the RA2 lepton cuts. Biggest change is to reduce electron threshold to 10 GeV
 
 const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1", "minDPinv", "minDPAll30"};
 
@@ -124,7 +125,7 @@ public :
   METRange theMETRange_;
   enum jetType {kCalo=0, kPF, kJPT};
   jetType theJetType_;
-  enum leptonType {kNormal=0, kPFLeptons};
+  enum leptonType {kNormal=0, kPFLeptons, kPFLeptonsRA2};
   leptonType theLeptonType_;
   enum dpType {kDeltaPhi=0, kminDP, kMPT, kDPSync1, kminDPinv, kminDPAll30};
   dpType theDPType_;
@@ -212,6 +213,7 @@ public :
 
    Int_t nbSSVM;
    float WCosHel_,topCosHel_,bestWMass_,bestTopMass_;
+   float eleet1_,muonpt1_; //FIXME this is a hack that I don't like!
   // ========================================== end
 
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
@@ -770,15 +772,11 @@ public :
    bool cutRequired(TString cutTag) ;
    bool passCut(TString cutTag) ;
 
-   //old RA2 cuts
-   bool passMuVetoRA2() ;
-   bool passEleVetoRA2() ;
-
    //used for Sync1 and kBaseline0
-   bool passMuVetoSync1() ;
-   bool passEleVetoSync1() ;
-   int countMuSync1() ;
-   int countEleSync1() ;
+   bool passMuVeto() ;
+   bool passEleVeto() ;
+   int countMu() ;
+   int countEle() ;
 
    bool passTauVeto();
    bool passCleaning();
@@ -802,6 +800,7 @@ public :
    bool isGoodJet_Sync1(unsigned int ijet);
    bool isGoodJet(unsigned int ijet); //index here is on the loose jet list
    bool isGoodJet30(unsigned int ijet); //index here is on the loose jet list
+   bool isGoodJetMHT(unsigned int ijet); //index here is on the loose jet list
    bool isLooseJet_Sync1(unsigned int ijet); //looser pt cut
    unsigned int nGoodJets_Sync1();
    unsigned int nGoodJets();
@@ -889,6 +888,7 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree, TTree *ecaltree)
      topCosHel_(-99),
      bestWMass_(1e9),
      bestTopMass_(1e9),
+     eleet1_(-1), muonpt1_(-1),
      printedHLT_(false),
      lastTriggerPass_("")
 //====================== end
@@ -1677,27 +1677,21 @@ bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to
 }
 
 
-bool basicLoop::passMuVetoSync1() {
-  //this is less fast than returning the veto as soon as we get to '1', but avoids code duplication
-
-  //in principle I can add a special argument to countMuSync1 to return as soon as it gets to 1,
-  //but let's leave that optimization for later
-
+bool basicLoop::passMuVeto() {
   //using nmu_ allows for inverting the veto
-  return (countMuSync1() == nmu_);
+  return (countMu() == nmu_);
 }
 
-int basicLoop::countMuSync1() {
+int basicLoop::countMu() {
 
   int ngoodmu=0;
 
   unsigned int nmu = 0;
   if (theLeptonType_ == kNormal) nmu=muonPt->size();  
   else if (theLeptonType_ ==kPFLeptons) nmu=muonPt_PF->size();
+  else if (theLeptonType_ ==kPFLeptonsRA2) nmu=muonPt_PF->size();
   else {assert(0);}
 
-  //need to be AllGlobalMuons
-  //this is all I stored in the ntuple
   for ( unsigned int i = 0; i< nmu; i++) {
     float pt=0,eta=0,reliso=0;
     bool isglobal=false;    
@@ -1715,13 +1709,28 @@ int basicLoop::countMuSync1() {
       reliso = (muonTrackIso_PF->at(i) + muonHcalIso_PF->at(i) + muonEcalIso_PF->at(i))/muonPt_PF->at(i);
       isglobal = muonIsGlobalMuon_PF->at(i);
     }
+    else if (theLeptonType_ ==kPFLeptonsRA2) {
+      pt = muonPt_PF->at(i);
+      eta = muonEta_PF->at(i);
+      //it appears that RA2 uses a very differently defined iso variable. i cannot calculate it from my ntuples
+      reliso = (muonTrackIso_PF->at(i) + muonHcalIso_PF->at(i) + muonEcalIso_PF->at(i))/muonPt_PF->at(i);
+      isglobal = muonIsGlobalMuon_PF->at(i) && muonIsGlobalMuonPromptTight_PF->at(i);
+      // muonNhits_PF //which set of hits is this?
+      //pixel hits?
+    }
     else {assert(0);}
 
     //now make cuts
     if ( !isglobal ) continue;
     if ( pt < 10 ) continue;
-    if ( fabs(eta) > 2.5 ) continue;
+
+    if       (theLeptonType_ ==kPFLeptonsRA2 &&  fabs(eta) > 2.4) continue;
+    else  if (theLeptonType_ !=kPFLeptonsRA2 &&  fabs(eta) > 2.5) continue;
+
     if ( reliso > 0.2) continue;
+
+    //FIXME adding this as a hack...i would like to do this more elegantly, but for now this will work
+    if (ngoodmu==0) muonpt1_ = pt;
 
     ++ngoodmu;
   }
@@ -1734,20 +1743,21 @@ bool basicLoop::passTauVeto() {
   return true;
 }
 
-bool basicLoop::passEleVetoSync1() {
+bool basicLoop::passEleVeto() {
   //see comments in muon section
 
   //using ne_ allows for inverting the veto
-  return (countEleSync1() == ne_);
+  return (countEle() == ne_);
 }
 
-int basicLoop::countEleSync1() {
+int basicLoop::countEle() {
 
   int ngoodele=0;
 
   unsigned int nele = 0;
   if (theLeptonType_ == kNormal) nele=eleEt->size();  
   else if (theLeptonType_ ==kPFLeptons) nele=eleEt_PF->size();
+  else if (theLeptonType_ ==kPFLeptonsRA2) nele=eleEt_PF->size();
   else {assert(0);}
 
   for (unsigned int i=0; i < nele; i++) {
@@ -1759,7 +1769,7 @@ int basicLoop::countEleSync1() {
       eta = eleEta->at(i);
       reliso = (eleTrackIso->at(i) + eleHcalIso->at(i) + eleEcalIso->at(i))/eleEt->at(i);
     }
-    else if (theLeptonType_ ==kPFLeptons) {
+    else if (theLeptonType_ ==kPFLeptons || theLeptonType_ ==kPFLeptonsRA2) {
       et = eleEt_PF->at(i);
       eta = eleEta_PF->at(i);
       reliso = (eleTrackIso_PF->at(i) + eleHcalIso_PF->at(i) + eleEcalIso_PF->at(i))/eleEt_PF->at(i);
@@ -1767,88 +1777,22 @@ int basicLoop::countEleSync1() {
     else {assert(0);}
 
     //make cuts    
-    if ( et < 15 ) continue;
+    if      (theLeptonType_ ==kPFLeptons    && et < 15 ) continue;
+    else if (theLeptonType_ ==kPFLeptonsRA2 && et < 10 ) continue;
+
     if ( fabs(eta) > 2.5 ) continue;
     if ( reliso > 0.2) continue;
     
     //if any electron passes all of these cuts, then it is good
+
+    //FIXME adding this as a hack...i would like to do this more elegantly, but for now this will work
+    if (ngoodele==0) eleet1_ = et;
+
     ++ngoodele;
   }
 
   return ngoodele;
 
-}
-
-bool basicLoop::passMuVetoRA2() {
-
-  /* debugging
-  const TString sp=" ";
-  cout<<"[passMuVetoRA2] "<<flush;
-  cout<<sp<<muonIsGlobalMuonPromptTight->size();
-  cout<<sp<<muonIsAllGlobalMuons->size();
-  cout<<sp<<  muonPt->size();
-  cout<<sp<<  muonEta->size();
-  cout<<sp<<  muonTrackIso->size();
-  cout<<sp<<  muonEcalIso->size();
-  cout<<sp<<  muonHcalIso->size();
-  cout<<sp<<  muonChi2->size();
-  cout<<sp<<  muonNdof->size();
-  cout<<sp<<  muonNhits->size();
-  cout<<sp<<  muonTrackd0->size();
-  cout<<sp<<  muonTrackPhi->size();
-  cout<<sp<<  muonPassID->size();
-  cout<<sp<<   muonEcalVeto->size();
-  cout<<sp<<   muonHcalVeto->size()<<endl;
-  */  
-
-  //loop over regular (not PF) muons
-  for ( unsigned int i = 0; i< muonPt->size(); i++) {
-    
-    //due to a bug, this isn't going to work
-    //   if ( !muonIsGlobalMuonPromptTight->at(i) ) continue;
-    //here is a sorry attempt to cover part of my ass
-    if ( muonIsGlobalMuonPromptTight->size() ==0) continue;
-
-    if ( muonPt->at(i) <= 10 ) continue;
-    if ( fabs(muonEta->at(i)) > 2.4 ) continue;
-
-    float ndof= muonNdof->at(i);
-    if (ndof<=0) continue;
-    if ( muonChi2->at(i) / ndof >= 10) continue;
-
-    if ( fabs(muonTrackd0->at(i)) > 0.2) continue;
-
-    if (muonNhits->at(i) <11) continue;
-
-    if ( (muonTrackIso->at(i) + muonHcalIso->at(i) + muonEcalIso->at(i))/muonPt->at(i) > 0.1) continue;
-
-    //if any muon passes all of these cuts, then veto
-    return false;
-  }
-
-  return true;
-}
-
-bool basicLoop::passEleVetoRA2() {
-
-  //loop over regular (not PF) electrons
-  for (unsigned int i=0; i< eleIDLoose->size(); i++) {
-
-    if ( !(eleIDLoose->at(i) >0) ) continue;
-
-    if ( eleEt->at(i) < 15 ) continue;
-    if ( fabs(eleEta->at(i)) > 2.4 ) continue;
-
-    //rel iso of 0.1 and d0<0.2 are in here
-    if (!elePassID->at(i)) continue;
-
-    //if ( (eleTrackIso->at(i) + eleHcalIso->at(i) + eleEcalIso->at(i))/eleEt->at(i) > 0.1) continue;
-    //i don't have d0 in the ntuple
-
-    //if any electron passes all of these cuts, then veto
-    return false;
-  }
-  return true;
 }
 
 bool basicLoop::passDeltaPhi_Sync1() {
@@ -1961,13 +1905,13 @@ bool basicLoop::passCut(const TString cutTag) {
   }
 
   //lepton vetoes
-  if (cutTag=="cutMuVeto" && theCutScheme_==kRA2) return passMuVetoRA2();
-  else if (cutTag=="cutMuVeto" && theCutScheme_==kSync1) return passMuVetoSync1();
-  else if (cutTag=="cutMuVeto" && theCutScheme_==kBaseline0) return passMuVetoSync1(); //passMuVetoDon()
+  if (cutTag=="cutMuVeto" && theCutScheme_==kRA2) return passMuVeto();
+  else if (cutTag=="cutMuVeto" && theCutScheme_==kSync1) return passMuVeto();
+  else if (cutTag=="cutMuVeto" && theCutScheme_==kBaseline0) return passMuVeto(); //passMuVetoDon()
 
-  if (cutTag=="cutEleVeto" && theCutScheme_==kRA2) return passEleVetoRA2();
-  else if (cutTag=="cutEleVeto" && theCutScheme_==kSync1) return passEleVetoSync1();
-  else if (cutTag=="cutEleVeto" && theCutScheme_==kBaseline0) return passEleVetoSync1(); //passEleVetoDon()
+  if (cutTag=="cutEleVeto" && theCutScheme_==kRA2) return passEleVeto();
+  else if (cutTag=="cutEleVeto" && theCutScheme_==kSync1) return passEleVeto();
+  else if (cutTag=="cutEleVeto" && theCutScheme_==kBaseline0) return passEleVeto(); //passEleVetoDon()
 
   if (cutTag=="cutTauVeto" && theCutScheme_==kBaseline0) return passTauVeto();
 
@@ -2810,7 +2754,7 @@ std::pair<float,float> basicLoop::getJERAdjustedMHTxy() {
   float mhty=0;
 
   for (unsigned int i=0; i<loosejetPt->size(); i++) {
-    if (isGoodJet( i ) ) {
+    if (isGoodJetMHT( i ) ) {
 
       mhtx -= getLooseJetPt(i) * cos(loosejetPhi->at(i));
       mhty -= getLooseJetPt(i) * sin(loosejetPhi->at(i));
@@ -2957,6 +2901,15 @@ bool basicLoop::isGoodJet30(unsigned int ijet) {
   if ( getLooseJetPt(ijet) <30) return false;
   if ( fabs(loosejetEta->at(ijet)) > 2.4) return false;
   if (doJetID_ && !(loosejetPassLooseID->at(ijet)) ) return false;
+
+  return true;
+}
+
+bool basicLoop::isGoodJetMHT(unsigned int ijet) {
+
+  if ( getLooseJetPt(ijet) <30) return false;
+  if ( fabs(loosejetEta->at(ijet)) > 5) return false;
+  //no jet id for MHT
 
   return true;
 }
