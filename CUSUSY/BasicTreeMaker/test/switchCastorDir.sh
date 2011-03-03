@@ -1,8 +1,8 @@
 #!/bin/sh
 
 #to use: just set old and new below, and do ./switchCastorDir.sh
-old='V00-01-01'
-new='V00-01-02'
+old='V00-02-01'
+new='V00-02-03'
 
 mkdir cfg_files_$old
 

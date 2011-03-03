@@ -22,7 +22,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.29 2011/02/17 13:28:15 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.30 2011/02/22 11:11:02 joshmt Exp $
 //
 //
 
@@ -74,6 +74,9 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 #include "DataFormats/Candidate/interface/Candidate.h"
 #include "DataFormats/HLTReco/interface/TriggerEvent.h"
 
+//test
+//#include "DataFormats/RecoCandidate/interface/RecoCandidate.h"
+
 //pulled in from Don's code
 #include "DataFormats/Common/interface/TriggerResults.h"
 #include "FWCore/Common/interface/TriggerNames.h"
@@ -119,6 +122,9 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   muonAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("muonAlgorithms")),
   tauAlgorithmNames_(iConfig.getParameter<std::vector<std::string> >("tauAlgorithms")),
 
+  eleSelected_(iConfig.getParameter<std::vector<std::string> >("eleSelected")),
+  muonSelected_(iConfig.getParameter<std::vector<std::string> >("muonSelected")),
+
   pfCandSrc_       (iConfig.getParameter<edm::InputTag>("PFCandSource")),
 
   jetIdLoose_      (iConfig.getParameter<edm::ParameterSet>("jetIdLoose") ),
@@ -138,14 +144,10 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   loosejetPtMin_   (iConfig.getParameter<double>("loosejetPtMin")), 
   loosejetEtaMax_  (iConfig.getParameter<double>("loosejetEtaMax")),
 
-  muPtMin_         (iConfig.getParameter<double>("muPtMin")), 
-  muEtaMax_        (iConfig.getParameter<double>("muEtaMax")), 
-  eleEtMin_        (iConfig.getParameter<double>("eleEtMin")), 
-  eleEtaMax_       (iConfig.getParameter<double>("eleEtaMax")), 
-
   //  jetInfoFilled_(false),
   //  leptonInfoFilled_(false),
-  trackInfoFilled_(false)
+  trackInfoFilled_(false),
+  tolerance_(1e-4)
 {
 
   assert(  jetAlgorithmNames_.size() == jetAlgorithmTags_.size());
@@ -154,6 +156,8 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
 
   //the fill lepton info method is not very flexible!
   assert(  eleAlgorithmNames_.size() == muonAlgorithmNames_.size() );
+  assert( eleAlgorithmNames_.size() == eleSelected_.size() );
+  assert( muonAlgorithmNames_.size() == muonSelected_.size() );
 
   edm::Service<TFileService> fs;
   Heventcount_ = fs->make<TH1D>( "Heventcount"  , "events processed", 1,  0, 1 );
@@ -511,26 +515,47 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
   std::string muTag=muonAlgorithmNames_[il];
   std::string eTag=eleAlgorithmNames_[il];
   
-  if (muonDebug)  std::cout<<muTag<<"\t"<<eTag <<std::endl;
+  if (muonDebug || eleDebug)  std::cout<<muTag<<"\t"<<eTag <<std::endl;
   
   //to get the cut flow in the right (arbitrary) order, need to do muons first
   edm::Handle<edm::View<pat::Muon> > muonHandle;
   iEvent.getByLabel(muTag,muonHandle);
   const edm::View<pat::Muon> & muons = *muonHandle;
-  for (edm::View<pat::Muon>::const_iterator imuon = muons.begin(); imuon!=muons.end(); ++imuon) {
-    
-    if (muonDebug)     std::cout<<"--mu id-- "<<muTag <<std::endl;
-    
-    //now storing ALL muons
 
+  //get the RA2 muon list
+  edm::Handle<edm::View<pat::Muon> > muonHandleRA2;
+  iEvent.getByLabel(muonSelected_[il],muonHandleRA2);
+  const edm::View<pat::Muon> & muonsRA2 = *muonHandleRA2;
+
+  for (edm::View<pat::Muon>::const_iterator imuon = muons.begin(); imuon!=muons.end(); ++imuon) {
+
+    //check if this muon is also on the RA2 list
+    bool foundOverlap=false;
+    for (edm::View<pat::Muon>::const_iterator iRA2muon = muonsRA2.begin(); iRA2muon!=muonsRA2.end(); ++iRA2muon) {
+      //ok, for pat::Muon this method worked. for non-PF pat::Electron is seems to work
+      //but for PF pat::Electron it did not work.
+      //this makes me nervous, so I go with a simple pT,eta,phi match
+//       if ( ((reco::RecoCandidate*) &(*imuon))-> overlap(  *iRA2muon ) ) {
+// 	foundOverlap=true;
+// 	//	std::cout<<"matching muons with pT = "<<imuon->pt()<<" "<<iRA2muon->pt()<<std::endl;
+//       }
+      if ( ( fabs(imuon->pt() - iRA2muon->pt()) < tolerance_) 
+	   && (fabs(imuon->eta() - iRA2muon->eta()) < tolerance_) 
+	   && (fabs(imuon->phi() - iRA2muon->phi()) < tolerance_)) {
+ 	foundOverlap=true;
+	//	std::cout<<"matching muons with pT = "<<imuon->pt()<<" "<<iRA2muon->pt()<<std::endl;
+      }
+      //      else 	std::cout<<"NOT matching muons with pT = "<<imuon->pt()<<" "<<iRA2muon->pt()<<std::endl;
+    }
+    muonIsRA2[muTag].push_back(foundOverlap);
+
+    //now storing ALL muons
     const  bool isGlobal = imuon->muonID("AllGlobalMuons");
     muonIsGlobalMuon[muTag].push_back(isGlobal);
 
     muonIsGlobalMuonPromptTight[muTag].push_back(imuon->muonID("GlobalMuonPromptTight"));
-    if (muonDebug)     std::cout<<"done with muon id" <<std::endl;    
 
     //Added by Luke -- Trying to get functions for the muons that are implemented by RA2 to get rid of fake MHT
-
     //    std::cout << "creating muon filter info" << std::endl;
     passesBadPFMuonFilter[muTag] = badPFMuonFilter(iEvent, pfCandSrc_,edm::InputTag(muTag)) ;
     //    std::cout << "done with badPFMuonFilter" << std::endl;
@@ -544,20 +569,19 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
     muonEta[muTag].push_back( imuon->eta());
     muonPhi[muTag].push_back( imuon->phi());
 
-    if (muonDebug) {
-      std::cout<<"muon pT: "<<imuon->pt()<<" "<<imuon->innerTrack()->pt()<<std::endl;
-      std::cout<<"muon isolation pairs: "<< //these are confirmed match in 384 running over a data PATtuple
-	imuon->ecalIso()<<" "<<imuon->isolationR03().emEt<<"\t"<<
-	imuon->hcalIso()<<" "<<imuon->isolationR03().hadEt<<"\t"<<
-	imuon->trackIso()<<" "<<imuon->isolationR03().sumPt<<std::endl;
-    }
+//     if (muonDebug) {
+//       std::cout<<"muon pT: "<<imuon->pt()<<" "<<imuon->innerTrack()->pt()<<std::endl;
+//       std::cout<<"muon isolation pairs: "<< //these are confirmed match in 384 running over a data PATtuple
+// 	imuon->ecalIso()<<" "<<imuon->isolationR03().emEt<<"\t"<<
+// 	imuon->hcalIso()<<" "<<imuon->isolationR03().hadEt<<"\t"<<
+// 	imuon->trackIso()<<" "<<imuon->isolationR03().sumPt<<std::endl;
+//     }
     muonTrackIso[muTag].push_back( imuon->trackIso() );
     muonEcalIso[muTag].push_back( imuon->ecalIso() );
     muonHcalIso[muTag].push_back( imuon->hcalIso() );
 
     //do this stuff only for global muons
     if (isGlobal) {
-      if (muonDebug)     std::cout<<"--mu combined-- "<<muTag <<std::endl;
       if (!imuon->combinedMuon().isNull()) {
 	muonChi2[muTag].push_back(imuon->combinedMuon()->chi2());
 	muonNdof[muTag].push_back(imuon->combinedMuon()->ndof());
@@ -567,13 +591,11 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
 	muonNdof[muTag].push_back(0);
       }
       
-      if (muonDebug)     std::cout<<"--mu track-- "<<muTag <<std::endl;
       muonTrackd0[muTag].push_back(imuon->track()->d0() );
       muonTrackPhi[muTag].push_back(imuon->track()->phi() );
       
       muonNhits[muTag].push_back(imuon->numberOfValidHits());
       
-      if (muonDebug)     std::cout<<"--mu veto-- "<<muTag <<std::endl;
       //   std::cout<<imuon->hcalIsoDeposit()<<"\t"<<imuon->ecalIsoDeposit()<<std::endl;
       //      muonHcalVeto[muTag].push_back(imuon->hcalIsoDeposit()->candEnergy());
       //      muonEcalVeto[muTag].push_back(imuon->ecalIsoDeposit()->candEnergy());
@@ -602,13 +624,7 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
     muonPassID[muTag].push_back(passMuon);
     
     //store vtx z
-    if (muonDebug) std::cout<<"[mu vtx z] = "<<imuon->vertex().z()<<std::endl;
     muonVtx_z[muTag].push_back(  imuon->vertex().z());
-      
-    if ( pv_z.size()>0 &&  (fabs( imuon->vertex().z() - pv_z.at(0)) >= 1)) passMuon=false; //new cut from Don
-    if (!passMuon) continue;
-
-    if (  imuon->pt() > muPtMin_ && fabs(imuon->eta()) < muEtaMax_  )       nMuons[muTag]++;
   } //end of loop over muons
 
   // it is really stupid that I am using a different style of logic for muons and electrons
@@ -621,12 +637,51 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
   if (!electronHandle.isValid()) {std::cout<<"electrons are not valid!"<<std::endl;}
   const edm::View<pat::Electron> & electrons = *electronHandle;
 
+  //get the RA2 electron list
+  edm::Handle<edm::View<pat::Electron> > eleHandleRA2;
+  iEvent.getByLabel(eleSelected_[il],eleHandleRA2);
+  const edm::View<pat::Electron> & electronsRA2 = *eleHandleRA2;
+
+  if (eleDebug) {
+    std::cout<<" using RA2 electron list: "<<eleSelected_[il]<<std::endl
+	     <<"N electrons, N RA2 electrons = "<<electrons.size()<<", "<<electronsRA2.size()<<std::endl;
+  }
+
+
   for (edm::View<pat::Electron>::const_iterator ielectron = electrons.begin(); ielectron!=electrons.end(); ++ielectron) {
+
+    //check if this muon is also on the RA2 list
+    bool foundOverlap=false;
+    for (edm::View<pat::Electron>::const_iterator iRA2ele = electronsRA2.begin(); iRA2ele!=electronsRA2.end(); ++iRA2ele) {
+
+      //this method almost worked, but failed for the PF electrons
+//       if ( ((reco::RecoCandidate*) &(*ielectron))-> overlap(  *iRA2ele ) ) {
+// 	foundOverlap=true;
+// 	std::cout<<"matching electrons with pT = "<<ielectron->pt()<<" "<<iRA2ele->pt()<<std::endl;
+// 	//	std::cout<<"matching electrons with eT = "<<ielectron->et()<<" "<<iRA2ele->et()<<std::endl;
+//       }
+//       else {
+// 	std::cout<<"NOT matching electrons with pT = "<<ielectron->pt()<<" "<<iRA2ele->pt()<<std::endl;
+// 	//	std::cout<<"matching electrons with eT = "<<ielectron->et()<<" "<<iRA2ele->et()<<std::endl;
+// 	}
+//       }
+
+      if ( (fabs(ielectron->pt() - iRA2ele->pt()) < tolerance_) 
+	   && (fabs(ielectron->eta() - iRA2ele->eta()) < tolerance_) 
+	   && (fabs(ielectron->phi() - iRA2ele->phi()) < tolerance_)) {
+	foundOverlap=true;
+	//	std::cout<<"matching electrons with pT = "<<ielectron->pt()<<" "<<iRA2ele->pt()<<std::endl;
+      }
+      //      else 	std::cout<<"NOT matching electrons with pT = "<<ielectron->pt()<<" "<<iRA2ele->pt()<<std::endl;
+    }
+
+    eleIsRA2[eTag].push_back(foundOverlap);
 
     eleIDLoose[eTag].push_back(ielectron->electronID( "eidLoose" ) );
     eleIDRobustTight[eTag].push_back(ielectron->electronID( "eidRobustTight" ) );
 
     eleEt[eTag].push_back( ielectron->et() );
+    //    elePt[eTag].push_back( ielectron->pt() );
     eleEta[eTag].push_back( ielectron->eta());
     elePhi[eTag].push_back( ielectron->phi());
     //std::cout<<"--elec 3--"<<std::endl;
@@ -639,13 +694,7 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
 
     eleVtx_z[eTag].push_back( ielectron->vertex().z() );
 
-    bool passid = electronId_(*ielectron); //iso and d0
-    elePassID[eTag].push_back(passid);
-    if ( passid && ielectron->electronID( "eidLoose" )>0 //iso cut is in here
-	 && (pv_z.size()>0 && (fabs( ielectron->vertex().z() - pv_z.at(0)) < 1 )) ) {
-	
-      if ( ielectron->et() > eleEtMin_ && fabs(ielectron->eta()) < eleEtaMax_ ) nElectrons[eTag]++;
-    }
+    elePassID[eTag].push_back(electronId_(*ielectron) );
     
   } //end of loop over electrons
   if (eleDebug)   std::cout<<"--leptons done--"<<std::endl;
@@ -1092,9 +1141,9 @@ BasicTreeMaker::resetTreeVariables() {
 
 
   for (unsigned int il=0; il<eleAlgorithmNames_.size(); il++) {
+    muonIsRA2[muonAlgorithmNames_[il]].clear();
     muonIsGlobalMuon[muonAlgorithmNames_[il]].clear();
     muonIsGlobalMuonPromptTight[muonAlgorithmNames_[il]].clear();
-    nMuons[muonAlgorithmNames_[il]]=0;
     muonPt[muonAlgorithmNames_[il]].clear();
     muonEta[muonAlgorithmNames_[il]].clear();
     muonPhi[muonAlgorithmNames_[il]].clear();
@@ -1116,8 +1165,8 @@ BasicTreeMaker::resetTreeVariables() {
 
     muonVtx_z[muonAlgorithmNames_[il]].clear();
 
-    nElectrons[eleAlgorithmNames_[il]]=0;
     eleEt[eleAlgorithmNames_[il]].clear();
+    //    elePt[eleAlgorithmNames_[il]].clear();
     eleEta[eleAlgorithmNames_[il]].clear();
     elePhi[eleAlgorithmNames_[il]].clear();
     eleTrackIso[eleAlgorithmNames_[il]].clear();
@@ -1131,6 +1180,7 @@ BasicTreeMaker::resetTreeVariables() {
     eleIDLoose[eleAlgorithmNames_[il]].clear();
     eleIDRobustTight[eleAlgorithmNames_[il]].clear();
     elePassID[eleAlgorithmNames_[il]].clear();
+    eleIsRA2[eleAlgorithmNames_[il]].clear();
   }
   for (unsigned int il=0; il<tauAlgorithmNames_.size(); il++) {
     tauPt[tauAlgorithmNames_[il]].clear();
@@ -1443,6 +1493,7 @@ BasicTreeMaker::beginJob()
       itail="/I";
     }
 
+    tree_->Branch( (string("muonIsRA2")+tail).c_str(),&muonIsRA2[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonIsGlobalMuon")+tail).c_str(),&muonIsGlobalMuon[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonIsGlobalMuonPromptTight")+tail).c_str(),&muonIsGlobalMuonPromptTight[muonAlgorithmNames_[il]]);
 
@@ -1464,12 +1515,13 @@ BasicTreeMaker::beginJob()
 
     tree_->Branch( (string("muonEcalVeto")+tail).c_str(),&muonEcalVeto[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonHcalVeto")+tail).c_str(),&muonHcalVeto[muonAlgorithmNames_[il]]);
-    tree_->Branch( (string("nMuons")+tail).c_str(),&nMuons[muonAlgorithmNames_[il]],(string("nMuons")+itail).c_str());
 
     tree_->Branch( (string("passesBadPFMuonFilter")+tail).c_str(),&passesBadPFMuonFilter[muonAlgorithmNames_[il]],(string("passesBadPFMuonFilter")+tail+"/O").c_str());
     tree_->Branch( (string("passesInconsistentMuonPFCandidateFilter")+tail).c_str(),&passesInconsistentMuonPFCandidateFilter[muonAlgorithmNames_[il]],(string("passesInconsistentMuonPFCandidateFilter")+tail+"/O").c_str());
 
+    tree_->Branch((string("eleIsRA2")+tail).c_str(),&eleIsRA2[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleEt")+tail).c_str(),&eleEt[eleAlgorithmNames_[il]]);
+    //    tree_->Branch((string("elePt")+tail).c_str(),&elePt[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleEta")+tail).c_str(),&eleEta[eleAlgorithmNames_[il]]);
     tree_->Branch((string("elePhi")+tail).c_str(),&elePhi[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleTrackIso")+tail).c_str(),&eleTrackIso[eleAlgorithmNames_[il]]);
@@ -1483,8 +1535,6 @@ BasicTreeMaker::beginJob()
     tree_->Branch((string("eleIDLoose")+tail).c_str(),&eleIDLoose[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleIDRobustTight")+tail).c_str(),&eleIDRobustTight[eleAlgorithmNames_[il]]);
     tree_->Branch((string("elePassID")+tail).c_str(),&elePassID[eleAlgorithmNames_[il]]);
-
-    tree_->Branch((string("nElectrons")+tail).c_str(),&nElectrons[eleAlgorithmNames_[il]],(string("nElectrons")+itail).c_str());
   }
 
   tree_->Branch("SUSY_nb",&SUSY_nb,"SUSY_nb/I");

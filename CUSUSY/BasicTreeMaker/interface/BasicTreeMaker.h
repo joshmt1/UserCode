@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.16 2011/02/17 13:28:16 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.17 2011/02/22 11:11:02 joshmt Exp $
 //
 //
 
@@ -115,6 +115,9 @@ private:
   std::vector<std::string> muonAlgorithmNames_; //the real collection names
   std::vector<std::string> tauAlgorithmNames_; //the real collection names
 
+  std::vector<std::string> eleSelected_; //name of a list of selected electrons
+  std::vector<std::string> muonSelected_; //name of a list of selected muons
+
   edm::InputTag pfCandSrc_;
 
   JetIDSelectionFunctor                jetIdLoose_;
@@ -135,15 +138,13 @@ private:
   double loosejetPtMin_ ;
   double loosejetEtaMax_;  
 
-  double muPtMin_  ;
-  double muEtaMax_ ;
-  double eleEtMin_ ;
-  double eleEtaMax_;
-
   //bookkeeping
   //  bool jetInfoFilled_;
   //  bool leptonInfoFilled_;
   bool trackInfoFilled_;
+
+  //for matching of particles
+  float tolerance_;
 
   // ====== define variables for the tree ======
   ULong64_t runNumber;
@@ -166,6 +167,7 @@ private:
   float bsy;
   float bsz;
 
+  std::map< std::string, std::vector<bool> > muonIsRA2;
   std::map< std::string, std::vector<bool> > muonIsGlobalMuon;
   std::map< std::string, std::vector<bool> > muonIsGlobalMuonPromptTight;
   std::map< std::string, std::vector<float> > muonPt;
@@ -187,8 +189,7 @@ private:
   std::map< std::string, std::vector<float> > muonHcalVeto;
   std::map< std::string, std::vector<float> > muonEcalVeto;
 
-  std::map< std::string, int > nMuons; //good muons (passing pt and eta cuts)
-  
+ 
   //beginning RA2 fake MHT muon reducing filter info
   std::map< std::string, bool > passesBadPFMuonFilter;
   std::map< std::string, bool > passesInconsistentMuonPFCandidateFilter;
@@ -196,7 +197,9 @@ private:
 
 
   //electron info for *all* electrons (!)
+  std::map< std::string, std::vector<bool> > eleIsRA2;
   std::map< std::string, std::vector<float> > eleEt;
+  //  std::map< std::string, std::vector<float> > elePt; //confirmed that pT and eT are the same!
   std::map< std::string, std::vector<float> > eleEta;
   std::map< std::string, std::vector<float> > elePhi;
   std::map< std::string, std::vector<float> > eleTrackIso;
@@ -210,8 +213,6 @@ private:
   std::map< std::string, std::vector<float> > eleIDLoose;
   std::map< std::string, std::vector<float> > eleIDRobustTight;
   std::map< std::string, std::vector<bool> > elePassID;
-
-  std::map< std::string, int > nElectrons; //good electrons
 
   //tau info all *all* taus
   std::map< std::string, std::vector<float> > tauPt;
