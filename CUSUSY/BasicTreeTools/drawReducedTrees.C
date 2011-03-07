@@ -320,9 +320,11 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
   gROOT->SetStyle("CMS");
   //gStyle->SetHatchesLineWidth(1);
 
-  renewCanvas("ratio");
+  TString canvasOpt = doRatio_ ? "ratio" : "";
+  const int mainPadIndex = doRatio_ ? 1 : 0;
+  renewCanvas(canvasOpt);
 
-  thecanvas->cd(1);
+  thecanvas->cd(mainPadIndex);
 
   //FIXME -- could add recode these numbers as a config option
   if (leg!=0) delete leg;
@@ -338,9 +340,11 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
     if (totalsm!=0) delete totalsm;
     totalsm = new TH1D("totalsm","",nbins,low,high);
     totalsm->Sumw2();
-    if (ratio!=0) delete ratio;
-    ratio = new TH1D("ratio","data/(SM MC)",nbins,low,high);
-    ratio->Sumw2();
+    if (doRatio_) {
+      if (ratio!=0) delete ratio;
+      ratio = new TH1D("ratio","data/(SM MC)",nbins,low,high);
+      ratio->Sumw2();
+    }
   }
   //here is the part that is really different from the previous implementation
   //need to make new histograms
@@ -466,21 +470,22 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
       cout<<"Integral of data, total SM: "<<hdata->Integral()<<" ; "<<totalsm->Integral()<<endl;
       cout<<"Chi^2 Test results: "<<hdata->Chi2Test(totalsm,"UW P")<<endl;
       cout<<"KS Test results: "<<hdata->KolmogorovTest(totalsm,"N")<<endl;;
-      thecanvas->cd(2);
-      //      cratio->cd();
-      ratio->Divide(hdata,totalsm);
-      ratio->SetMinimum(ratioMin);
-      ratio->SetMaximum(ratioMax);
-      ratio->GetYaxis()->SetNdivisions(200 + int(ratioMax-ratioMin)+1);    //set ticks ; to be seen if this really works
-      ratio->GetYaxis()->SetLabelSize(0.2); //make y label bigger
-      ratio->Draw();
-      thecanvas->GetPad(2)->SetTopMargin(0.1);
+      if (doRatio_) {
+	thecanvas->cd(2);
+	ratio->Divide(hdata,totalsm);
+	ratio->SetMinimum(ratioMin);
+	ratio->SetMaximum(ratioMax);
+	ratio->GetYaxis()->SetNdivisions(200 + int(ratioMax-ratioMin)+1);    //set ticks ; to be seen if this really works
+	ratio->GetYaxis()->SetLabelSize(0.2); //make y label bigger
+	ratio->Draw();
+	thecanvas->GetPad(2)->SetTopMargin(0.1);
+      }
     }
     if (doCustomPlotMax_) thestack->SetMaximum(customPlotMax_);
     if (doCustomPlotMin_) thestack->SetMinimum(customPlotMin_);
   }
 
-  thecanvas->cd(1);
+  thecanvas->cd(mainPadIndex);
   if (doleg_)  leg->Draw();
 
   //  if (doSubtraction_) savename+="-MCSub";
@@ -496,8 +501,6 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
   //  thecanvas->Print(savename+".C");    //for formal purposes
   thecanvas->SaveAs(savename+".pdf"); //for pdftex
   thecanvas->SaveAs(savename+".png"); //for twiki
-
-  //  cratio->SaveAs(savename+"-ratio.eps"); //for me
 
 }
 
@@ -678,6 +681,7 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
 
   setStackMode(true);
   doData(true);
+  doRatioPlot(true);
 
   //  setQCDErrorMode(true);
   // PROBLEMS -- CMS style ruins the hash marks. central value on the TGraphErrors is wrong!
