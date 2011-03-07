@@ -4,6 +4,9 @@ I will now work on replacing drawCutflowPlots.C with this code.
 
 This code will not use the plots created by the Nminus1 code,
 but rather it will work from the reducedTrees
+
+known bugs:
+non-stacked drawing is not yet implemented
 */
 
 #include "TROOT.h"
@@ -310,6 +313,42 @@ void loadSamples() {
 
 }
 
+void drawSimple(const TString var, const int nbins, const float low, const float high, const TString filename, 
+		const TString histname , const TString samplename) {
+
+  loadSamples();
+
+//I would rather implement this functionality via drawPlots(), but I think it will be simpler
+//to just write something simple
+
+//no presentation, just fill the histogram and save
+  TTree* tree=0;
+  if (samplename=="data") {
+    tree = (TTree*) fdata->Get("reducedTree");
+  }
+  else {
+    for (unsigned int isample=0; isample<samples_.size(); isample++) {
+      if ( samples_[isample] == samplename) {
+	cout <<samples_[isample]<<endl;
+	tree = (TTree*) files_[samples_[isample]]->Get("reducedTree");
+      }
+    }
+  }
+  gROOT->cd();
+  
+  //when owen explicitly uses a histo type, it is a TH1F
+  TH1F hh(histname,histname,nbins,low,high);
+  hh.Sumw2();
+   
+  tree->Project(histname,var,getCutString().Data());
+
+  //at this point i've got a histogram. what more could i want?
+  TFile fout(filename,"UPDATE");
+  hh.Write();
+  fout.Close();
+
+}
+
 void drawPlots(const TString var, const int nbins, const float low, const float high, const TString xtitle, const TString ytitle, TString filename="") {
   loadSamples();
 
@@ -493,7 +532,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
   if (logy_) savename += "-logY";
   //  savename += scaleAppendToFilename;
 
-  if (!dostack_)    savename += "-drawNormalized";
+  if (!dostack_)    savename += "-drawPlain";
   else savename += "-drawStack";
 
   //amazingly, \includegraphics cannot handle an extra dot in the filename. so avoid it.
@@ -872,3 +911,13 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
 }
 
 
+void drawOwen() {
+
+  /*
+.L drawReducedTrees.C++
+  */
+
+  selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && nbjets>=1 && MET>=80 && MET<150";// && cutCleaning==1";
+  drawSimple("bestTopMass",40,0,800,"simpleOutput.root", "bestM3j_met_80_150_ge1btag_ttbar","TTbarJets");
+
+}
