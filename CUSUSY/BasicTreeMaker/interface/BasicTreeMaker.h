@@ -9,11 +9,14 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.17 2011/02/22 11:11:02 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.18 2011/03/03 16:37:20 joshmt Exp $
 //
 //
 
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h" //test
+
+//Sezen & Harrison's code for PDF uncertainties
+#include "CUSUSY/BasicTreeMaker/src/PDFFactory.h"
 
 //ROOT includes
 #include "TTree.h"
@@ -89,6 +92,9 @@ private:
   TH1D* Heventcount_;
   TTree* tree_;
   TTree* infotree_;
+
+  // Instantiate the PDFFactory class:
+  PDFFactory pdffactory_;
 
   bool isMC_;
   bool doPrescale_;
@@ -166,6 +172,8 @@ private:
   float bsx;
   float bsy;
   float bsz;
+
+  std::vector<float>  pdfWeights; //for PDF uncertainties
 
   std::map< std::string, std::vector<bool> > muonIsRA2;
   std::map< std::string, std::vector<bool> > muonIsGlobalMuon;

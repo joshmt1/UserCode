@@ -22,7 +22,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.30 2011/02/22 11:11:02 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.31 2011/03/03 16:37:20 joshmt Exp $
 //
 //
 
@@ -100,6 +100,8 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   Heventcount_(0),
   tree_(0),
   infotree_(0),
+
+  pdffactory_("cteq66.LHgrid", 44),
 
   isMC_(iConfig.getParameter<bool>("MCflag")),
   doPrescale_(true),
@@ -395,6 +397,19 @@ BasicTreeMaker::fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSet
   flavorHistory=(int) *path;
   //std::cout<<"flavorHistory = "<<flavorHistory<<std::endl;
   
+  // === fill PDF info ===
+  bool pdfInfook = pdffactory_.extractInfo(iEvent);
+  if (!pdfInfook) std::cout << "WARNING -- PDF information not available!" << std::endl;
+  // Get the PDF weights and print them::
+  std::vector<double>& pdfweights = pdffactory_.weights();
+  // std::cout << "PDF weights for event : " << iEvent.id().event() << std::endl;
+  for (unsigned int i=0; i<pdfweights.size(); i++) {
+    //     cout << "Weight " << i << ":\t" << pdfweights[i] << endl;
+    pdfWeights.push_back(pdfweights[i]); //copy into the tree array
+  }
+  //cout << endl;
+
+
 }
 
 void
@@ -1214,6 +1229,8 @@ BasicTreeMaker::resetTreeVariables() {
   SUSY_nb=0;
   qScale=0;
   mcWeight=0;
+  pdfWeights.clear(); 
+  if (isMC_) pdfWeights.reserve(45); //this number is hard-coded twice in this class FIXME
   topDecayCode.clear();
   ZDecayMode=-99;
   flavorHistory=-99;
@@ -1540,6 +1557,7 @@ BasicTreeMaker::beginJob()
   tree_->Branch("SUSY_nb",&SUSY_nb,"SUSY_nb/I");
   tree_->Branch("qScale",&qScale,"qScale/D");
   tree_->Branch("mcWeight",&mcWeight,"mcWeight/D");
+  tree_->Branch("pdfWeights",&pdfWeights);
   tree_->Branch("topDecayCode",&topDecayCode);
   tree_->Branch("ZDecayMode",&ZDecayMode,"ZDecayMode/I");
   tree_->Branch("flavorHistory",&flavorHistory,"flavorHistory/I");
@@ -1558,6 +1576,7 @@ BasicTreeMaker::endJob() {
 
   cout<<"Job took [CPU/Wall] seconds: "<<thetimer_->cpuTime()<<" / "<<thetimer_->realTime()<<endl;
   cout<<"events/sec = "<<Heventcount_->GetEntries()<<" / "<<thetimer_->realTime()<<" = "<<Heventcount_->GetEntries() /thetimer_->realTime()<<endl;  
+
 
 }
 
