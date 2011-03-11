@@ -360,6 +360,7 @@ a function of eta,phi) later.
   double weight; //one exception to the float rule
   //copy run, ev, lumi directly from ntuple
   float HT, MHT, MET, METphi, minDeltaPhi, minDeltaPhiAll, minDeltaPhiAll30,minDeltaPhi30_eta5_noIdAll;
+  float caloMHT; //caloMET is an ntuple variable
   float deltaPhiMETMismeasuredJet, deltaPhiMPTMET, deltaPhib1b2;
   float jetpt1,jetphi1, jeteta1;//, bjetpt1, bjetphi1, bjeteta1; //should add these back at some point
   float jetpt2,jetphi2, jeteta2;//, bjetpt2, bjetphi2, bjeteta2; //should add these back at some point
@@ -437,6 +438,12 @@ a function of eta,phi) later.
   reducedTree.Branch("MET",&MET,"MET/F");
   reducedTree.Branch("METphi",&METphi,"METphi/F");
   reducedTree.Branch("MHT",&MHT,"MHT/F");
+
+  reducedTree.Branch("caloMET",&caloMET,"caloMET/F");
+  reducedTree.Branch("caloMHT",&caloMHT,"caloMHT/F");
+
+  reducedTree.Branch("MET",&MET,"MET/F");
+  reducedTree.Branch("MET",&MET,"MET/F");
 
   reducedTree.Branch("bestWMass",&bestWMass_,"bestWMass/F");
   reducedTree.Branch("bestTopMass",&bestTopMass_,"bestTopMass/F");
@@ -525,6 +532,13 @@ a function of eta,phi) later.
       HT=getHT();
       MET=getMET();
       MHT=getMHT();
+
+      //caloMET is automatically filled from the ntuple
+      jetType cachedJetType = theJetType_;
+      theJetType_ = kCalo;
+      caloMHT=getMHT();
+      theJetType_ = cachedJetType;
+
       METphi = getMETphi();
       minDeltaPhi = getMinDeltaPhiMET(3);
       minDeltaPhiAll = getMinDeltaPhiMET(99);
@@ -781,9 +795,11 @@ void basicLoop::cutflowPlotter()
 
 }
 
- //will copy and paste a lot of code from ::Loop here
- //i want to start fresh!
+/*
 //This is the code used for the N-1 and other stacked plots in the AN
+However, I now hope to completely replace it by plotting from the reducedTrees.
+
+*/
 void basicLoop::Nminus1plots()
 {
   
@@ -2129,11 +2145,11 @@ void basicLoop::nbLoop()
 void basicLoop::screendump()
 {
 
-  //for now hard-coded with a couple events
-  /* some data events
-  specifyEvent(143962, 2, 732462);
-  specifyEvent(143962, 2, 810194);
-  */
+  //   some data events
+     //specifyEvent(143962, 2, 732462);
+     //the RA2 spectacular event
+  specifyEvent(148953, 49, 70626194);
+  
   // specifyEvent(148862, 75, 120899194); //event that fails my cuts but not Don
 
   /* LM0 events */
@@ -2143,7 +2159,7 @@ void basicLoop::screendump()
   */
 
   //Fall10 ttbar events
-  specifyEvent(1,1,122488);
+  //  specifyEvent(1,1,122488);
 
   //LM9 events
   //  specifyEvent(1,11,4313);
@@ -2170,7 +2186,7 @@ void basicLoop::screendump()
 	  cout<<"--- record for event: ("<<jentry <<") run,ls,ev = "<<runNumber<<sp<<lumiSection<<sp<<eventNumber<<endl;
 	  //Show() doesn't cut it-- it just shows the pointer addresses!
 	  
-	  if (false) {
+	  if (true) {
 	    for (unsigned int i=0 ; i<cutTags_.size(); i++) {
 	      if (cutRequired(cutTags_[i])) {
 		TString passstr = passCut(cutTags_[i]) ? "pass" : "fail";
@@ -2179,17 +2195,20 @@ void basicLoop::screendump()
 	    }
 	  }
 	  
-	  if (false) {
+	  if (true) {
 	    cout<<" jet info (pT, Eta, Jet ID, isGood, SSVHE) n good jets = "<<nGoodJets()<<endl;
 	    for (unsigned int ijet=0; ijet<loosejetPt->size(); ijet++) {
 	      TString jetisgood = isGoodJet(ijet) ? "Good" : "notGood";
-	      cout<<"\tjet "<<ijet<<": "<<getLooseJetPt(ijet) <<sp<<loosejetEta->at(ijet)<<sp<<loosejetPassLooseID->at(ijet)<<sp<<jetisgood
-		  <<sp<< loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags->at(ijet)<<endl;
+	      cout<<"\tjet "<<ijet<<": "<<getLooseJetPt(ijet)<<sp<<loosejetPhi->at(ijet) <<sp<<loosejetEta->at(ijet)<<sp<<loosejetPassLooseID->at(ijet)<<sp<<jetisgood  <<sp<< loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags->at(ijet)<<endl;
 	    }
-	    cout<<"\tEvent HT = "<<getHT()<<endl;
+	    cout<<"\tEvent HT  = "<<getHT()<<endl;
+	    cout<<"\tEvent MHT = "<<getMHT()<<endl;
+	    cout<<"\t  MHT phi = "<<getMHTphi()<<endl;
+	    cout<<"\tEvent MET = "<<getMET()<<endl;
+	    cout<<"\t  MET phi = "<<getMETphi()<<endl;
 	  }
 
-	  if (true) {
+	  if (false) {
 	    //	    cout<<" jet info (pT, Eta, Jet ID, isGood, SSVHE) n good jets = "<<nGoodJets()<<endl;
 	    for (unsigned int ijet=0; ijet<loosejetPt->size(); ijet++) {
 	      TString jetisgood = isGoodJet(ijet) ? "Good" : "notGood";
