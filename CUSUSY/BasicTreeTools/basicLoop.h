@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Fri Feb 18 11:40:32 2011 by ROOT version 5.22/00d
+// Fri Mar 11 12:49:32 2011 by ROOT version 5.22/00d
 // from TTree tree/tree
-// found on file: /cu1/joshmt/BasicNtuples/V00-02-03/TTbarJets/BasicNtuple.root
+// found on file: /cu1/joshmt/BasicNtuples/V00-03-00/TTbarJets/BasicNtuple1.root
 //////////////////////////////////////////////////////////
 
 #ifndef basicLoop_h
@@ -376,6 +376,7 @@ public :
    vector<bool>    *tauID_byTaNCfrOnePercent_PF;
    vector<bool>    *tauID_byTaNCfrHalfPercent_PF;
    vector<bool>    *tauID_byTaNCfrQuarterPercent_PF;
+   vector<bool>    *muonIsRA2;
    vector<bool>    *muonIsGlobalMuon;
    vector<bool>    *muonIsGlobalMuonPromptTight;
    vector<float>   *muonPt;
@@ -393,9 +394,9 @@ public :
    vector<float>   *muonVtx_z;
    vector<float>   *muonEcalVeto;
    vector<float>   *muonHcalVeto;
-   Int_t           nMuons;
    Bool_t          passesBadPFMuonFilter;
    Bool_t          passesInconsistentMuonPFCandidateFilter;
+   vector<bool>    *eleIsRA2;
    vector<float>   *eleEt;
    vector<float>   *eleEta;
    vector<float>   *elePhi;
@@ -407,7 +408,7 @@ public :
    vector<float>   *eleIDLoose;
    vector<float>   *eleIDRobustTight;
    vector<bool>    *elePassID;
-   Int_t           nElectrons;
+   vector<bool>    *muonIsRA2_PF;
    vector<bool>    *muonIsGlobalMuon_PF;
    vector<bool>    *muonIsGlobalMuonPromptTight_PF;
    vector<float>   *muonPt_PF;
@@ -425,9 +426,9 @@ public :
    vector<float>   *muonVtx_z_PF;
    vector<float>   *muonEcalVeto_PF;
    vector<float>   *muonHcalVeto_PF;
-   Int_t           nMuons_PF;
    Bool_t          passesBadPFMuonFilter_PF;
    Bool_t          passesInconsistentMuonPFCandidateFilter_PF;
+   vector<bool>    *eleIsRA2_PF;
    vector<float>   *eleEt_PF;
    vector<float>   *eleEta_PF;
    vector<float>   *elePhi_PF;
@@ -439,13 +440,13 @@ public :
    vector<float>   *eleIDLoose_PF;
    vector<float>   *eleIDRobustTight_PF;
    vector<bool>    *elePassID_PF;
-   Int_t           nElectrons_PF;
    Int_t           SUSY_nb;
    Double_t        qScale;
    Double_t        mcWeight;
+   vector<float>   *pdfWeights;
    vector<int>     *topDecayCode;
+   Int_t           ZDecayMode;
    Int_t           flavorHistory;
-   Int_t ZDecayMode; //====== begin end
 
    // List of branches
    TBranch        *b_runNumber;   //!
@@ -604,6 +605,7 @@ public :
    TBranch        *b_tauID_byTaNCfrOnePercent_PF;   //!
    TBranch        *b_tauID_byTaNCfrHalfPercent_PF;   //!
    TBranch        *b_tauID_byTaNCfrQuarterPercent_PF;   //!
+   TBranch        *b_muonIsRA2;   //!
    TBranch        *b_muonIsGlobalMuon;   //!
    TBranch        *b_muonIsGlobalMuonPromptTight;   //!
    TBranch        *b_muonPt;   //!
@@ -621,9 +623,9 @@ public :
    TBranch        *b_muonVtx_z;   //!
    TBranch        *b_muonEcalVeto;   //!
    TBranch        *b_muonHcalVeto;   //!
-   TBranch        *b_nMuons;   //!
    TBranch        *b_passesBadPFMuonFilter;   //!
    TBranch        *b_passesInconsistentMuonPFCandidateFilter;   //!
+   TBranch        *b_eleIsRA2;   //!
    TBranch        *b_eleEt;   //!
    TBranch        *b_eleEta;   //!
    TBranch        *b_elePhi;   //!
@@ -635,7 +637,7 @@ public :
    TBranch        *b_eleIDLoose;   //!
    TBranch        *b_eleIDRobustTight;   //!
    TBranch        *b_elePassID;   //!
-   TBranch        *b_nElectrons;   //!
+   TBranch        *b_muonIsRA2_PF;   //!
    TBranch        *b_muonIsGlobalMuon_PF;   //!
    TBranch        *b_muonIsGlobalMuonPromptTight_PF;   //!
    TBranch        *b_muonPt_PF;   //!
@@ -653,9 +655,9 @@ public :
    TBranch        *b_muonVtx_z_PF;   //!
    TBranch        *b_muonEcalVeto_PF;   //!
    TBranch        *b_muonHcalVeto_PF;   //!
-   TBranch        *b_nMuons_PF;   //!
    TBranch        *b_passesBadPFMuonFilter_PF;   //!
    TBranch        *b_passesInconsistentMuonPFCandidateFilter_PF;   //!
+   TBranch        *b_eleIsRA2_PF;   //!
    TBranch        *b_eleEt_PF;   //!
    TBranch        *b_eleEta_PF;   //!
    TBranch        *b_elePhi_PF;   //!
@@ -667,13 +669,13 @@ public :
    TBranch        *b_eleIDLoose_PF;   //!
    TBranch        *b_eleIDRobustTight_PF;   //!
    TBranch        *b_elePassID_PF;   //!
-   TBranch        *b_nElectrons_PF;   //!
    TBranch        *b_SUSY_nb;   //!
    TBranch        *b_qScale;   //!
    TBranch        *b_mcWeight;   //!
+   TBranch        *b_pdfWeights;   //!
    TBranch        *b_topDecayCode;   //!
+   TBranch        *b_ZDecayMode;   //!
    TBranch        *b_flavorHistory;   //!
-   TBranch        *b_ZDecayMode;   // ===== begin end
 
    basicLoop(TTree *tree=0, TTree *infotree=0, TTree *ecaltree=0);    // ========================================== begin, end
    virtual ~basicLoop();
@@ -683,7 +685,6 @@ public :
    virtual void     Init(TTree *tree);
    virtual Bool_t   Notify();
    virtual void     Show(Long64_t entry = -1);
-
    // ========================================== begin
    //first the functions in basicLoop.C
    //these are "User" functions that loop over events.
@@ -707,7 +708,6 @@ public :
    //some stuff that is used internally
    void fillTightJetInfo();
    void InitJets();
-   bool isV00_02_04() {return findInputName().Contains("V00-02-04");}
    void fillEcalVetoList(TTree* ecaltree);
 
    //performance timing
@@ -856,7 +856,6 @@ public :
    //   double getMinDeltaR_bj(unsigned int bindex);
    double getDeltaPhi(double phi1, double phi2);
    // ========================================== end
-
 };
 
 #endif
@@ -904,6 +903,7 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree, TTree *ecaltree)
    }
   // ========================================== end
 
+
    Init(tree);
    // ========================================== begin
    if (ecaltree != 0) fillEcalVetoList(ecaltree); else ecalVetoEvents_.clear();
@@ -945,7 +945,6 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree, TTree *ecaltree)
      assert(0);
    }
    // ========================================== end
-
 }
 
 basicLoop::~basicLoop()
@@ -955,6 +954,7 @@ basicLoop::~basicLoop()
   //if (!fChain) return;
   // delete fChain->GetCurrentFile();
   // ========================================== end
+
 }
 
 Int_t basicLoop::GetEntry(Long64_t entry)
@@ -1130,6 +1130,7 @@ void basicLoop::Init(TTree *tree)
    tauID_byTaNCfrOnePercent_PF = 0;
    tauID_byTaNCfrHalfPercent_PF = 0;
    tauID_byTaNCfrQuarterPercent_PF = 0;
+   muonIsRA2 = 0;
    muonIsGlobalMuon = 0;
    muonIsGlobalMuonPromptTight = 0;
    muonPt = 0;
@@ -1147,6 +1148,7 @@ void basicLoop::Init(TTree *tree)
    muonVtx_z = 0;
    muonEcalVeto = 0;
    muonHcalVeto = 0;
+   eleIsRA2 = 0;
    eleEt = 0;
    eleEta = 0;
    elePhi = 0;
@@ -1158,6 +1160,7 @@ void basicLoop::Init(TTree *tree)
    eleIDLoose = 0;
    eleIDRobustTight = 0;
    elePassID = 0;
+   muonIsRA2_PF = 0;
    muonIsGlobalMuon_PF = 0;
    muonIsGlobalMuonPromptTight_PF = 0;
    muonPt_PF = 0;
@@ -1175,6 +1178,7 @@ void basicLoop::Init(TTree *tree)
    muonVtx_z_PF = 0;
    muonEcalVeto_PF = 0;
    muonHcalVeto_PF = 0;
+   eleIsRA2_PF = 0;
    eleEt_PF = 0;
    eleEta_PF = 0;
    elePhi_PF = 0;
@@ -1186,8 +1190,8 @@ void basicLoop::Init(TTree *tree)
    eleIDLoose_PF = 0;
    eleIDRobustTight_PF = 0;
    elePassID_PF = 0;
+   pdfWeights = 0;
    topDecayCode = 0;
-   ZDecayMode=-1;//============= begin end
    // Set branch addresses and branch pointers
    if (!tree) return;
    fChain = tree;
@@ -1350,6 +1354,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("tauID_byTaNCfrOnePercent_PF", &tauID_byTaNCfrOnePercent_PF, &b_tauID_byTaNCfrOnePercent_PF);
    fChain->SetBranchAddress("tauID_byTaNCfrHalfPercent_PF", &tauID_byTaNCfrHalfPercent_PF, &b_tauID_byTaNCfrHalfPercent_PF);
    fChain->SetBranchAddress("tauID_byTaNCfrQuarterPercent_PF", &tauID_byTaNCfrQuarterPercent_PF, &b_tauID_byTaNCfrQuarterPercent_PF);
+   fChain->SetBranchAddress("muonIsRA2", &muonIsRA2, &b_muonIsRA2);
    fChain->SetBranchAddress("muonIsGlobalMuon", &muonIsGlobalMuon, &b_muonIsGlobalMuon);
    fChain->SetBranchAddress("muonIsGlobalMuonPromptTight", &muonIsGlobalMuonPromptTight, &b_muonIsGlobalMuonPromptTight);
    fChain->SetBranchAddress("muonPt", &muonPt, &b_muonPt);
@@ -1367,9 +1372,9 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("muonVtx_z", &muonVtx_z, &b_muonVtx_z);
    fChain->SetBranchAddress("muonEcalVeto", &muonEcalVeto, &b_muonEcalVeto);
    fChain->SetBranchAddress("muonHcalVeto", &muonHcalVeto, &b_muonHcalVeto);
-   fChain->SetBranchAddress("nMuons", &nMuons, &b_nMuons);
    fChain->SetBranchAddress("passesBadPFMuonFilter", &passesBadPFMuonFilter, &b_passesBadPFMuonFilter);
    fChain->SetBranchAddress("passesInconsistentMuonPFCandidateFilter", &passesInconsistentMuonPFCandidateFilter, &b_passesInconsistentMuonPFCandidateFilter);
+   fChain->SetBranchAddress("eleIsRA2", &eleIsRA2, &b_eleIsRA2);
    fChain->SetBranchAddress("eleEt", &eleEt, &b_eleEt);
    fChain->SetBranchAddress("eleEta", &eleEta, &b_eleEta);
    fChain->SetBranchAddress("elePhi", &elePhi, &b_elePhi);
@@ -1381,7 +1386,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("eleIDLoose", &eleIDLoose, &b_eleIDLoose);
    fChain->SetBranchAddress("eleIDRobustTight", &eleIDRobustTight, &b_eleIDRobustTight);
    fChain->SetBranchAddress("elePassID", &elePassID, &b_elePassID);
-   fChain->SetBranchAddress("nElectrons", &nElectrons, &b_nElectrons);
+   fChain->SetBranchAddress("muonIsRA2_PF", &muonIsRA2_PF, &b_muonIsRA2_PF);
    fChain->SetBranchAddress("muonIsGlobalMuon_PF", &muonIsGlobalMuon_PF, &b_muonIsGlobalMuon_PF);
    fChain->SetBranchAddress("muonIsGlobalMuonPromptTight_PF", &muonIsGlobalMuonPromptTight_PF, &b_muonIsGlobalMuonPromptTight_PF);
    fChain->SetBranchAddress("muonPt_PF", &muonPt_PF, &b_muonPt_PF);
@@ -1399,9 +1404,9 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("muonVtx_z_PF", &muonVtx_z_PF, &b_muonVtx_z_PF);
    fChain->SetBranchAddress("muonEcalVeto_PF", &muonEcalVeto_PF, &b_muonEcalVeto_PF);
    fChain->SetBranchAddress("muonHcalVeto_PF", &muonHcalVeto_PF, &b_muonHcalVeto_PF);
-   fChain->SetBranchAddress("nMuons_PF", &nMuons_PF, &b_nMuons_PF);
    fChain->SetBranchAddress("passesBadPFMuonFilter_PF", &passesBadPFMuonFilter_PF, &b_passesBadPFMuonFilter_PF);
    fChain->SetBranchAddress("passesInconsistentMuonPFCandidateFilter_PF", &passesInconsistentMuonPFCandidateFilter_PF, &b_passesInconsistentMuonPFCandidateFilter_PF);
+   fChain->SetBranchAddress("eleIsRA2_PF", &eleIsRA2_PF, &b_eleIsRA2_PF);
    fChain->SetBranchAddress("eleEt_PF", &eleEt_PF, &b_eleEt_PF);
    fChain->SetBranchAddress("eleEta_PF", &eleEta_PF, &b_eleEta_PF);
    fChain->SetBranchAddress("elePhi_PF", &elePhi_PF, &b_elePhi_PF);
@@ -1413,13 +1418,13 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("eleIDLoose_PF", &eleIDLoose_PF, &b_eleIDLoose_PF);
    fChain->SetBranchAddress("eleIDRobustTight_PF", &eleIDRobustTight_PF, &b_eleIDRobustTight_PF);
    fChain->SetBranchAddress("elePassID_PF", &elePassID_PF, &b_elePassID_PF);
-   fChain->SetBranchAddress("nElectrons_PF", &nElectrons_PF, &b_nElectrons_PF);
    fChain->SetBranchAddress("SUSY_nb", &SUSY_nb, &b_SUSY_nb);
    fChain->SetBranchAddress("qScale", &qScale, &b_qScale);
    fChain->SetBranchAddress("mcWeight", &mcWeight, &b_mcWeight);
+   fChain->SetBranchAddress("pdfWeights", &pdfWeights, &b_pdfWeights);
    fChain->SetBranchAddress("topDecayCode", &topDecayCode, &b_topDecayCode);
+   fChain->SetBranchAddress("ZDecayMode", &ZDecayMode, &b_ZDecayMode);
    fChain->SetBranchAddress("flavorHistory", &flavorHistory, &b_flavorHistory);
-   if (isV00_02_04())  fChain->SetBranchAddress("ZDecayMode", &ZDecayMode, &b_ZDecayMode); // ========== begin end
    Notify();
 }
 
@@ -1703,32 +1708,26 @@ int basicLoop::countMu() {
       reliso = (muonTrackIso->at(i) + muonHcalIso->at(i) + muonEcalIso->at(i))/muonPt->at(i);
       isglobal = muonIsGlobalMuon->at(i);
     }
-    else if (theLeptonType_ ==kPFLeptons) {
+    else if (theLeptonType_ ==kPFLeptons ||theLeptonType_ ==kPFLeptonsRA2) {
       pt = muonPt_PF->at(i);
       eta = muonEta_PF->at(i);
       reliso = (muonTrackIso_PF->at(i) + muonHcalIso_PF->at(i) + muonEcalIso_PF->at(i))/muonPt_PF->at(i);
       isglobal = muonIsGlobalMuon_PF->at(i);
     }
-    else if (theLeptonType_ ==kPFLeptonsRA2) {
-      pt = muonPt_PF->at(i);
-      eta = muonEta_PF->at(i);
-      //it appears that RA2 uses a very differently defined iso variable. i cannot calculate it from my ntuples
-      reliso = (muonTrackIso_PF->at(i) + muonHcalIso_PF->at(i) + muonEcalIso_PF->at(i))/muonPt_PF->at(i);
-      isglobal = muonIsGlobalMuon_PF->at(i) && muonIsGlobalMuonPromptTight_PF->at(i);
-      // muonNhits_PF //which set of hits is this?
-      //pixel hits?
-    }
     else {assert(0);}
 
     //now make cuts
-    if ( !isglobal ) continue;
-    if ( pt < 10 ) continue;
+    if (theLeptonType_ == kPFLeptonsRA2) {
+      if ( ! muonIsRA2_PF->at(i) ) continue;
+    }
+    else { //not bothering with the assert anymore!
+      if ( !isglobal ) continue;
+      if ( pt < 10 ) continue; 
+      if (fabs(eta) > 2.5) continue;
+      if ( reliso > 0.2) continue;
+    }
 
-    if       (theLeptonType_ ==kPFLeptonsRA2 &&  fabs(eta) > 2.4) continue;
-    else  if (theLeptonType_ !=kPFLeptonsRA2 &&  fabs(eta) > 2.5) continue;
-
-    if ( reliso > 0.2) continue;
-
+    //once we reach here we've got a good muon in hand
     //FIXME adding this as a hack...i would like to do this more elegantly, but for now this will work
     if (ngoodmu==0) muonpt1_ = pt;
 
@@ -1777,12 +1776,14 @@ int basicLoop::countEle() {
     else {assert(0);}
 
     //make cuts    
-    if      (theLeptonType_ ==kPFLeptons    && et < 15 ) continue;
-    else if (theLeptonType_ ==kPFLeptonsRA2 && et < 10 ) continue;
-
-    if ( fabs(eta) > 2.5 ) continue;
-    if ( reliso > 0.2) continue;
-    
+    if (theLeptonType_ == kPFLeptonsRA2) {
+      if ( ! eleIsRA2_PF->at(i) ) continue;
+    }
+    else {
+      if ( et < 15 ) continue;
+      if ( fabs(eta) > 2.5 ) continue;
+      if ( reliso > 0.2) continue;
+    }
     //if any electron passes all of these cuts, then it is good
 
     //FIXME adding this as a hack...i would like to do this more elegantly, but for now this will work
@@ -2140,7 +2141,7 @@ with Uncorrect Pt>20 GeV, not just jets passing my 'loose' cuts
 }
 
 std::pair<float,float> basicLoop::getUnclusteredSmearedMETxy() {
-  assert( theLeptonType_ == kPFLeptons);  //hard-code for PF leptons for now
+  assert( theLeptonType_ == kPFLeptons || theLeptonType_ == kPFLeptonsRA2 );  //hard-code for PF leptons for now
 
   /*
 twiki says to make sure we use JER bias-corrected uncorrected jet pT.
@@ -2758,6 +2759,17 @@ std::pair<float,float> basicLoop::getJERAdjustedMHTxy() {
 
       mhtx -= getLooseJetPt(i) * cos(loosejetPhi->at(i));
       mhty -= getLooseJetPt(i) * sin(loosejetPhi->at(i));
+    }
+  }
+
+  //this is an experiment! add taus in!
+  //FIXME hard-coded for PF
+  for (unsigned int i=0; i<tauPt_PF->size(); i++) {
+    //start by using same pT threshold as jets
+    if ( tauPt_PF->at(i) > 30 && fabs(tauEta_PF->at(i))<5 ) {
+
+      mhtx -= tauPt_PF->at(i) * cos(tauPhi_PF->at(i));
+      mhty -= tauPt_PF->at(i) * sin(tauPhi_PF->at(i));
     }
   }
   
@@ -4042,5 +4054,6 @@ void basicLoop::stopTimer(const Long64_t ntotal) {
 }
 
 // ========================================== end
+
 
 #endif // #ifdef basicLoop_cxx
