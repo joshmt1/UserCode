@@ -21,8 +21,10 @@ non-stacked drawing is not yet implemented
 #include "THStack.h"
 #include "TH1.h"
 #include "TLine.h"
+#include "TCut.h"
 
 //not clear yet whether I want to use HistHolder.h or not
+#include <fstream>
 
 #include <iostream>
 #include <map>
@@ -38,7 +40,9 @@ std::map<TString, TString> sampleLabel_;
 std::map<TString, UInt_t> sampleMarkerStyle_;
 
 TString inputPath = "/cu2/joshmt/";
-TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
+//TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
+TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLepRA20e0mu_minDP_MuonEcalCleaning";
+//TString cutdesc = "Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonEcalCleaning";
 //TString cutdesc = "Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
 TString selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
 
@@ -46,7 +50,7 @@ float leg_x1 = 0.696, leg_x2=0.94, leg_y1=0.5, leg_y2=0.92;
 
 bool doRatio_=false;
 bool logy_=false;
-bool dostack_=false;
+bool dostack_=true;
 bool doleg_=true;
 bool dodata_=true;
 bool addOverflow_=true;
@@ -251,7 +255,7 @@ void loadSamples() {
   //  samples_.push_back("PythiaQCD");
   samples_.push_back("PythiaPUQCDFlat");
   samples_.push_back("TTbarJets");
-  samples_.push_back("SingleTop");
+   samples_.push_back("SingleTop");
   samples_.push_back("WJets");
   samples_.push_back("ZJets");
   samples_.push_back("Zinvisible");
@@ -261,8 +265,8 @@ void loadSamples() {
   //no need to ever comment these out
   sampleColor_["LM13"] = kGray; //borrowed from a different sample
   sampleColor_["QCD"] = kYellow;
-  sampleColor_["PythiaQCD"] = kYellow-7;
-  sampleColor_["PythiaPUQCDFlat"] = kYellow-5;
+  sampleColor_["PythiaQCD"] = kYellow;
+  sampleColor_["PythiaPUQCDFlat"] = kYellow;
   sampleColor_["TTbarJets"]=kRed+1;
   sampleColor_["SingleTop"] = kMagenta;
   sampleColor_["WJets"] = kGreen-3;
@@ -306,6 +310,7 @@ void loadSamples() {
   dname+=cutdesc;
   dname+=".data.root";
   dname.Prepend(inputPath);
+  if (dname.Contains("JERbias")) dname.ReplaceAll("JERbias_",""); //JERbias not relevant for data
   if ( dodata_) {
     fdata = new TFile(dname);
     if (fdata->IsZombie()) cout<<"Problem with data file! "<<dname<<endl;
@@ -313,8 +318,8 @@ void loadSamples() {
 
 }
 
-void drawSimple(const TString var, const int nbins, const float low, const float high, const TString filename, 
-		const TString histname , const TString samplename) {
+float drawSimple(const TString var, const int nbins, const float low, const float high, const TString filename, 
+		 const TString histname , const TString samplename) {
 
   loadSamples();
 
@@ -334,6 +339,7 @@ void drawSimple(const TString var, const int nbins, const float low, const float
       }
     }
   }
+  if (tree==0) {cout<<"Something went wrong finding your sample!"<<endl; return 0;}
   gROOT->cd();
   
   //when owen explicitly uses a histo type, it is a TH1F
@@ -341,12 +347,13 @@ void drawSimple(const TString var, const int nbins, const float low, const float
   hh.Sumw2();
    
   tree->Project(histname,var,getCutString().Data());
+  float theIntegral = hh.Integral(0,nbins+1);
 
   //at this point i've got a histogram. what more could i want?
   TFile fout(filename,"UPDATE");
   hh.Write();
   fout.Close();
-
+  return theIntegral;
 }
 
 void drawPlots(const TString var, const int nbins, const float low, const float high, const TString xtitle, const TString ytitle, TString filename="") {
@@ -682,6 +689,7 @@ void drawrplots() {
 .L drawReducedTrees.C++
   */
 
+  setStackMode(false);
   doData(false);
 
   //no met, no mindeltaphi
@@ -711,6 +719,8 @@ void drawSomething() {
   /* for reference, here is all cuts (>=0 b)
 selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
 
+//here is all cuts but with ECAL cleaning removed
+selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
 
 .L drawReducedTrees.C++
 
@@ -739,42 +749,63 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
   var="MET"; xtitle="E_{T}^{miss} [GeV]";
   ratioMin = 0; ratioMax = 2;
 
-  selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET");
 
-  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET_ge1b");
 
-  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET_eq1b");
 
-  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET_ge2b");
 
+  setLogY(true);   setPlotMinimum(1e-1);
+  nbins=50; low= 0; high=500;
+  var="MET"; xtitle="E_{T}^{miss} [GeV]";
+  ratioMin = 0.5; ratioMax = 1.5;
+  selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "H_METw");
+
   // ==== MHT plot === (no MET cut)
-  setLogY(true);  setPlotMinimum(1);
-  nbins=25; low= 0; high=260;
-  ratioMin = 0.4; ratioMax = 1.5;
+  setLogY(true);  setPlotMinimum(1e-1);
+  nbins=50; low= 0; high=500;
+  ratioMin = 0.5; ratioMax = 1.5;
   var="MHT"; xtitle="H_{T}^{miss} [GeV]";
 
-  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "H_MHT");
+
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MHT_ge1b");
 
-  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MHT_ge2b");
+
+  //to compare to RA2
+  setLogY(true);  setPlotMinimum(1);
+  nbins=16; low= 0; high=160;
+  selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "H_MHTveryloose");
+
 
   // ==== minDeltaPhi plots ====
   setLogY(false);
   resetPlotMinimum();
   nbins=10; low=0; high = TMath::Pi() + 0.001;
   var="minDeltaPhi"; xtitle="min(#Delta#phi[ jets 1..3, E_{T}^{miss} ] )";
-  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutCleaning==1";
+
+  selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "HminDeltaPhiMETj");
+
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "HminDeltaPhiMETj_ge1b");
 
-  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutCleaning==1";
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "HminDeltaPhiMETj_eq1b");
 
-  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutCleaning==1";
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "HminDeltaPhiMETj_ge2b");
 
   // ==== HT plots ==== //in this case this is not an N-1 plot, because we've already cut on HT
@@ -782,13 +813,13 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
   setLogY(false);
   nbins=10; low=300; high = 1000;
   var="HT"; xtitle="H_{T} (GeV)";
-  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_HT_ge1b");
 
-  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_HT_eq1b");
 
-  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_HT_ge2b");
 
   // ==== n jets ====
@@ -796,49 +827,49 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
   resetPlotMinimum();
   setLogY(false);
   var="njets"; xtitle="Jet multiplicity";
-  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "Hnjets_ge1b");
 
-  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "Hnjets_eq1b");
 
-  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 &&  MET>=100 && MET<150&& cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "Hnjets_ge2b");
 
   // ==== n b jets ====
-  nbins=5; low=0; high = 5;
+  nbins=4; low=0; high = 4;
   resetPlotMinimum();
   setLogY(false);
   var="nbjets"; xtitle="Number of b-tagged jets";
-  selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1 && cut3Jets==1";
+  selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && cut3Jets==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "Hnbjets");
 
   // ==== n Electrons ====
-  nbins=4; low=0; high= 4;
+  nbins=3; low=0; high= 3;
   resetPlotMinimum();
   setLogY(false);
   var="nElectrons"; xtitle="Number of electrons";
-  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "HnElectrons_ge1b");
 
-  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "HnElectrons_eq1b");
 
-  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "HnElectrons_ge2b");
 
   // ==== n Muons ====
-  nbins=4; low=0; high= 4;
+  nbins=3; low=0; high= 3;
   resetPlotMinimum();
   setLogY(false);
   var="nMuons"; xtitle="Number of muons";
-  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "HnMuons_ge1b");
 
-  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "HnMuons_eq1b");
 
-  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "HnMuons_ge2b");
 
   // ==== lead jet pT ====
@@ -847,24 +878,29 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
   setLogY(false);
   var="jetpt1"; xtitle="p_{T} of lead jet (GeV)";
 
-  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "Hjetpt1_ge1b");
 
-  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "Hjetpt1_eq1b");
 
-  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "Hjetpt1_ge2b");
 
   // ======= Owen's variables =====
-  nbins=40; low=50; high= 550;
+  nbins=10; low=50; high= 550;
   resetPlotMinimum();
   setLogY(false);
   var="bestTopMass"; xtitle="Best top mass (GeV)";
 
-  //relaxed MET cut
-  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && cutCleaning==1 && MET>=100";
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>=100 && MET<150";
   drawPlots(var,nbins,low,high,xtitle,"Events", "bestTopMass_ge1b");
+
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>=100 && MET<150";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "bestTopMass_eq1b");
+
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>=100 && MET<150";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "bestTopMass_ge2b");
 
   // ======= study cleaning  =======
   //  bool passBadPFMuon, passInconsistentMuon, passEcalCleaning;
@@ -899,25 +935,106 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
 //   setLogY(false);
 //   var="bjetpt1"; xtitle="p_{T} of lead jet (GeV)";
 
-//   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+//   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
 //   drawPlots(var,nbins,low,high,xtitle,"Events", "Hjetpt1_ge1b");
 
-//   selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+//   selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
 //   drawPlots(var,nbins,low,high,xtitle,"Events", "Hjetpt1_eq1b");
 
-//   selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
+//   selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
 //   drawPlots(var,nbins,low,high,xtitle,"Events", "Hjetpt1_ge2b");
 
 }
 
 
-void drawOwen() {
+void drawOwen(bool doMinDPPass) {
 
   /*
 .L drawReducedTrees.C++
   */
 
-  selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && nbjets>=1 && MET>=80 && MET<150";// && cutCleaning==1";
-  drawSimple("bestTopMass",40,0,800,"simpleOutput.root", "bestM3j_met_80_150_ge1btag_ttbar","TTbarJets");
+  const  int nbins = 35;
+  const  float min=0;
+  const  float max=800;
 
+  const  TCut baseSelection = "cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1"; //no MET, no minDeltaPhi, no cleaning, no b tag
+  const  TCut passCleaning = "cutCleaning==1"; //apply all cleaning //"passInconsistentMuon == 1 && passBadPFMuon==1"; //apply cleaning but without ECAL dead cells
+  const  TCut passMinDeltaPhi = "cutDeltaPhi==1";
+  const  TCut failMinDeltaPhi = "cutDeltaPhi==0";
+  const  TCut ge1b =  "nbjets >= 1";
+  const  TCut ge2b =  "nbjets >= 2";
+  const  TCut eq1b =  "nbjets == 1";
+
+  //
+  TString histfilename= doMinDPPass ? "bestM3j-bins.pass.root" : "bestM3j-bins.fail.root";
+  TString textfilename= doMinDPPass ? "drawOwen.pass.output" : "drawOwen.fail.output";
+  TCut theMinDeltaPhiCut = doMinDPPass ? passMinDeltaPhi : failMinDeltaPhi;
+
+  ofstream ofile(textfilename.Data());
+
+  for (int ibtag = 0; ibtag<3; ibtag++) { //do this an ugly way for now
+    TCut theBTaggingCut = ge1b; TString btagstring = "ge1b";
+    if (ibtag==0) { //nothing to do
+    }
+    else if (ibtag==1) {
+      theBTaggingCut = eq1b; 
+      btagstring = "eq1b";
+    }
+    else if (ibtag==2) {
+      theBTaggingCut = ge2b; 
+      btagstring = "ge2b";
+    }
+    else assert(0);
+    ofile<<" == "<<btagstring<<" == "<<endl;
+
+    //these regions define the PDFs (templates)
+    TCut LSBMET = "MET>=0 && MET<50";
+    TCut theLSBSelection = baseSelection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && LSBMET;
+    selection_ = theLSBSelection.GetTitle();
+    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_0_50_"+btagstring+"btag_data","data");
+    
+    //this one is going to be handled by the flexible MET version....
+    //   TCut SBMET = "MET>=70 && MET<150";
+    //   TCut theSBSelection = baseSelection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && SBMET;
+    //   selection_ = theSBSelection.GetTitle();
+    //   drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_70_150_ge1btag_ttbar","TTbarJets");
+    
+    //now for a flexible MET region
+    //  int metCutLow = 60;
+    //  int metCutHigh = 140;
+    for (int metCutLow = 60; metCutLow <=130; metCutLow+=5) {
+      for (int metCutHigh = 140; metCutHigh <=150; metCutHigh+=5) {
+	TString metCutString; metCutString.Form("MET >= %d && MET < %d",metCutLow,metCutHigh);
+	ofile<<metCutString<<endl;
+	TCut METselection(metCutString.Data());
+	TCut theSelection = baseSelection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && METselection;
+	selection_ = theSelection.GetTitle();
+	TString nameOfHist;
+	nameOfHist.Form( "bestM3j_met_%d_%d_%stag_",metCutLow,metCutHigh,btagstring.Data());
+	ofile<<"ttbar = "<<drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"ttbar","TTbarJets")<<endl;
+	ofile<<"qcd   = "<<drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"qcd","PythiaPUQCDFlat")<<endl;
+	drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"data","data");
+      }
+    }
+    
+  }
+  ofile.close();
+
+  //trick to get the total SM histo filled. make sure SingleTop is commented out in the master list
+  /*
+  drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+  TFile fh(histfilename,"UPDATE");
+  totalsm->SetName("bestM3j_met_80_150_ge1btag_allsm");
+  totalsm->Write();
+  fh.Close();
+
+  drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_80_150_ge1btag_data","data"); //for the real fit
+  drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_80_150_ge1btag_qcd","PythiaPUQCDFlat");
+  drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_80_150_ge1btag_ttbar","TTbarJets");
+
+  drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_80_150_ge1btag_wjets","WJets");
+  drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_80_150_ge1btag_zjets","ZJets");
+
+  drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_80_150_ge1btag_zinvis","Zinvisible");
+  */
 }
