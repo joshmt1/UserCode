@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.18 2011/03/03 16:37:20 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.19 2011/03/09 14:23:14 joshmt Exp $
 //
 //
 
@@ -64,6 +64,7 @@ private:
   bool inconsistentMuonPFCandidateFilter(const edm::Event& iEvent, edm::InputTag muonSource, double ptMin = 100, double maxPTDiff = 0.1, bool verbose = false);
 
   //End Code from RA2 for filtering fake MHT with muons
+  bool isIsolatedMuon( const pat::Muon& muonRef );
 
   //a clever piece of code stolen from Freya
   template <class C>
@@ -193,6 +194,8 @@ private:
   std::map< std::string, std::vector<bool> > muonPassID;
 
   std::map< std::string, std::vector<float> > muonVtx_z;
+
+  std::map< std::string, std::vector<float> > muonEoverP;
 
   std::map< std::string, std::vector<float> > muonHcalVeto;
   std::map< std::string, std::vector<float> > muonEcalVeto;

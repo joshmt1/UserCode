@@ -22,7 +22,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.31 2011/03/03 16:37:20 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.32 2011/03/09 14:23:14 joshmt Exp $
 //
 //
 
@@ -88,6 +88,10 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 #include "DataFormats/PatCandidates/interface/Tau.h"
 
 #include "DataFormats/VertexReco/interface/Vertex.h"
+
+//test
+//#include "RecoParticleFlow/PFProducer/interface/PFMuonAlgo.h"
+
 
 #include "CUSUSY/BasicTreeMaker/interface/BasicTreeMaker.h"
 
@@ -519,8 +523,62 @@ bool BasicTreeMaker::inconsistentMuonPFCandidateFilter(const edm::Event& iEvent,
   return passFilter;
 
 }
+ //End Code from RA2 for filtering fake MHT with muons
 
-  //End Code from RA2 for filtering fake MHT with muons
+//more or less copied and pasted from
+//http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/RecoParticleFlow/PFProducer/src/PFMuonAlgo.cc?revision=1.20&view=markup
+//except that I'm changing it to use pat::Muon instead of a 'muonRef'
+//This is used only for my half-way implementation of the greedy muon filter
+bool
+BasicTreeMaker::isIsolatedMuon( const pat::Muon& muonRef ){
+  // Isolated Muons which are missed by standard cuts are nearly always global+tracker
+  if ( !muonRef.isGlobalMuon() ) return false;
+
+  // If it's not a tracker muon, only take it if there are valid muon hits
+
+  reco::TrackRef standAloneMu = muonRef.standAloneMuon();
+
+  if ( !muonRef.isTrackerMuon() ){
+    if(standAloneMu->hitPattern().numberOfValidMuonDTHits() == 0 &&
+       standAloneMu->hitPattern().numberOfValidMuonCSCHits() ==0) return false;
+  }
+  
+  // for isolation, take the smallest pt available to reject fakes
+
+  reco::TrackRef combinedMu = muonRef.combinedMuon();
+  double smallestMuPt = combinedMu->pt();
+  
+  if(standAloneMu->pt()<smallestMuPt) smallestMuPt = standAloneMu->pt();
+  
+  if(muonRef.isTrackerMuon())
+    {
+      reco::TrackRef trackerMu = muonRef.track();
+      if(trackerMu->pt() < smallestMuPt) smallestMuPt= trackerMu->pt();
+    }
+     
+  double sumPtR03 = muonRef.isolationR03().sumPt;
+  double emEtR03 = muonRef.isolationR03().emEt;
+  double hadEtR03 = muonRef.isolationR03().hadEt;
+  
+  double relIso = (sumPtR03 + emEtR03 + hadEtR03)/smallestMuPt;
+  //double relIso = sumPtR03/muonRef.pt();
+
+  /*
+  // protection against fake tracks -- only needed for tracker only, which isn't found in signal sample
+  if(muonRef.isTrackerMuon() && !muonRef.isGlobalMuon() && !muonRef.isStandAloneMuon())
+    {
+      reco::TrackRef trackerMu = muonRef.track();
+      
+      if(trackerMu->ptError()/trackerMu->pt() > 0.20) return false;
+    }
+  //std::cout<<" relIso "<<relIso<<std::endl;
+  */
+
+  if (relIso<0.1) return true;
+  else return false;
+}
+
+
 void
 BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned int il) {
 
@@ -563,6 +621,21 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
       //      else 	std::cout<<"NOT matching muons with pT = "<<imuon->pt()<<" "<<iRA2muon->pt()<<std::endl;
     }
     muonIsRA2[muTag].push_back(foundOverlap);
+
+    //this is a pseudo-implementation of the greedy muon filter.
+    //it does *not* actually faithfully reimplement it; that would have required RECO (I think)
+    //instead of looking at all PFCandidates that are muons, I start with the muon list
+    if (imuon->pfCandidateRef().isNonnull() ) {
+      bool isIso = isIsolatedMuon(*imuon);
+    
+      if (isIso) {
+	double totalCaloEnergy = imuon->pfCandidateRef()->rawEcalEnergy() +  imuon->pfCandidateRef()->rawHcalEnergy();
+	float eOverP = totalCaloEnergy/imuon->pfCandidateRef()->p(); 
+	muonEoverP[muTag].push_back( eOverP );
+      }
+      else   muonEoverP[muTag].push_back( -1 );
+    }
+    else   muonEoverP[muTag].push_back( -2 );
 
     //now storing ALL muons
     const  bool isGlobal = imuon->muonID("AllGlobalMuons");
@@ -699,11 +772,9 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
     //    elePt[eTag].push_back( ielectron->pt() );
     eleEta[eTag].push_back( ielectron->eta());
     elePhi[eTag].push_back( ielectron->phi());
-    //std::cout<<"--elec 3--"<<std::endl;
     eleTrackIso[eTag].push_back( ielectron->dr03TkSumPt() );
     eleEcalIso[eTag].push_back( ielectron->dr03EcalRecHitSumEt() );
     eleHcalIso[eTag].push_back( ielectron->dr03HcalTowerSumEt() );
-    //std::cout<<"--elec 4--"<<std::endl;
 
     eledB[eTag].push_back( ielectron->dB());
 
@@ -1166,6 +1237,8 @@ BasicTreeMaker::resetTreeVariables() {
     muonEcalIso[muonAlgorithmNames_[il]].clear();
     muonHcalIso[muonAlgorithmNames_[il]].clear();
 
+    muonEoverP[muonAlgorithmNames_[il]].clear();
+
     muonChi2[muonAlgorithmNames_[il]].clear();
     muonNdof[muonAlgorithmNames_[il]].clear();
     muonNhits[muonAlgorithmNames_[il]].clear();
@@ -1302,6 +1375,7 @@ BasicTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   fillTrackInfo(iEvent,iSetup);
   if (isMC_)    fillMCInfo(iEvent,iSetup);
+
   tree_->Fill();
 
 // #ifdef THIS_IS_AN_EVENT_EXAMPLE
@@ -1513,6 +1587,8 @@ BasicTreeMaker::beginJob()
     tree_->Branch( (string("muonIsRA2")+tail).c_str(),&muonIsRA2[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonIsGlobalMuon")+tail).c_str(),&muonIsGlobalMuon[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonIsGlobalMuonPromptTight")+tail).c_str(),&muonIsGlobalMuonPromptTight[muonAlgorithmNames_[il]]);
+
+    tree_->Branch( (string("muonEoverP")+tail).c_str(),&muonEoverP[muonAlgorithmNames_[il]]);
 
     tree_->Branch( (string("muonPt")+tail).c_str(),&muonPt[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonEta")+tail).c_str(),&muonEta[muonAlgorithmNames_[il]]);
