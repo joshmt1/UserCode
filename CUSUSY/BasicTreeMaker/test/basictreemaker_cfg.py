@@ -15,7 +15,7 @@ process.source = cms.Source("PoolSource",
 #   'file:/cu1/joshmt/AOD/Fall10-QCD_TuneD6T_HT-1000_7TeV-madgraph-C473857E-99DA-DF11-8531-00163691DC86.SUSYPAT.root'
   'INPUT'
  #   'file:/afs/cern.ch/user/s/ssekmen/public/Sezen_PAT.root'
- #   'file:/cu1/joshmt/AOD/387/TTJets_TuneD6T_Fall10_387_PAT_9_1_rY1.root'
+#    'file:/cu1/joshmt/AOD/387/TTJets_TuneD6T_Fall10_387_PAT_9_1_rY1.root'
 #   'file:/cu1/joshmt/AOD/387/PAT_387_run2010B_multijet_nov4rereco_9_1_9wD.root'
 #    'file:/cu1/joshmt/DonPAT/data/PAT_38X_jetmettau_sep17rereco_sep11_9_1_wJJ.root'
 #    'file:/cu1/joshmt/DonPAT/MoreMSSM_PAT_10_1_osg.root'
@@ -54,6 +54,8 @@ process.RA2muonSelector.VertexSource = cms.InputTag(pvString)
 process.RA2muonSelectorPF = muonSelector.clone()
 process.RA2muonSelectorPF.MuonSource = cms.InputTag(muonCollectionPF)
 process.RA2muonSelectorPF.VertexSource = cms.InputTag(pvString)
+
+############################# START RA2 cleaning ####################################
 
 
 ############################# START ntuple specifics ####################################
@@ -96,8 +98,8 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
                                                                       "byTaNCfrOnePercent","byTaNCfrHalfPercent", "byTaNCfrQuarterPercent"),
 #first the names of various collections
                                         pvTag = cms.InputTag(pvString),
-                                        jetAlgorithms = cms.vstring( "cleanPatJetsAK5Calo","cleanPatJetsAK5JPT","selectedPatJetsPF" ), #real collection names
-                                        jetNames      = cms.vstring( "calo","JPT","PF" ), #for TTree use
+                                        jetAlgorithms = cms.vstring( "cleanPatJetsAK5Calo","selectedPatJetsPF" ), #real collection names
+                                        jetNames      = cms.vstring( "calo","PF" ), #for TTree use
                                         metAlgorithms = cms.vstring( "patMETsAK5Calo", "patMETsTC","patMETsPF","patMETsTypeIPF"),
                                         metNames = cms.vstring( "calo", "tc","pf","pf1"),
 
