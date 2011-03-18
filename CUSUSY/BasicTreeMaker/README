@@ -1,6 +1,8 @@
 Release notes
 --
 
+V00-03-01 - critical bug fix in muon cleaning. Also add some additional variables to facilitate studying other tail cleaning.
+
 V00-03-00 - add RA2 Leptons (requires checking out RA2 code), add PDF uncertainties (requires special code and special setup for compilation)
 
 V00-02-04 - add some code that specifically look at the decay mode of Z0. Adds one variable to ntuple
