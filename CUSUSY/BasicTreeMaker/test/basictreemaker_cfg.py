@@ -55,8 +55,6 @@ process.RA2muonSelectorPF = muonSelector.clone()
 process.RA2muonSelectorPF.MuonSource = cms.InputTag(muonCollectionPF)
 process.RA2muonSelectorPF.VertexSource = cms.InputTag(pvString)
 
-############################# START RA2 cleaning ####################################
-
 
 ############################# START ntuple specifics ####################################
 

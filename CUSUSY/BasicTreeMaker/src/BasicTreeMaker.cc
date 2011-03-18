@@ -22,7 +22,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.32 2011/03/09 14:23:14 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.33 2011/03/18 13:24:22 joshmt Exp $
 //
 //
 
@@ -150,9 +150,6 @@ BasicTreeMaker::BasicTreeMaker(const edm::ParameterSet& iConfig) :
   loosejetPtMin_   (iConfig.getParameter<double>("loosejetPtMin")), 
   loosejetEtaMax_  (iConfig.getParameter<double>("loosejetEtaMax")),
 
-  //  jetInfoFilled_(false),
-  //  leptonInfoFilled_(false),
-  trackInfoFilled_(false),
   tolerance_(1e-4)
 {
 
@@ -357,12 +354,14 @@ BasicTreeMaker::fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSet
   //std::cout<<" == fillMCInfo =="<<std::endl;
 
   // === get the process qscale (pthat) ===
-
   edm::Handle<GenEventInfoProduct> genEventInfo;
   iEvent.getByLabel("generator", genEventInfo);
 
   qScale=genEventInfo->qScale();
+  ptHat = genEventInfo->hasBinningValues() ? genEventInfo->binningValues()[0] : 0;
   mcWeight = genEventInfo->weight();
+
+
   // === get some info about the decay structure in the event ===
 
   edm::Handle<reco::GenParticleCollection> genParticles;
@@ -419,22 +418,31 @@ BasicTreeMaker::fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSet
 void
 BasicTreeMaker::fillTrackInfo(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
-  if (trackInfoFilled_) return;
-
   edm::Handle<reco::TrackCollection> generalTracks;
   iEvent.getByLabel("generalTracks", generalTracks); //TODO make this name configurable in py
 
+  //also need the main PV
+  edm::Handle<std::vector<reco::Vertex> > vtxs;
+  iEvent.getByLabel(pvLabel_, vtxs);
+  const reco::Vertex * vtx = &((*vtxs)[0]);
+
+  double sumpt=0;
   //no need to bother with sorting tracks
   for (reco::TrackCollection::const_iterator trit=generalTracks->begin(); trit!=generalTracks->end() ; trit++) {
-
+    //for general ntuple storage
     if (trit->pt() > 5 && fabs(trit->eta()) < 5) { //cuts TODO make them configurable
       trackPt.push_back(trit->pt());
       trackEta.push_back(trit->eta());
       trackPhi.push_back(trit->phi());
     }
-  }
 
-  trackInfoFilled_=true;
+    //for the tracking failure filter ...not so good that i'm hard-coding this stuff...
+    if (fabs(trit->dz(vtx->position())) > 1) continue;
+    if (fabs(trit->dxy(vtx->position())) > 0.2) continue;
+    sumpt += trit->pt();
+  }
+  SumPtOverHT = pfht_>0  ? sumpt/pfht_ : -1; //for tracking failure detection. can apply cut offline
+
 }
 
 void
@@ -464,7 +472,11 @@ BasicTreeMaker::fillTauInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
 
   //Code from RA2 for filtering fake MHT with muons:
 
-bool BasicTreeMaker::badPFMuonFilter(const edm::Event& iEvent, edm::InputTag pfCandSource, edm::InputTag muonSource, double maxPtDiff, bool doPtDiff, bool doPJCut, bool debug){
+void BasicTreeMaker::badPFMuonFilter(const edm::Event& iEvent, edm::InputTag pfCandSource, edm::InputTag muonSource, double maxPtDiff, bool doPtDiff, bool doPJCut, bool debug){
+
+  passesBadPFMuonFilter=true;
+
+  //std::cout<<"[badPFMuonFilter] tag: "<<muonSource<<std::endl;
 
   edm::Handle<reco::PFCandidateCollection> pfCands;
   iEvent.getByLabel(pfCandSource, pfCands);
@@ -486,7 +498,8 @@ bool BasicTreeMaker::badPFMuonFilter(const edm::Event& iEvent, edm::InputTag pfC
 	  if (m->originalObjectRef().id() == c->muonRef().id() &&
 	      m->originalObjectRef().key() == c->muonRef().key()) {
 	    if (debug) std::cout << "pf-reco muon match (mindr/pf pt/reco pt): " << dr << " " << c->pt() << " " << m->pt() << std::endl;
-	    if (c->pt() - m->pt() > maxPtDiff) return false;
+	    if (c->pt() - m->pt() > maxPtDiff) passesBadPFMuonFilter=false;
+	    if (c->pt() - m->pt() > 25) muonPtDiff_PF.push_back(c->pt() - m->pt());
 	  }
 	}
       }
@@ -498,17 +511,20 @@ bool BasicTreeMaker::badPFMuonFilter(const edm::Event& iEvent, edm::InputTag pfC
     }
   }
   // if no bad match found, return true
-  return true; 
+
 }
 
-bool BasicTreeMaker::inconsistentMuonPFCandidateFilter(const edm::Event& iEvent, edm::InputTag muonSource, double ptMin, double maxPTDiff, bool verbose){
+void BasicTreeMaker::inconsistentMuonPFCandidateFilter(const edm::Event& iEvent, edm::InputTag muonSource, double ptMin, double maxPTDiff, bool verbose){
   using namespace std;  
   using namespace edm;
+
+  // cout<<"[inconsistentMuonPFCandidateFilter] tag: "<<muonSource<<endl;
+
 
   edm::Handle<edm::View<pat::Muon> > muons;
   iEvent.getByLabel(muonSource, muons);
   
-  bool    passFilter = true;
+  passesInconsistentMuonPFCandidateFilter=true;
 
   if (!muons.failedToGet() && muons.isValid()) { // if these are pat muons
     for (edm::View<pat::Muon>::const_iterator muon = muons->begin(); muon != muons->end(); ++muon) {
@@ -516,14 +532,11 @@ bool BasicTreeMaker::inconsistentMuonPFCandidateFilter(const edm::Event& iEvent,
       if (  muon->isTrackerMuon()
 	    && muon->isGlobalMuon()
 	    && fabs(muon->innerTrack()->pt()/muon->globalTrack()->pt() - 1) <= maxPTDiff   )  continue; 
-      passFilter = false;
+      passesInconsistentMuonPFCandidateFilter = false;
     }
   }
-   
-  return passFilter;
 
 }
- //End Code from RA2 for filtering fake MHT with muons
 
 //more or less copied and pasted from
 //http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/RecoParticleFlow/PFProducer/src/PFMuonAlgo.cc?revision=1.20&view=markup
@@ -590,6 +603,16 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
   
   if (muonDebug || eleDebug)  std::cout<<muTag<<"\t"<<eTag <<std::endl;
   
+  //Added by Luke -- Trying to get functions for the muons that are implemented by RA2 to get rid of fake MHT
+  //note -- these used to be called inside the muon loop, but that doesn't seem right at all
+  //that means they get called 0 times if there are 0 muons, but then the bool never got filled.
+  //in short, it was wrong. now call them exactly once per event!
+
+  //for  badPFMuonFilter we want to call it only for the non-PF muon collection
+  if (muTag.find("PF")==std::string::npos) badPFMuonFilter(iEvent, pfCandSrc_,edm::InputTag(muTag)) ;
+  //for  the inconsistent muon we want to call it for the PF muon collection
+  if (muTag.find("PF")!=std::string::npos) inconsistentMuonPFCandidateFilter(iEvent, edm::InputTag(muTag)) ;
+
   //to get the cut flow in the right (arbitrary) order, need to do muons first
   edm::Handle<edm::View<pat::Muon> > muonHandle;
   iEvent.getByLabel(muTag,muonHandle);
@@ -643,15 +666,6 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
 
     muonIsGlobalMuonPromptTight[muTag].push_back(imuon->muonID("GlobalMuonPromptTight"));
 
-    //Added by Luke -- Trying to get functions for the muons that are implemented by RA2 to get rid of fake MHT
-    //    std::cout << "creating muon filter info" << std::endl;
-    passesBadPFMuonFilter[muTag] = badPFMuonFilter(iEvent, pfCandSrc_,edm::InputTag(muTag)) ;
-    //    std::cout << "done with badPFMuonFilter" << std::endl;
-    passesInconsistentMuonPFCandidateFilter[muTag] = inconsistentMuonPFCandidateFilter(iEvent, edm::InputTag(muTag)) ;
-    //    std::cout << "done with inconsistentMuonPFCandidateFilter" << std::endl;
-
-    //Done with fake MHT coding
-
     //record pT and eta of all that pass 
     muonPt[muTag].push_back( imuon->pt() );
     muonEta[muTag].push_back( imuon->eta());
@@ -683,19 +697,8 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
       muonTrackPhi[muTag].push_back(imuon->track()->phi() );
       
       muonNhits[muTag].push_back(imuon->numberOfValidHits());
-      
-      //   std::cout<<imuon->hcalIsoDeposit()<<"\t"<<imuon->ecalIsoDeposit()<<std::endl;
-      //      muonHcalVeto[muTag].push_back(imuon->hcalIsoDeposit()->candEnergy());
-      //      muonEcalVeto[muTag].push_back(imuon->ecalIsoDeposit()->candEnergy());
-      if (imuon->isIsolationValid() ) {
-	muonEcalVeto[muTag].push_back(imuon->isolationR03().emVetoEt);
-	muonHcalVeto[muTag].push_back(imuon->isolationR03().hadVetoEt);
-      }
-      else {
-	muonEcalVeto[muTag].push_back(0);
-	muonHcalVeto[muTag].push_back(0);
-      }
-
+      float ptratio = imuon->globalTrack()->pt() == 0 ? -99 : imuon->innerTrack()->pt()/imuon->globalTrack()->pt();
+      muonPtRatio[muTag].push_back(ptratio);
     }
     else { //non-global
       muonChi2[muTag].push_back(0);
@@ -703,8 +706,7 @@ BasicTreeMaker::fillLeptonInfo(const edm::Event& iEvent, const edm::EventSetup& 
       muonTrackd0[muTag].push_back(-99 );
       muonTrackPhi[muTag].push_back(-99 );
       muonNhits[muTag].push_back(-99);
-      muonEcalVeto[muTag].push_back(0);
-      muonHcalVeto[muTag].push_back(0);
+      muonPtRatio[muTag].push_back(-99);
     }
 
     // Muon veto
@@ -860,6 +862,9 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
     //now pull out that jet
     const pat::Jet & jet = jets[jj];
     
+    //note that this code will fail if we ever run over 2 different PF jet collections in parallel!
+    if (jet.isPFJet()) pfht_+= jet.pt(); //for tracking failure filter, compute PF HT with no cuts
+
     /*
       - canned code for getting the JEC uncertainties from the DB
       - note that it is hard-coded for PF -- this is kludge that I should eventually fix
@@ -1174,14 +1179,15 @@ FIXME for now i'm going to hardcode the "calo" here
 
 void
 BasicTreeMaker::resetTreeVariables() {
+  pfht_=0;
+
   //reset tree variables
   passTrigger.clear();
   hltPrescale.clear();
-  //  jetInfoFilled_=false;
-  //  leptonInfoFilled_=false;
-  trackInfoFilled_=false;
 
   bsx=bsy=bsz=0;
+
+  passesBadPFMuonFilter=passesInconsistentMuonPFCandidateFilter=true;
 
   for (std::vector<std::string>::const_iterator ij=jetAlgorithmTags_.begin() ; ij!=jetAlgorithmTags_.end() ; ++ij) {
     tightJetIndex[*ij].clear();
@@ -1225,7 +1231,7 @@ BasicTreeMaker::resetTreeVariables() {
     }
   }
 
-
+  muonPtDiff_PF.clear();
   for (unsigned int il=0; il<eleAlgorithmNames_.size(); il++) {
     muonIsRA2[muonAlgorithmNames_[il]].clear();
     muonIsGlobalMuon[muonAlgorithmNames_[il]].clear();
@@ -1238,6 +1244,7 @@ BasicTreeMaker::resetTreeVariables() {
     muonHcalIso[muonAlgorithmNames_[il]].clear();
 
     muonEoverP[muonAlgorithmNames_[il]].clear();
+    muonPtRatio[muonAlgorithmNames_[il]].clear();
 
     muonChi2[muonAlgorithmNames_[il]].clear();
     muonNdof[muonAlgorithmNames_[il]].clear();
@@ -1247,9 +1254,6 @@ BasicTreeMaker::resetTreeVariables() {
     muonTrackPhi[muonAlgorithmNames_[il]].clear();
 
     muonPassID[muonAlgorithmNames_[il]].clear();
-
-    muonEcalVeto[muonAlgorithmNames_[il]].clear();
-    muonHcalVeto[muonAlgorithmNames_[il]].clear();
 
     muonVtx_z[muonAlgorithmNames_[il]].clear();
 
@@ -1288,6 +1292,7 @@ BasicTreeMaker::resetTreeVariables() {
   pv_chi2.clear();
   pv_rho.clear();
 
+
   for (unsigned int im=0; im<metAlgorithmTags_.size() ; im++) {
     MET[metAlgorithmTags_[im]]=-99;
     METphi[metAlgorithmTags_[im]]=-99;
@@ -1302,6 +1307,8 @@ BasicTreeMaker::resetTreeVariables() {
   SUSY_nb=0;
   qScale=0;
   mcWeight=0;
+  ptHat=0;
+  SumPtOverHT=0;
   pdfWeights.clear(); 
   if (isMC_) pdfWeights.reserve(45); //this number is hard-coded twice in this class FIXME
   topDecayCode.clear();
@@ -1458,6 +1465,11 @@ BasicTreeMaker::beginJob()
   tree_->Branch("pv_chi2",&pv_chi2);
   tree_->Branch("pv_ndof",&pv_ndof);
 
+  //muon cleaning
+  tree_->Branch("muonPtDiff_PF",&muonPtDiff_PF);
+  tree_->Branch("passesBadPFMuonFilter",&passesBadPFMuonFilter,"passesBadPFMuonFilter/O");
+  tree_->Branch("passesInconsistentMuonPFCandidateFilter",&passesInconsistentMuonPFCandidateFilter,"passesInconsistentMuonPFCandidateFilter/O");
+
   //jet branches
   for (vector<string>::const_iterator ij=jetAlgorithmTags_.begin() ; ij!=jetAlgorithmTags_.end() ; ++ij) {
 
@@ -1546,6 +1558,7 @@ BasicTreeMaker::beginJob()
   tree_->Branch("trackPt",&trackPt);
   tree_->Branch("trackEta",&trackEta);
   tree_->Branch("trackPhi",&trackPhi);
+  tree_->Branch("SumPtOverHT",&SumPtOverHT,"SumPtOverHT/F");
 
   for (unsigned int il=0; il<tauAlgorithmNames_.size(); il++) {
     string tail="_";
@@ -1589,6 +1602,7 @@ BasicTreeMaker::beginJob()
     tree_->Branch( (string("muonIsGlobalMuonPromptTight")+tail).c_str(),&muonIsGlobalMuonPromptTight[muonAlgorithmNames_[il]]);
 
     tree_->Branch( (string("muonEoverP")+tail).c_str(),&muonEoverP[muonAlgorithmNames_[il]]);
+    tree_->Branch( (string("muonPtRatio")+tail).c_str(),&muonPtRatio[muonAlgorithmNames_[il]]);
 
     tree_->Branch( (string("muonPt")+tail).c_str(),&muonPt[muonAlgorithmNames_[il]]);
     tree_->Branch( (string("muonEta")+tail).c_str(),&muonEta[muonAlgorithmNames_[il]]);
@@ -1606,11 +1620,6 @@ BasicTreeMaker::beginJob()
 
     tree_->Branch( (string("muonVtx_z")+tail).c_str(),&muonVtx_z[muonAlgorithmNames_[il]]);
 
-    tree_->Branch( (string("muonEcalVeto")+tail).c_str(),&muonEcalVeto[muonAlgorithmNames_[il]]);
-    tree_->Branch( (string("muonHcalVeto")+tail).c_str(),&muonHcalVeto[muonAlgorithmNames_[il]]);
-
-    tree_->Branch( (string("passesBadPFMuonFilter")+tail).c_str(),&passesBadPFMuonFilter[muonAlgorithmNames_[il]],(string("passesBadPFMuonFilter")+tail+"/O").c_str());
-    tree_->Branch( (string("passesInconsistentMuonPFCandidateFilter")+tail).c_str(),&passesInconsistentMuonPFCandidateFilter[muonAlgorithmNames_[il]],(string("passesInconsistentMuonPFCandidateFilter")+tail+"/O").c_str());
 
     tree_->Branch((string("eleIsRA2")+tail).c_str(),&eleIsRA2[eleAlgorithmNames_[il]]);
     tree_->Branch((string("eleEt")+tail).c_str(),&eleEt[eleAlgorithmNames_[il]]);
@@ -1632,6 +1641,7 @@ BasicTreeMaker::beginJob()
 
   tree_->Branch("SUSY_nb",&SUSY_nb,"SUSY_nb/I");
   tree_->Branch("qScale",&qScale,"qScale/D");
+  tree_->Branch("ptHat",&ptHat,"ptHat/D");
   tree_->Branch("mcWeight",&mcWeight,"mcWeight/D");
   tree_->Branch("pdfWeights",&pdfWeights);
   tree_->Branch("topDecayCode",&topDecayCode);

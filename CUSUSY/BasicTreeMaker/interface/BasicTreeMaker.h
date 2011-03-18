@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.19 2011/03/09 14:23:14 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.20 2011/03/18 13:24:22 joshmt Exp $
 //
 //
 
@@ -59,9 +59,8 @@ private:
   bool passJetId(const pat::Jet & jet);
 
   //Code from RA2 for filtering fake MHT with muons:
-
-  bool badPFMuonFilter(const edm::Event& iEvent, edm::InputTag pfCandSource, edm::InputTag muonSource, double maxPtDiff = 100, bool doPtDiff = true, bool doPJCut = false, bool debug = false);
-  bool inconsistentMuonPFCandidateFilter(const edm::Event& iEvent, edm::InputTag muonSource, double ptMin = 100, double maxPTDiff = 0.1, bool verbose = false);
+  void badPFMuonFilter(const edm::Event& iEvent, edm::InputTag pfCandSource, edm::InputTag muonSource, double maxPtDiff = 100, bool doPtDiff = true, bool doPJCut = false, bool debug = false);
+  void inconsistentMuonPFCandidateFilter(const edm::Event& iEvent, edm::InputTag muonSource, double ptMin = 100, double maxPTDiff = 0.1, bool verbose = false);
 
   //End Code from RA2 for filtering fake MHT with muons
   bool isIsolatedMuon( const pat::Muon& muonRef );
@@ -145,13 +144,10 @@ private:
   double loosejetPtMin_ ;
   double loosejetEtaMax_;  
 
-  //bookkeeping
-  //  bool jetInfoFilled_;
-  //  bool leptonInfoFilled_;
-  bool trackInfoFilled_;
-
   //for matching of particles
   float tolerance_;
+
+  double pfht_;
 
   // ====== define variables for the tree ======
   ULong64_t runNumber;
@@ -196,14 +192,13 @@ private:
   std::map< std::string, std::vector<float> > muonVtx_z;
 
   std::map< std::string, std::vector<float> > muonEoverP;
+  std::map< std::string, std::vector<float> > muonPtRatio;
 
-  std::map< std::string, std::vector<float> > muonHcalVeto;
-  std::map< std::string, std::vector<float> > muonEcalVeto;
+  std::vector<float> muonPtDiff_PF; 
 
- 
   //beginning RA2 fake MHT muon reducing filter info
-  std::map< std::string, bool > passesBadPFMuonFilter;
-  std::map< std::string, bool > passesInconsistentMuonPFCandidateFilter;
+  bool  passesBadPFMuonFilter;
+  bool  passesInconsistentMuonPFCandidateFilter;
   //ending RA2 fake MHT muon reducing filter info
 
 
@@ -287,10 +282,13 @@ string is the jetAlgorithmTag
   std::vector<float> trackPt;
   std::vector<float> trackEta;
   std::vector<float> trackPhi;
+  //sum track pT over PF jet HT
+  float SumPtOverHT;
 
   //MC info
   int SUSY_nb;
   double qScale;
+  double ptHat;
   double mcWeight;
   std::vector<int> topDecayCode;
   int ZDecayMode;
