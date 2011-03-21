@@ -72,6 +72,8 @@ TCanvas* thecanvas=0;
 TLegend* leg=0;
 THStack* thestack=0;
 TH1D* totalsm=0;
+TH1D* totalewk=0;
+TH1D* totalqcdttbar=0;
 TH1D* ratio=0; float ratioMin=0; float ratioMax=2;
 TGraphErrors* qcderrors=0;
 bool loaded_=false; //bookkeeping
@@ -386,6 +388,12 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
     if (totalsm!=0) delete totalsm;
     totalsm = new TH1D("totalsm","",nbins,low,high);
     totalsm->Sumw2();
+    if (totalewk!=0) delete totalewk;
+    totalewk = new TH1D("totalewk","",nbins,low,high);
+    totalewk->Sumw2();
+    if (totalqcdttbar!=0) delete totalqcdttbar;
+    totalqcdttbar = new TH1D("totalqcdttbar","",nbins,low,high);
+    totalqcdttbar->Sumw2();
     if (doRatio_) {
       if (ratio!=0) delete ratio;
       ratio = new TH1D("ratio","data/(SM MC)",nbins,low,high);
@@ -424,7 +432,18 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
       qcderrors->SetFillStyle(3353);
       qcderrors->SetFillColor(1);
     }
-    if (!samples_[isample].Contains("LM")) totalsm->Add(histos_[samples_[isample]]);
+    if (!samples_[isample].Contains("LM")) {
+      totalsm->Add(histos_[samples_[isample]]);
+        cout << "totalsm: " << samples_[isample] << endl;
+    }
+    if (!samples_[isample].Contains("LM") && !samples_[isample].Contains("QCD") && !samples_[isample].Contains("TTbar")) {
+      totalewk->Add(histos_[samples_[isample]]);
+      cout << "totalewk: " << samples_[isample] << endl;
+    }
+    if (samples_[isample].Contains("QCD") || samples_[isample].Contains("TTbar")){
+      totalqcdttbar->Add(histos_[samples_[isample]]);
+      cout << "totalqcdttbar: " << samples_[isample] << endl;
+    }
 
     //now just do a bunch of histogram formatting
     if (!dostack_) {
@@ -952,6 +971,8 @@ void drawOwen(bool doMinDPPass) {
   /*
 .L drawReducedTrees.C++
   */
+  
+  doOverflowAddition(false);
 
   const  int nbins = 35;
   const  float min=0;
@@ -991,8 +1012,18 @@ void drawOwen(bool doMinDPPass) {
     TCut LSBMET = "MET>=0 && MET<50";
     TCut theLSBSelection = baseSelection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && LSBMET;
     selection_ = theLSBSelection.GetTitle();
-    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_0_50_"+btagstring+"btag_data","data");
-    
+    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_0_50_"+btagstring+"tag_data","data");
+    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_0_50_"+btagstring+"tag_qcd","PythiaPUQCDFlat");
+    drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+    TFile fh(histfilename,"UPDATE");  
+    totalsm->SetName("bestM3j_met_0_50_"+btagstring+"tag_totalsm");
+    totalewk->SetName("bestM3j_met_0_50_"+btagstring+"tag_totalewk");
+    totalqcdttbar->SetName("bestM3j_met_0_50_"+btagstring+"tag_totalqcdttbar");
+    totalsm->Write();          
+    totalewk->Write();
+    totalqcdttbar->Write();
+    fh.Close();   
+
     //this one is going to be handled by the flexible MET version....
     //   TCut SBMET = "MET>=70 && MET<150";
     //   TCut theSBSelection = baseSelection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && SBMET;
@@ -1014,6 +1045,15 @@ void drawOwen(bool doMinDPPass) {
 	ofile<<"ttbar = "<<drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"ttbar","TTbarJets")<<endl;
 	ofile<<"qcd   = "<<drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"qcd","PythiaPUQCDFlat")<<endl;
 	drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"data","data");
+	drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+	TFile fh(histfilename,"UPDATE");
+	totalsm->SetName(nameOfHist+"totalsm");
+	totalewk->SetName(nameOfHist+"totalewk");
+	totalqcdttbar->SetName(nameOfHist+"totalqcdttbar");
+	totalsm->Write();
+	totalewk->Write();
+	totalqcdttbar->Write();
+	fh.Close();
       }
     }
     
