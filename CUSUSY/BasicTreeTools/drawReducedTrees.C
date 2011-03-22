@@ -979,7 +979,8 @@ void drawOwen(bool doMinDPPass) {
   const  float max=800;
 
   const  TCut baseSelection = "cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1"; //no MET, no minDeltaPhi, no cleaning, no b tag
-  const  TCut passCleaning = "cutCleaning==1"; //apply all cleaning //"passInconsistentMuon == 1 && passBadPFMuon==1"; //apply cleaning but without ECAL dead cells
+  // "cutCleaning==1"; //apply all cleaning 
+  const  TCut passCleaning ="passInconsistentMuon == 1 && passBadPFMuon==1"; //apply cleaning but without ECAL dead cells
   const  TCut passMinDeltaPhi = "cutDeltaPhi==1";
   const  TCut failMinDeltaPhi = "cutDeltaPhi==0";
   const  TCut ge1b =  "nbjets >= 1";
