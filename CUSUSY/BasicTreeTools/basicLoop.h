@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Fri Mar 11 12:49:32 2011 by ROOT version 5.22/00d
+// Mon Mar 21 14:11:02 2011 by ROOT version 5.22/00d
 // from TTree tree/tree
-// found on file: /cu1/joshmt/BasicNtuples/V00-03-00/TTbarJets/BasicNtuple1.root
+// found on file: /cu1/joshmt/BasicNtuples/V00-03-01/LM13/BasicNtuple.root
 //////////////////////////////////////////////////////////
 
 #ifndef basicLoop_h
@@ -22,7 +22,7 @@
 #include "MiscUtil.cxx"
 //this code will have to be regenerated when changing the ntuple structure
 //custom code is marked with these 'begin' and 'end' markers
-// ---- this version is compatible with ntuple tag: V00-02-03 and V00-02-04 ----
+// ---- this version is compatible with ntuple tag: V00-03-01 ------
 #include <iostream>
 #include <vector>
 #include <set>
@@ -94,7 +94,6 @@ const char *METRangeNames_[]={"med",  "high", "wide", "medhigh"}; //'no cut' is 
 
 const char *jetTypeNames_[]={"calo","PF", "JPT"};
 const char *leptonTypeNames_[]={"RegLep","PFLep","PFLepRA2"};
-//the RA2 lepton scheme is not a perfect copy of the RA2 lepton cuts. Biggest change is to reduce electron threshold to 10 GeV
 
 const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1", "minDPinv", "minDPAll30"};
 
@@ -215,7 +214,6 @@ public :
    float WCosHel_,topCosHel_,bestWMass_,bestTopMass_;
    float eleet1_,muonpt1_; //FIXME this is a hack that I don't like!
   // ========================================== end
-
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
    Int_t           fCurrent; //!current Tree number in a TChain
 
@@ -234,6 +232,9 @@ public :
    vector<float>   *pv_rho;
    vector<float>   *pv_chi2;
    vector<float>   *pv_ndof;
+   vector<float>   *muonPtDiff_PF;
+   Bool_t          passesBadPFMuonFilter;
+   Bool_t          passesInconsistentMuonPFCandidateFilter;
    vector<int>     *tightJetIndex_calo;
    vector<int>     *looseJetIndex_calo;
    vector<float>   *loosejetPt_calo;
@@ -267,39 +268,6 @@ public :
    vector<float>   *loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo;
    vector<float>   *loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo;
    vector<float>   *loosejetBTagDisc_simpleSecondaryVertexBJetTags_calo;
-   vector<int>     *tightJetIndex_JPT;
-   vector<int>     *looseJetIndex_JPT;
-   vector<float>   *loosejetPt_JPT;
-   vector<float>   *loosejetPz_JPT;
-   vector<float>   *loosejetPtUncorr_JPT;
-   vector<float>   *loosejetEt_JPT;
-   vector<float>   *loosejetE_JPT;
-   vector<float>   *loosejetEta_JPT;
-   vector<float>   *loosejetPhi_JPT;
-   vector<bool>    *loosejetPassLooseID_JPT;
-   vector<bool>    *loosejetPassTightID_JPT;
-   vector<float>   *loosejetEnergyFracHadronic_JPT;
-   vector<float>   *loosejetJECUncPlus_JPT;
-   vector<float>   *loosejetJECUncMinus_JPT;
-   vector<int>     *loosejetFlavor_JPT;
-   vector<int>     *loosejetGenPt_JPT;
-   vector<int>     *loosejetGenEta_JPT;
-   vector<int>     *loosejetGenPhi_JPT;
-   vector<int>     *loosejetGenParticlePDGId_JPT;
-   vector<float>   *loosejetInvisibleEnergy_JPT;
-   vector<int>     *loosejetNTracks_JPT;
-   vector<int>     *loosejetNSV_JPT;
-   vector<float>   *loosejetSVUnWeightedMass_JPT;
-   vector<float>   *loosejetSVWeightedMass_JPT;
-   vector<float>   *loosejetSVUnWeightedLifetime_JPT;
-   vector<float>   *loosejetSVWeightedLifetime_JPT;
-   vector<float>   *loosejetSVUnWeightedCosTheta_JPT;
-   vector<float>   *loosejetSVWeightedCosTheta_JPT;
-   vector<float>   *loosejetBTagDisc_trackCountingHighPurBJetTags_JPT;
-   vector<float>   *loosejetBTagDisc_trackCountingHighEffBJetTags_JPT;
-   vector<float>   *loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_JPT;
-   vector<float>   *loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_JPT;
-   vector<float>   *loosejetBTagDisc_simpleSecondaryVertexBJetTags_JPT;
    vector<int>     *tightJetIndex_PF;
    vector<int>     *looseJetIndex_PF;
    vector<float>   *loosejetPt_PF;
@@ -356,6 +324,7 @@ public :
    vector<float>   *trackPt;
    vector<float>   *trackEta;
    vector<float>   *trackPhi;
+   Float_t         SumPtOverHT;
    vector<float>   *tauPt;
    vector<float>   *tauEta;
    vector<float>   *tauPhi;
@@ -379,6 +348,8 @@ public :
    vector<bool>    *muonIsRA2;
    vector<bool>    *muonIsGlobalMuon;
    vector<bool>    *muonIsGlobalMuonPromptTight;
+   vector<float>   *muonEoverP;
+   vector<float>   *muonPtRatio;
    vector<float>   *muonPt;
    vector<float>   *muonEta;
    vector<float>   *muonPhi;
@@ -392,10 +363,6 @@ public :
    vector<float>   *muonTrackPhi;
    vector<bool>    *muonPassID;
    vector<float>   *muonVtx_z;
-   vector<float>   *muonEcalVeto;
-   vector<float>   *muonHcalVeto;
-   Bool_t          passesBadPFMuonFilter;
-   Bool_t          passesInconsistentMuonPFCandidateFilter;
    vector<bool>    *eleIsRA2;
    vector<float>   *eleEt;
    vector<float>   *eleEta;
@@ -411,6 +378,8 @@ public :
    vector<bool>    *muonIsRA2_PF;
    vector<bool>    *muonIsGlobalMuon_PF;
    vector<bool>    *muonIsGlobalMuonPromptTight_PF;
+   vector<float>   *muonEoverP_PF;
+   vector<float>   *muonPtRatio_PF;
    vector<float>   *muonPt_PF;
    vector<float>   *muonEta_PF;
    vector<float>   *muonPhi_PF;
@@ -424,10 +393,6 @@ public :
    vector<float>   *muonTrackPhi_PF;
    vector<bool>    *muonPassID_PF;
    vector<float>   *muonVtx_z_PF;
-   vector<float>   *muonEcalVeto_PF;
-   vector<float>   *muonHcalVeto_PF;
-   Bool_t          passesBadPFMuonFilter_PF;
-   Bool_t          passesInconsistentMuonPFCandidateFilter_PF;
    vector<bool>    *eleIsRA2_PF;
    vector<float>   *eleEt_PF;
    vector<float>   *eleEta_PF;
@@ -442,6 +407,7 @@ public :
    vector<bool>    *elePassID_PF;
    Int_t           SUSY_nb;
    Double_t        qScale;
+   Double_t        ptHat;
    Double_t        mcWeight;
    vector<float>   *pdfWeights;
    vector<int>     *topDecayCode;
@@ -463,6 +429,9 @@ public :
    TBranch        *b_pv_rho;   //!
    TBranch        *b_pv_chi2;   //!
    TBranch        *b_pv_ndof;   //!
+   TBranch        *b_muonPtDiff_PF;   //!
+   TBranch        *b_passesBadPFMuonFilter;   //!
+   TBranch        *b_passesInconsistentMuonPFCandidateFilter;   //!
    TBranch        *b_tightJetIndex_calo;   //!
    TBranch        *b_looseJetIndex_calo;   //!
    TBranch        *b_loosejetPt_calo;   //!
@@ -496,39 +465,6 @@ public :
    TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo;   //!
    TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo;   //!
    TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexBJetTags_calo;   //!
-   TBranch        *b_tightJetIndex_JPT;   //!
-   TBranch        *b_looseJetIndex_JPT;   //!
-   TBranch        *b_loosejetPt_JPT;   //!
-   TBranch        *b_loosejetPz_JPT;   //!
-   TBranch        *b_loosejetPtUncorr_JPT;   //!
-   TBranch        *b_loosejetEt_JPT;   //!
-   TBranch        *b_loosejetE_JPT;   //!
-   TBranch        *b_loosejetEta_JPT;   //!
-   TBranch        *b_loosejetPhi_JPT;   //!
-   TBranch        *b_loosejetPassLooseID_JPT;   //!
-   TBranch        *b_loosejetPassTightID_JPT;   //!
-   TBranch        *b_loosejetEnergyFracHadronic_JPT;   //!
-   TBranch        *b_loosejetJECUncPlus_JPT;   //!
-   TBranch        *b_loosejetJECUncMinus_JPT;   //!
-   TBranch        *b_loosejetFlavor_JPT;   //!
-   TBranch        *b_loosejetGenPt_JPT;   //!
-   TBranch        *b_loosejetGenEta_JPT;   //!
-   TBranch        *b_loosejetGenPhi_JPT;   //!
-   TBranch        *b_loosejetGenParticlePDGId_JPT;   //!
-   TBranch        *b_loosejetInvisibleEnergy_JPT;   //!
-   TBranch        *b_loosejetNTracks_JPT;   //!
-   TBranch        *b_loosejetNSV_JPT;   //!
-   TBranch        *b_loosejetSVUnWeightedMass_JPT;   //!
-   TBranch        *b_loosejetSVWeightedMass_JPT;   //!
-   TBranch        *b_loosejetSVUnWeightedLifetime_JPT;   //!
-   TBranch        *b_loosejetSVWeightedLifetime_JPT;   //!
-   TBranch        *b_loosejetSVUnWeightedCosTheta_JPT;   //!
-   TBranch        *b_loosejetSVWeightedCosTheta_JPT;   //!
-   TBranch        *b_loosejetBTagDisc_trackCountingHighPurBJetTags_JPT;   //!
-   TBranch        *b_loosejetBTagDisc_trackCountingHighEffBJetTags_JPT;   //!
-   TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_JPT;   //!
-   TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_JPT;   //!
-   TBranch        *b_loosejetBTagDisc_simpleSecondaryVertexBJetTags_JPT;   //!
    TBranch        *b_tightJetIndex_PF;   //!
    TBranch        *b_looseJetIndex_PF;   //!
    TBranch        *b_loosejetPt_PF;   //!
@@ -585,6 +521,7 @@ public :
    TBranch        *b_trackPt;   //!
    TBranch        *b_trackEta;   //!
    TBranch        *b_trackPhi;   //!
+   TBranch        *b_SumPtOverHT;   //!
    TBranch        *b_tauPt;   //!
    TBranch        *b_tauEta;   //!
    TBranch        *b_tauPhi;   //!
@@ -608,6 +545,8 @@ public :
    TBranch        *b_muonIsRA2;   //!
    TBranch        *b_muonIsGlobalMuon;   //!
    TBranch        *b_muonIsGlobalMuonPromptTight;   //!
+   TBranch        *b_muonEoverP;   //!
+   TBranch        *b_muonPtRatio;   //!
    TBranch        *b_muonPt;   //!
    TBranch        *b_muonEta;   //!
    TBranch        *b_muonPhi;   //!
@@ -621,10 +560,6 @@ public :
    TBranch        *b_muonTrackPhi;   //!
    TBranch        *b_muonPassID;   //!
    TBranch        *b_muonVtx_z;   //!
-   TBranch        *b_muonEcalVeto;   //!
-   TBranch        *b_muonHcalVeto;   //!
-   TBranch        *b_passesBadPFMuonFilter;   //!
-   TBranch        *b_passesInconsistentMuonPFCandidateFilter;   //!
    TBranch        *b_eleIsRA2;   //!
    TBranch        *b_eleEt;   //!
    TBranch        *b_eleEta;   //!
@@ -640,6 +575,8 @@ public :
    TBranch        *b_muonIsRA2_PF;   //!
    TBranch        *b_muonIsGlobalMuon_PF;   //!
    TBranch        *b_muonIsGlobalMuonPromptTight_PF;   //!
+   TBranch        *b_muonEoverP_PF;   //!
+   TBranch        *b_muonPtRatio_PF;   //!
    TBranch        *b_muonPt_PF;   //!
    TBranch        *b_muonEta_PF;   //!
    TBranch        *b_muonPhi_PF;   //!
@@ -653,10 +590,6 @@ public :
    TBranch        *b_muonTrackPhi_PF;   //!
    TBranch        *b_muonPassID_PF;   //!
    TBranch        *b_muonVtx_z_PF;   //!
-   TBranch        *b_muonEcalVeto_PF;   //!
-   TBranch        *b_muonHcalVeto_PF;   //!
-   TBranch        *b_passesBadPFMuonFilter_PF;   //!
-   TBranch        *b_passesInconsistentMuonPFCandidateFilter_PF;   //!
    TBranch        *b_eleIsRA2_PF;   //!
    TBranch        *b_eleEt_PF;   //!
    TBranch        *b_eleEta_PF;   //!
@@ -671,6 +604,7 @@ public :
    TBranch        *b_elePassID_PF;   //!
    TBranch        *b_SUSY_nb;   //!
    TBranch        *b_qScale;   //!
+   TBranch        *b_ptHat;   //!
    TBranch        *b_mcWeight;   //!
    TBranch        *b_pdfWeights;   //!
    TBranch        *b_topDecayCode;   //!
@@ -781,6 +715,9 @@ public :
    bool passTauVeto();
    bool passCleaning();
    bool passEcalDeadCellCleaning();
+   bool passGreedyMuon();
+   float findMaxMuonPtDiff();
+   void findMostInconsistentPFMuon(float &mostInconsistentMuonPt, float &mostInconsistentMuonPtDiff);
 
    bool passSSVM(int i); //index is for loose jets
 
@@ -807,6 +744,9 @@ public :
    float jetPtOfN(unsigned int n);
    float jetPhiOfN(unsigned int n);
    float jetEtaOfN(unsigned int n);
+   float bjetPtOfN(unsigned int n);
+   float bjetPhiOfN(unsigned int n);
+   float bjetEtaOfN(unsigned int n);
    int countBJets_Sync1();
    int countBJets();
    bool passDeltaPhi_Sync1() ;
@@ -902,7 +842,6 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree, TTree *ecaltree)
     return;
    }
   // ========================================== end
-
 
    Init(tree);
    // ========================================== begin
@@ -1008,6 +947,7 @@ void basicLoop::Init(TTree *tree)
    pv_rho = 0;
    pv_chi2 = 0;
    pv_ndof = 0;
+   muonPtDiff_PF = 0;
    tightJetIndex_calo = 0;
    looseJetIndex_calo = 0;
    loosejetPt_calo = 0;
@@ -1041,39 +981,6 @@ void basicLoop::Init(TTree *tree)
    loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo = 0;
    loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo = 0;
    loosejetBTagDisc_simpleSecondaryVertexBJetTags_calo = 0;
-   tightJetIndex_JPT = 0;
-   looseJetIndex_JPT = 0;
-   loosejetPt_JPT = 0;
-   loosejetPz_JPT = 0;
-   loosejetPtUncorr_JPT = 0;
-   loosejetEt_JPT = 0;
-   loosejetE_JPT = 0;
-   loosejetEta_JPT = 0;
-   loosejetPhi_JPT = 0;
-   loosejetPassLooseID_JPT = 0;
-   loosejetPassTightID_JPT = 0;
-   loosejetEnergyFracHadronic_JPT = 0;
-   loosejetJECUncPlus_JPT = 0;
-   loosejetJECUncMinus_JPT = 0;
-   loosejetFlavor_JPT = 0;
-   loosejetGenPt_JPT = 0;
-   loosejetGenEta_JPT = 0;
-   loosejetGenPhi_JPT = 0;
-   loosejetGenParticlePDGId_JPT = 0;
-   loosejetInvisibleEnergy_JPT = 0;
-   loosejetNTracks_JPT = 0;
-   loosejetNSV_JPT = 0;
-   loosejetSVUnWeightedMass_JPT = 0;
-   loosejetSVWeightedMass_JPT = 0;
-   loosejetSVUnWeightedLifetime_JPT = 0;
-   loosejetSVWeightedLifetime_JPT = 0;
-   loosejetSVUnWeightedCosTheta_JPT = 0;
-   loosejetSVWeightedCosTheta_JPT = 0;
-   loosejetBTagDisc_trackCountingHighPurBJetTags_JPT = 0;
-   loosejetBTagDisc_trackCountingHighEffBJetTags_JPT = 0;
-   loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_JPT = 0;
-   loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_JPT = 0;
-   loosejetBTagDisc_simpleSecondaryVertexBJetTags_JPT = 0;
    tightJetIndex_PF = 0;
    looseJetIndex_PF = 0;
    loosejetPt_PF = 0;
@@ -1133,6 +1040,8 @@ void basicLoop::Init(TTree *tree)
    muonIsRA2 = 0;
    muonIsGlobalMuon = 0;
    muonIsGlobalMuonPromptTight = 0;
+   muonEoverP = 0;
+   muonPtRatio = 0;
    muonPt = 0;
    muonEta = 0;
    muonPhi = 0;
@@ -1146,8 +1055,6 @@ void basicLoop::Init(TTree *tree)
    muonTrackPhi = 0;
    muonPassID = 0;
    muonVtx_z = 0;
-   muonEcalVeto = 0;
-   muonHcalVeto = 0;
    eleIsRA2 = 0;
    eleEt = 0;
    eleEta = 0;
@@ -1163,6 +1070,8 @@ void basicLoop::Init(TTree *tree)
    muonIsRA2_PF = 0;
    muonIsGlobalMuon_PF = 0;
    muonIsGlobalMuonPromptTight_PF = 0;
+   muonEoverP_PF = 0;
+   muonPtRatio_PF = 0;
    muonPt_PF = 0;
    muonEta_PF = 0;
    muonPhi_PF = 0;
@@ -1176,8 +1085,6 @@ void basicLoop::Init(TTree *tree)
    muonTrackPhi_PF = 0;
    muonPassID_PF = 0;
    muonVtx_z_PF = 0;
-   muonEcalVeto_PF = 0;
-   muonHcalVeto_PF = 0;
    eleIsRA2_PF = 0;
    eleEt_PF = 0;
    eleEta_PF = 0;
@@ -1212,6 +1119,9 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("pv_rho", &pv_rho, &b_pv_rho);
    fChain->SetBranchAddress("pv_chi2", &pv_chi2, &b_pv_chi2);
    fChain->SetBranchAddress("pv_ndof", &pv_ndof, &b_pv_ndof);
+   fChain->SetBranchAddress("muonPtDiff_PF", &muonPtDiff_PF, &b_muonPtDiff_PF);
+   fChain->SetBranchAddress("passesBadPFMuonFilter", &passesBadPFMuonFilter, &b_passesBadPFMuonFilter);
+   fChain->SetBranchAddress("passesInconsistentMuonPFCandidateFilter", &passesInconsistentMuonPFCandidateFilter, &b_passesInconsistentMuonPFCandidateFilter);
    fChain->SetBranchAddress("tightJetIndex_calo", &tightJetIndex_calo, &b_tightJetIndex_calo);
    fChain->SetBranchAddress("looseJetIndex_calo", &looseJetIndex_calo, &b_looseJetIndex_calo);
    fChain->SetBranchAddress("loosejetPt_calo", &loosejetPt_calo, &b_loosejetPt_calo);
@@ -1245,39 +1155,6 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo", &loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo, &b_loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_calo);
    fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo", &loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo, &b_loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_calo);
    fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexBJetTags_calo", &loosejetBTagDisc_simpleSecondaryVertexBJetTags_calo, &b_loosejetBTagDisc_simpleSecondaryVertexBJetTags_calo);
-   fChain->SetBranchAddress("tightJetIndex_JPT", &tightJetIndex_JPT, &b_tightJetIndex_JPT);
-   fChain->SetBranchAddress("looseJetIndex_JPT", &looseJetIndex_JPT, &b_looseJetIndex_JPT);
-   fChain->SetBranchAddress("loosejetPt_JPT", &loosejetPt_JPT, &b_loosejetPt_JPT);
-   fChain->SetBranchAddress("loosejetPz_JPT", &loosejetPz_JPT, &b_loosejetPz_JPT);
-   fChain->SetBranchAddress("loosejetPtUncorr_JPT", &loosejetPtUncorr_JPT, &b_loosejetPtUncorr_JPT);
-   fChain->SetBranchAddress("loosejetEt_JPT", &loosejetEt_JPT, &b_loosejetEt_JPT);
-   fChain->SetBranchAddress("loosejetE_JPT", &loosejetE_JPT, &b_loosejetE_JPT);
-   fChain->SetBranchAddress("loosejetEta_JPT", &loosejetEta_JPT, &b_loosejetEta_JPT);
-   fChain->SetBranchAddress("loosejetPhi_JPT", &loosejetPhi_JPT, &b_loosejetPhi_JPT);
-   fChain->SetBranchAddress("loosejetPassLooseID_JPT", &loosejetPassLooseID_JPT, &b_loosejetPassLooseID_JPT);
-   fChain->SetBranchAddress("loosejetPassTightID_JPT", &loosejetPassTightID_JPT, &b_loosejetPassTightID_JPT);
-   fChain->SetBranchAddress("loosejetEnergyFracHadronic_JPT", &loosejetEnergyFracHadronic_JPT, &b_loosejetEnergyFracHadronic_JPT);
-   fChain->SetBranchAddress("loosejetJECUncPlus_JPT", &loosejetJECUncPlus_JPT, &b_loosejetJECUncPlus_JPT);
-   fChain->SetBranchAddress("loosejetJECUncMinus_JPT", &loosejetJECUncMinus_JPT, &b_loosejetJECUncMinus_JPT);
-   fChain->SetBranchAddress("loosejetFlavor_JPT", &loosejetFlavor_JPT, &b_loosejetFlavor_JPT);
-   fChain->SetBranchAddress("loosejetGenPt_JPT", &loosejetGenPt_JPT, &b_loosejetGenPt_JPT);
-   fChain->SetBranchAddress("loosejetGenEta_JPT", &loosejetGenEta_JPT, &b_loosejetGenEta_JPT);
-   fChain->SetBranchAddress("loosejetGenPhi_JPT", &loosejetGenPhi_JPT, &b_loosejetGenPhi_JPT);
-   fChain->SetBranchAddress("loosejetGenParticlePDGId_JPT", &loosejetGenParticlePDGId_JPT, &b_loosejetGenParticlePDGId_JPT);
-   fChain->SetBranchAddress("loosejetInvisibleEnergy_JPT", &loosejetInvisibleEnergy_JPT, &b_loosejetInvisibleEnergy_JPT);
-   fChain->SetBranchAddress("loosejetNTracks_JPT", &loosejetNTracks_JPT, &b_loosejetNTracks_JPT);
-   fChain->SetBranchAddress("loosejetNSV_JPT", &loosejetNSV_JPT, &b_loosejetNSV_JPT);
-   fChain->SetBranchAddress("loosejetSVUnWeightedMass_JPT", &loosejetSVUnWeightedMass_JPT, &b_loosejetSVUnWeightedMass_JPT);
-   fChain->SetBranchAddress("loosejetSVWeightedMass_JPT", &loosejetSVWeightedMass_JPT, &b_loosejetSVWeightedMass_JPT);
-   fChain->SetBranchAddress("loosejetSVUnWeightedLifetime_JPT", &loosejetSVUnWeightedLifetime_JPT, &b_loosejetSVUnWeightedLifetime_JPT);
-   fChain->SetBranchAddress("loosejetSVWeightedLifetime_JPT", &loosejetSVWeightedLifetime_JPT, &b_loosejetSVWeightedLifetime_JPT);
-   fChain->SetBranchAddress("loosejetSVUnWeightedCosTheta_JPT", &loosejetSVUnWeightedCosTheta_JPT, &b_loosejetSVUnWeightedCosTheta_JPT);
-   fChain->SetBranchAddress("loosejetSVWeightedCosTheta_JPT", &loosejetSVWeightedCosTheta_JPT, &b_loosejetSVWeightedCosTheta_JPT);
-   fChain->SetBranchAddress("loosejetBTagDisc_trackCountingHighPurBJetTags_JPT", &loosejetBTagDisc_trackCountingHighPurBJetTags_JPT, &b_loosejetBTagDisc_trackCountingHighPurBJetTags_JPT);
-   fChain->SetBranchAddress("loosejetBTagDisc_trackCountingHighEffBJetTags_JPT", &loosejetBTagDisc_trackCountingHighEffBJetTags_JPT, &b_loosejetBTagDisc_trackCountingHighEffBJetTags_JPT);
-   fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_JPT", &loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_JPT, &b_loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags_JPT);
-   fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_JPT", &loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_JPT, &b_loosejetBTagDisc_simpleSecondaryVertexHighPurBJetTags_JPT);
-   fChain->SetBranchAddress("loosejetBTagDisc_simpleSecondaryVertexBJetTags_JPT", &loosejetBTagDisc_simpleSecondaryVertexBJetTags_JPT, &b_loosejetBTagDisc_simpleSecondaryVertexBJetTags_JPT);
    fChain->SetBranchAddress("tightJetIndex_PF", &tightJetIndex_PF, &b_tightJetIndex_PF);
    fChain->SetBranchAddress("looseJetIndex_PF", &looseJetIndex_PF, &b_looseJetIndex_PF);
    fChain->SetBranchAddress("loosejetPt_PF", &loosejetPt_PF, &b_loosejetPt_PF);
@@ -1334,6 +1211,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("trackPt", &trackPt, &b_trackPt);
    fChain->SetBranchAddress("trackEta", &trackEta, &b_trackEta);
    fChain->SetBranchAddress("trackPhi", &trackPhi, &b_trackPhi);
+   fChain->SetBranchAddress("SumPtOverHT", &SumPtOverHT, &b_SumPtOverHT);
    fChain->SetBranchAddress("tauPt", &tauPt, &b_tauPt);
    fChain->SetBranchAddress("tauEta", &tauEta, &b_tauEta);
    fChain->SetBranchAddress("tauPhi", &tauPhi, &b_tauPhi);
@@ -1357,6 +1235,8 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("muonIsRA2", &muonIsRA2, &b_muonIsRA2);
    fChain->SetBranchAddress("muonIsGlobalMuon", &muonIsGlobalMuon, &b_muonIsGlobalMuon);
    fChain->SetBranchAddress("muonIsGlobalMuonPromptTight", &muonIsGlobalMuonPromptTight, &b_muonIsGlobalMuonPromptTight);
+   fChain->SetBranchAddress("muonEoverP", &muonEoverP, &b_muonEoverP);
+   fChain->SetBranchAddress("muonPtRatio", &muonPtRatio, &b_muonPtRatio);
    fChain->SetBranchAddress("muonPt", &muonPt, &b_muonPt);
    fChain->SetBranchAddress("muonEta", &muonEta, &b_muonEta);
    fChain->SetBranchAddress("muonPhi", &muonPhi, &b_muonPhi);
@@ -1370,10 +1250,6 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("muonTrackPhi", &muonTrackPhi, &b_muonTrackPhi);
    fChain->SetBranchAddress("muonPassID", &muonPassID, &b_muonPassID);
    fChain->SetBranchAddress("muonVtx_z", &muonVtx_z, &b_muonVtx_z);
-   fChain->SetBranchAddress("muonEcalVeto", &muonEcalVeto, &b_muonEcalVeto);
-   fChain->SetBranchAddress("muonHcalVeto", &muonHcalVeto, &b_muonHcalVeto);
-   fChain->SetBranchAddress("passesBadPFMuonFilter", &passesBadPFMuonFilter, &b_passesBadPFMuonFilter);
-   fChain->SetBranchAddress("passesInconsistentMuonPFCandidateFilter", &passesInconsistentMuonPFCandidateFilter, &b_passesInconsistentMuonPFCandidateFilter);
    fChain->SetBranchAddress("eleIsRA2", &eleIsRA2, &b_eleIsRA2);
    fChain->SetBranchAddress("eleEt", &eleEt, &b_eleEt);
    fChain->SetBranchAddress("eleEta", &eleEta, &b_eleEta);
@@ -1389,6 +1265,8 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("muonIsRA2_PF", &muonIsRA2_PF, &b_muonIsRA2_PF);
    fChain->SetBranchAddress("muonIsGlobalMuon_PF", &muonIsGlobalMuon_PF, &b_muonIsGlobalMuon_PF);
    fChain->SetBranchAddress("muonIsGlobalMuonPromptTight_PF", &muonIsGlobalMuonPromptTight_PF, &b_muonIsGlobalMuonPromptTight_PF);
+   fChain->SetBranchAddress("muonEoverP_PF", &muonEoverP_PF, &b_muonEoverP_PF);
+   fChain->SetBranchAddress("muonPtRatio_PF", &muonPtRatio_PF, &b_muonPtRatio_PF);
    fChain->SetBranchAddress("muonPt_PF", &muonPt_PF, &b_muonPt_PF);
    fChain->SetBranchAddress("muonEta_PF", &muonEta_PF, &b_muonEta_PF);
    fChain->SetBranchAddress("muonPhi_PF", &muonPhi_PF, &b_muonPhi_PF);
@@ -1402,10 +1280,6 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("muonTrackPhi_PF", &muonTrackPhi_PF, &b_muonTrackPhi_PF);
    fChain->SetBranchAddress("muonPassID_PF", &muonPassID_PF, &b_muonPassID_PF);
    fChain->SetBranchAddress("muonVtx_z_PF", &muonVtx_z_PF, &b_muonVtx_z_PF);
-   fChain->SetBranchAddress("muonEcalVeto_PF", &muonEcalVeto_PF, &b_muonEcalVeto_PF);
-   fChain->SetBranchAddress("muonHcalVeto_PF", &muonHcalVeto_PF, &b_muonHcalVeto_PF);
-   fChain->SetBranchAddress("passesBadPFMuonFilter_PF", &passesBadPFMuonFilter_PF, &b_passesBadPFMuonFilter_PF);
-   fChain->SetBranchAddress("passesInconsistentMuonPFCandidateFilter_PF", &passesInconsistentMuonPFCandidateFilter_PF, &b_passesInconsistentMuonPFCandidateFilter_PF);
    fChain->SetBranchAddress("eleIsRA2_PF", &eleIsRA2_PF, &b_eleIsRA2_PF);
    fChain->SetBranchAddress("eleEt_PF", &eleEt_PF, &b_eleEt_PF);
    fChain->SetBranchAddress("eleEta_PF", &eleEta_PF, &b_eleEta_PF);
@@ -1420,6 +1294,7 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("elePassID_PF", &elePassID_PF, &b_elePassID_PF);
    fChain->SetBranchAddress("SUSY_nb", &SUSY_nb, &b_SUSY_nb);
    fChain->SetBranchAddress("qScale", &qScale, &b_qScale);
+   fChain->SetBranchAddress("ptHat", &ptHat, &b_ptHat);
    fChain->SetBranchAddress("mcWeight", &mcWeight, &b_mcWeight);
    fChain->SetBranchAddress("pdfWeights", &pdfWeights, &b_pdfWeights);
    fChain->SetBranchAddress("topDecayCode", &topDecayCode, &b_topDecayCode);
@@ -2763,6 +2638,7 @@ std::pair<float,float> basicLoop::getJERAdjustedMHTxy() {
   }
 
   //this is an experiment! add taus in!
+  //-->experiment successful! leave taus in.
   //FIXME hard-coded for PF
   for (unsigned int i=0; i<tauPt_PF->size(); i++) {
     //start by using same pT threshold as jets
@@ -3129,6 +3005,60 @@ float basicLoop::jetEtaOfN(unsigned int n) {
   return 0;
 }
 
+float basicLoop::bjetPtOfN(unsigned int n) {
+  //updated to use Sync1 or Baseline0 cuts
+
+  unsigned int ngood=0;
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+
+    bool pass=false;
+    if (theCutScheme_==kBaseline0) pass = isGoodJet30(i) && passSSVM(i);
+    else {assert(0);}
+
+    if (pass ) {
+      ngood++;
+      if (ngood==n) return  getLooseJetPt(i);
+    }
+  }
+  return 0;
+}
+
+float basicLoop::bjetPhiOfN(unsigned int n) {
+  //updated to use Sync1 or Baseline0 cuts
+
+  unsigned int ngood=0;
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+
+    bool pass=false;
+    if (theCutScheme_==kBaseline0) pass = isGoodJet30(i) && passSSVM(i);
+    else {assert(0);}
+
+    if (pass ) {
+      ngood++;
+      if (ngood==n) return   loosejetPhi->at(i);
+    }
+  }
+  return 0;
+}
+
+float basicLoop::bjetEtaOfN(unsigned int n) {
+  //updated to use Sync1 or Baseline0 cuts
+
+  unsigned int ngood=0;
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+
+    bool pass=false;
+    if (theCutScheme_==kBaseline0) pass = isGoodJet30(i) && passSSVM(i);
+    else {assert(0);}
+
+    if (pass ) {
+      ngood++;
+      if (ngood==n) return   loosejetEta->at(i);
+    }
+  }
+  return 0;
+}
+
 unsigned int basicLoop::nGoodJets_Sync1() {
   
   unsigned int njets=0;
@@ -3168,19 +3098,53 @@ bool basicLoop::passCleaning() {
 
   if (theCleaningType_ == kNoCleaning) return true;
   else if (theCleaningType_ == kMuonCleaning) {
-    //this is a subtle point --
-    //the bad PF muon filter should be comparing reco muons (not PF) to the particle flow reco
-    //the inconsistent muon filter should use only the PF muons
-    return (passesBadPFMuonFilter && passesInconsistentMuonPFCandidateFilter_PF);
+    //these bools have now been simplified in the ntuple.
+    //there are no longer extraneous _PF/not _PF copies
+    return (passesBadPFMuonFilter && passesInconsistentMuonPFCandidateFilter);
   }
   else if (theCleaningType_ ==kMuonEcalCleaning) {
-    bool passMuon = passesBadPFMuonFilter && passesInconsistentMuonPFCandidateFilter_PF;
+    bool passMuon = passesBadPFMuonFilter && passesInconsistentMuonPFCandidateFilter;
     bool passEcal = passEcalDeadCellCleaning();
     return passMuon && passEcal;
   }
   else {assert(0);}
 
   return false;
+}
+
+//look for greedy muons (subject to the limitations explained in the ntuple maker code)
+bool basicLoop::passGreedyMuon() {
+
+  for (unsigned int i=0; i<muonEoverP_PF->size(); ++i) {
+    if (muonEoverP_PF->at(i) >= 1) return false;
+  }
+
+  return true;
+}
+
+//for studying the pT cut of the BadPFMuonFilter
+float basicLoop::findMaxMuonPtDiff() {
+  float max=0;
+
+  for (unsigned int i=0; i<muonPtDiff_PF->size(); i++) {
+    if (muonPtDiff_PF->at(i) > max) max = muonPtDiff_PF->at(i);
+  }
+
+  return max;
+}
+
+void basicLoop::findMostInconsistentPFMuon(float &mostInconsistentMuonPt, float &mostInconsistentMuonPtDiff) {
+  mostInconsistentMuonPtDiff=0;
+  mostInconsistentMuonPt=0;
+
+  for (unsigned int i=0; i<muonPtRatio_PF->size(); i++) {
+    float diff = fabs(muonPtRatio_PF->at(i) - 1);
+    if (diff > mostInconsistentMuonPtDiff) {
+      mostInconsistentMuonPt = muonPt_PF->at(i);
+      mostInconsistentMuonPtDiff = muonPtRatio_PF->at(i);
+    }
+  }
+  
 }
 
 bool basicLoop::passEcalDeadCellCleaning() {
@@ -4054,6 +4018,7 @@ void basicLoop::stopTimer(const Long64_t ntotal) {
 }
 
 // ========================================== end
+
 
 
 #endif // #ifdef basicLoop_cxx

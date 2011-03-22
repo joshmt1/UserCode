@@ -362,9 +362,9 @@ a function of eta,phi) later.
   float HT, MHT, MET, METphi, minDeltaPhi, minDeltaPhiAll, minDeltaPhiAll30,minDeltaPhi30_eta5_noIdAll;
   float caloMHT; //caloMET is an ntuple variable
   float deltaPhiMETMismeasuredJet, deltaPhiMPTMET, deltaPhib1b2;
-  float jetpt1,jetphi1, jeteta1;//, bjetpt1, bjetphi1, bjeteta1; //should add these back at some point
-  float jetpt2,jetphi2, jeteta2;//, bjetpt2, bjetphi2, bjeteta2; //should add these back at some point
-  float jetpt3,jetphi3, jeteta3;//, bjetpt3, bjetphi3, bjeteta3; //should add these back at some point
+  float jetpt1,jetphi1, jeteta1, bjetpt1, bjetphi1, bjeteta1; //should add these back at some point
+  float jetpt2,jetphi2, jeteta2, bjetpt2, bjetphi2, bjeteta2; //should add these back at some point
+  float jetpt3,jetphi3, jeteta3, bjetpt3, bjetphi3, bjeteta3; //should add these back at some point
   float eleet1;
   float muonpt1;
   float genInvisibleHT, genInvisibleMHT, genMET,genMETphi;
@@ -374,7 +374,9 @@ a function of eta,phi) later.
 
   bool cutHT,cutPV,cutTrigger; //these will always be true
   bool cut3Jets,cutEleVeto,cutMuVeto,cutMET,cutDeltaPhi,cutCleaning;
-  bool passBadPFMuon, passInconsistentMuon, passEcalCleaning;
+  bool passBadPFMuon, passInconsistentMuon, passEcalCleaning, passGreedyMu;
+  float maxMuonPtDiff;
+  float mostInconsistentMuonPt, mostInconsistentMuonPtDiff;
 
   //SUSY_nb //copy straight from ntuple!
   int nbGen;
@@ -424,6 +426,11 @@ a function of eta,phi) later.
   reducedTree.Branch("passEcalCleaning",&passEcalCleaning,"passEcalCleaning/O");
   reducedTree.Branch("passInconsistentMuon",&passInconsistentMuon,"passInconsistentMuon/O");
   reducedTree.Branch("passBadPFMuon",&passBadPFMuon,"passBadPFMuon/O");
+  reducedTree.Branch("passGreedyMuon",&passGreedyMu,"passGreedyMuon/O");
+  reducedTree.Branch("maxMuonPtDiff",&maxMuonPtDiff,"maxMuonPtDiff/F");
+  reducedTree.Branch("mostInconsistentMuonPt",&mostInconsistentMuonPt,"mostInconsistentMuonPt/F");
+  reducedTree.Branch("mostInconsistentMuonPtDiff",&mostInconsistentMuonPtDiff,"mostInconsistentMuonPtDiff/F");
+  reducedTree.Branch("SumPtOverHT",&SumPtOverHT,"SumPtOverHT/F"); //copy directly from ntuple
 
   reducedTree.Branch("nbGen",&nbGen,"nbGen/I");
   reducedTree.Branch("SUSY_nb",&SUSY_nb,"SUSY_nb/I");
@@ -471,6 +478,18 @@ a function of eta,phi) later.
   reducedTree.Branch("jetpt3",&jetpt3,"jetpt3/F");
   reducedTree.Branch("jeteta3",&jeteta3,"jeteta3/F");
   reducedTree.Branch("jetphi3",&jetphi3,"jetphi3/F");
+
+  reducedTree.Branch("bjetpt1",&bjetpt1,"bjetpt1/F");
+  reducedTree.Branch("bjeteta1",&bjeteta1,"bjeteta1/F");
+  reducedTree.Branch("bjetphi1",&bjetphi1,"bjetphi1/F");
+
+  reducedTree.Branch("bjetpt2",&bjetpt2,"bjetpt2/F");
+  reducedTree.Branch("bjeteta2",&bjeteta2,"bjeteta2/F");
+  reducedTree.Branch("bjetphi2",&bjetphi2,"bjetphi2/F");
+
+  reducedTree.Branch("bjetpt3",&bjetpt3,"bjetpt3/F");
+  reducedTree.Branch("bjeteta3",&bjeteta3,"bjeteta3/F");
+  reducedTree.Branch("bjetphi3",&bjetphi3,"bjetphi3/F");
 
   reducedTree.Branch("genInvisibleHT",&genInvisibleHT,"genInvisibleHT/F");
   reducedTree.Branch("genInvisibleMHT",&genInvisibleMHT,"genInvisibleMHT/F");
@@ -521,8 +540,12 @@ a function of eta,phi) later.
       cutCleaning = passCut("cutCleaning");
 
       passBadPFMuon = passesBadPFMuonFilter;
-      passInconsistentMuon = passesInconsistentMuonPFCandidateFilter_PF;
+      passInconsistentMuon = passesInconsistentMuonPFCandidateFilter;
       passEcalCleaning = passEcalDeadCellCleaning();
+      passGreedyMu = passGreedyMuon();
+      maxMuonPtDiff = findMaxMuonPtDiff();
+      findMostInconsistentPFMuon( mostInconsistentMuonPt, mostInconsistentMuonPtDiff);
+      //SumPtOverHT copied directly from ntuple
 
       njets = nGoodJets();
       nElectrons = countEle();
@@ -570,6 +593,18 @@ a function of eta,phi) later.
       jetpt3 = jetPtOfN(3);
       jetphi3 = jetPhiOfN(3);
       jeteta3 = jetEtaOfN(3);
+
+      bjetpt1 = bjetPtOfN(1);
+      bjetphi1 = bjetPhiOfN(1);
+      bjeteta1 = bjetEtaOfN(1);
+
+      bjetpt2 = bjetPtOfN(2);
+      bjetphi2 = bjetPhiOfN(2);
+      bjeteta2 = bjetEtaOfN(2);
+
+      bjetpt3 = bjetPtOfN(3);
+      bjetphi3 = bjetPhiOfN(3);
+      bjeteta3 = bjetEtaOfN(3);
 
       genInvisibleHT =  getJetInvisibleEnergyHT();      
       genInvisibleMHT = getJetInvisibleEnergyMHT();
