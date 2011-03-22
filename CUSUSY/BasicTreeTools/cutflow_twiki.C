@@ -22,16 +22,16 @@ TCanvas * Ccutflow;
 //filestub_  -- what input files to use (just the middle part of the filename)
 //mode_      -- what type of table to print
 //latexMode_ -- do you want your table formatted for latex or for twiki
-
-const TString filestub_ ="Baseline0_PF_pfMETmed_PFLep0e0mu_minDP_MuonCleaning";
+const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning_Witheq4SUSYb";
+//const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning";
 //mode 1 is print cut flow table (B & S) ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
 //mode 4 is like 1 but B only, 5 is like 1 but S only
 //mode 6 is print S/B table
 //mode 7 prints signal efficiency table (%)
-const int mode_ = 4;
+const int mode_ = 7;
 const bool latexMode_ = true; //true=latex, false=TWiki
 
-//nb: this routine is hard-coded to use 4 QCD samples and 3 SingleTop samples
+//nb: this routine is hard-coded to use 3 SingleTop samples
 //also, the list of input sample is hard-coded below
 
 const TString pm = latexMode_ ? " \\pm " : " +/- ";
@@ -135,29 +135,35 @@ void cutflow_twiki()
   //so old cutflow files won't work any more!
   std::vector<TString> cutnames;
 
-  int nbackground = 6;
-  char *background_list[]={"QCD","TTbarJets","SingleTop","WJets","ZJets","Zinvisible"}; //this one corresponds to filenames
+  int nbackground = 6; //we now override this number automatically if we fail to load some of the files
+  char *background_list[]={"PythiaPUQCDFlat","TTbarJets","SingleTop","WJets","ZJets","Zinvisible"}; //this one corresponds to filenames
+  //gala's variation
+  //char *background_list[]={"TTbarJets","SingleTop","Zinvisible","WJets","ZJets"}; //this one corresponds to filenames
   //FIXME -- this is hard-coded for Latex output:
   char *background_names[]={"QCD","\\ttbar","Single-Top","\\WJets","\\ZJets","\\Zinvisible"}; //this one has printed names
+  //char *background_names[]={"ttbar","Single-Top","Zinvisible","WJets","ZJets"}; //this one has printed names
   int nsignal = 2;//5;//16;
   //  char *signal_list[]={"LM0", "LM1", "LM2", "LM4", "LM5", "LM6","LM7", "LM8","LM9","LM9p", "LM9t175", "LM10", "LM11", "LM12","LM13","mMSSM"};
   //  char *signal_list[]={"LM0", "LM1", "LM9","LM13","mMSSMv3"};
   char *signal_list[]={ "LM9","LM13"};
 
-  //combine single top into one category
-  std::vector<TString> singletopnames;
-  singletopnames.push_back("SingleTop-sChannel");
-  singletopnames.push_back("SingleTop-tChannel");
-  singletopnames.push_back("SingleTop-tWChannel");
-  combineSamples("SingleTop",singletopnames);
+  if (!(mode_==5 ||mode_==7)) { //not needed for signal-only output
+    //combine single top into one category
+    std::vector<TString> singletopnames;
+    singletopnames.push_back("SingleTop-sChannel");
+    singletopnames.push_back("SingleTop-tChannel");
+    singletopnames.push_back("SingleTop-tWChannel");
+    combineSamples("SingleTop",singletopnames);
+  }
 
   //combine qcd into one
-  std::vector<TString> qcdnames;
-  qcdnames.push_back("QCD100");
-  qcdnames.push_back("QCD250");
-  qcdnames.push_back("QCD500");
-  qcdnames.push_back("QCD1000");
-  combineSamples("QCD",qcdnames);
+//   std::vector<TString> qcdnames;
+//   qcdnames.push_back("QCD100");
+//   qcdnames.push_back("QCD250");
+//   qcdnames.push_back("QCD500");
+//   qcdnames.push_back("QCD1000");
+//   combineSamples("QCD",qcdnames);
+  
 
   //these are only relevant for mode==1
   const int drawsignalindex = 3; //this is the signal to use for the plot
@@ -176,7 +182,9 @@ void cutflow_twiki()
 //I need to fill cutnames!
   TString filename = "cutflow.";
   filename+=filestub_;
-  filename+="."; filename+=background_list[0];
+  filename+="."; 
+  if (mode_!=5 && mode_!=7) filename+=background_list[0];
+  else  filename+=signal_list[0];
   filename += ".dat";
   ifstream file(filename.Data());
   if (!file.good()) {cout<<"bad file! "<<filename<<endl; return;}
@@ -213,7 +221,7 @@ void cutflow_twiki()
     cout<<"Reading "<<filename<<endl;
     double nevt,nevterr;
     ifstream file(filename.Data());
-    if (!file.good()) {cout<<"bad file! "<<filename<<endl; return;}
+    if (!file.good()) {cout<<"bad file! "<<filename<<endl; continue;}
     int ibin=1;
     while (file>>cutdesc>>nevt>>nevterr ) {
       double scale = 1;
@@ -229,7 +237,8 @@ void cutflow_twiki()
     file.close();
   }
   cout<<"--"<<endl;
-  cout<<  background.size()<<"\t"<<  backgrounderr.size()<<endl;
+  cout<<"Number of background files loaded = "<< background.size()<<"\t"<<  backgrounderr.size()<<endl;
+  nbackground = background.size();
 
   for (int i=0 ; i<nsignal; i++) {
     TString filename = "cutflow.";
