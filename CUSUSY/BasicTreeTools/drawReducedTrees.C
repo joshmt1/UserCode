@@ -1024,6 +1024,14 @@ void drawOwen(bool doMinDPPass) {
     totalewk->Write();
     totalqcdttbar->Write();
     fh.Close();   
+    
+    TCut SIGMET = "MET>=150 && MET<10000";
+    TCut theSIGSelection = baseSelection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && SIGMET;
+    selection_ = theSIGSelection.GetTitle();
+    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_10000_"+btagstring+"tag_qcd","PythiaPUQCDFlat");
+    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_10000_"+btagstring+"tag_ttbar","TTbarJets");
+    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_10000_"+btagstring+"tag_data","data");
+    
 
     //this one is going to be handled by the flexible MET version....
     //   TCut SBMET = "MET>=70 && MET<150";
@@ -1034,8 +1042,8 @@ void drawOwen(bool doMinDPPass) {
     //now for a flexible MET region
     //  int metCutLow = 60;
     //  int metCutHigh = 140;
-    for (int metCutLow = 60; metCutLow <=130; metCutLow+=5) {
-      for (int metCutHigh = 140; metCutHigh <=150; metCutHigh+=5) {
+    for (int metCutLow = 70; metCutLow <=100; metCutLow+=30) {
+      for (int metCutHigh = 150; metCutHigh <=150; metCutHigh+=5) {
 	TString metCutString; metCutString.Form("MET >= %d && MET < %d",metCutLow,metCutHigh);
 	ofile<<metCutString<<endl;
 	TCut METselection(metCutString.Data());
