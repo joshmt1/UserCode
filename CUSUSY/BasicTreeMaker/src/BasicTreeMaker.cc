@@ -22,7 +22,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.33 2011/03/18 13:24:22 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.34 2011/03/18 16:17:35 joshmt Exp $
 //
 //
 
@@ -946,17 +946,24 @@ BasicTreeMaker::fillJetInfo(const edm::Event& iEvent, const edm::EventSetup& iSe
 
       //JEC uncertainties
       //for now we are hard-coding to only store them for PF jets
-      if (jet.isPFJet()) {
-	jecUncPF->setJetEta(jet.eta());
-	jecUncPF->setJetPt(jet.pt()); //corrected pT
-	const 	float uncplus = jecUncPF->getUncertainty(true);
-	loosejetJECUncPlus[jetAlgorithmTags_[jetIndex]].push_back( uncplus );
-	//due to weird behavior of this JetUncertainty class, need to reset the eta and pt
-	jecUncPF->setJetEta(jet.eta());
-	jecUncPF->setJetPt(jet.pt()); //corrected pT
-	const 	float uncminus = jecUncPF->getUncertainty(false);
-	loosejetJECUncMinus[jetAlgorithmTags_[jetIndex]].push_back( uncminus );
-	if (jetDebug)	std::cout<<"JEC uncertainty = "<<uncplus<<" "<<uncminus<<std::endl;
+      if (jet.isPFJet() ) {
+	if (fabs(jet.eta())<5) {
+	  jecUncPF->setJetEta(jet.eta());
+	  jecUncPF->setJetPt(jet.pt()); //corrected pT
+	  const 	float uncplus = jecUncPF->getUncertainty(true);
+	  loosejetJECUncPlus[jetAlgorithmTags_[jetIndex]].push_back( uncplus );
+	  //due to weird behavior of this JetUncertainty class, need to reset the eta and pt
+	  jecUncPF->setJetEta(jet.eta());
+	  jecUncPF->setJetPt(jet.pt()); //corrected pT
+	  const 	float uncminus = jecUncPF->getUncertainty(false);
+	  loosejetJECUncMinus[jetAlgorithmTags_[jetIndex]].push_back( uncminus );
+	  if (jetDebug)	std::cout<<"JEC uncertainty = "<<uncplus<<" "<<uncminus<<std::endl;
+	}
+	//code threw an exception for eta>6 jet
+	else {
+	  loosejetJECUncPlus[jetAlgorithmTags_[jetIndex]].push_back( 0 );
+	  loosejetJECUncMinus[jetAlgorithmTags_[jetIndex]].push_back( 0 );
+	}
       }
 
       //jet id
