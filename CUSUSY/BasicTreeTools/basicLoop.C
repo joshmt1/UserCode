@@ -202,7 +202,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   //open output file
   //FIXME hardcoded for dellcmscornell here
   //TString outfilename="/cu1/joshmt/ABCDtrees/ABCDtree.";
-  TString outfilename="/cu1/joshmt/ABCDtrees/11Mar14/ABCDtree.";
+  TString outfilename="/cu1/joshmt/ABCDtrees/11Mar22/ABCDtree.";
   outfilename+=getCutDescriptionString();
   outfilename+=".";    outfilename+=getBCutDescriptionString(); 
   outfilename+=".";    outfilename+=sampleName; 
@@ -362,9 +362,9 @@ a function of eta,phi) later.
   float HT, MHT, MET, METphi, minDeltaPhi, minDeltaPhiAll, minDeltaPhiAll30,minDeltaPhi30_eta5_noIdAll;
   float caloMHT; //caloMET is an ntuple variable
   float deltaPhiMETMismeasuredJet, deltaPhiMPTMET, deltaPhib1b2;
-  float jetpt1,jetphi1, jeteta1, bjetpt1, bjetphi1, bjeteta1; //should add these back at some point
-  float jetpt2,jetphi2, jeteta2, bjetpt2, bjetphi2, bjeteta2; //should add these back at some point
-  float jetpt3,jetphi3, jeteta3, bjetpt3, bjetphi3, bjeteta3; //should add these back at some point
+  float jetpt1,jetphi1, jeteta1, bjetpt1, bjetphi1, bjeteta1;
+  float jetpt2,jetphi2, jeteta2, bjetpt2, bjetphi2, bjeteta2;
+  float jetpt3,jetphi3, jeteta3, bjetpt3, bjetphi3, bjeteta3;
   float eleet1;
   float muonpt1;
   float genInvisibleHT, genInvisibleMHT, genMET,genMETphi;
@@ -377,6 +377,8 @@ a function of eta,phi) later.
   bool passBadPFMuon, passInconsistentMuon, passEcalCleaning, passGreedyMu;
   float maxMuonPtDiff;
   float mostInconsistentMuonPt, mostInconsistentMuonPtDiff;
+
+  int nGoodPV;
 
   //SUSY_nb //copy straight from ntuple!
   int nbGen;
@@ -435,6 +437,8 @@ a function of eta,phi) later.
   reducedTree.Branch("nbGen",&nbGen,"nbGen/I");
   reducedTree.Branch("SUSY_nb",&SUSY_nb,"SUSY_nb/I");
   reducedTree.Branch("topDecayCategory",&topDecayCategory,"topDecayCategory/I");
+
+  reducedTree.Branch("nGoodPV",&nGoodPV,"nGoodPV/I");
 
   reducedTree.Branch("njets",&njets,"njets/I");
   reducedTree.Branch("nbjets",&nbjets,"nbjets/I");
@@ -546,6 +550,8 @@ a function of eta,phi) later.
       maxMuonPtDiff = findMaxMuonPtDiff();
       findMostInconsistentPFMuon( mostInconsistentMuonPt, mostInconsistentMuonPtDiff);
       //SumPtOverHT copied directly from ntuple
+
+      nGoodPV = countGoodPV();
 
       njets = nGoodJets();
       nElectrons = countEle();

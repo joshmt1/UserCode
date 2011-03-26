@@ -683,6 +683,8 @@ public :
    double getCrossSection(TString inname="") ;
    TString findInputName() ;
 
+   int countGoodPV() ;
+
    float getMET(); //return MET determined by theMETType_
    float getMETphi(); //return MET determined by theMETType_
    float getGenMET(); //return MET determined by theMETType_
@@ -702,6 +704,7 @@ public :
    std::pair<float, float> getJERAdjustedMETxy();
    std::pair<float, float> getJERAdjustedMHTxy();
    std::pair<float,float> getUnclusteredSmearedMETxy() ;
+   float getJESExtraUnc(unsigned int ijet);
 
    bool cutRequired(TString cutTag) ;
    bool passCut(TString cutTag) ;
@@ -736,6 +739,7 @@ public :
    float getLooseJetPtUncorr(unsigned int ijet); //includes JER
    bool isGoodJet_Sync1(unsigned int ijet);
    bool isGoodJet(unsigned int ijet); //index here is on the loose jet list
+   bool isGoodJet10(unsigned int ijet); //index here is on the loose jet list
    bool isGoodJet30(unsigned int ijet); //index here is on the loose jet list
    bool isGoodJetMHT(unsigned int ijet); //index here is on the loose jet list
    bool isLooseJet_Sync1(unsigned int ijet); //looser pt cut
@@ -1899,41 +1903,32 @@ bool basicLoop::passCut(const TString cutTag) {
   return true;
 }
 
-bool basicLoop::passPV() {
+int basicLoop::countGoodPV() {
 
-
-  //i have now understood the discrepancies between the PVSelector and the hand-calculated result
-  //the PV selector only looks at the first PV. I think this is wrong.
-  //so this function should be used instead
-
-  //this is precomputed PVSelector result
-  return pv_pass;
   //never run the code down here (except for special checks)
 
-  bool pass=false;
+  int npass=0;
   for (unsigned int ipv = 0; ipv<pv_isFake->size(); ipv++) {
     if ( pv_isFake->at(ipv) ) continue;
     if ( fabs(pv_z->at(ipv)) > 24 ) continue;
     if ( fabs(pv_rho->at(ipv)) > 2 ) continue;
     if ( pv_ndof->at(ipv) <= 4 ) continue;
 
-    pass=true; break;
+    ++npass;
   }
 
-  /*
-  if (ntupleResult != pass) {
-    cout<<"PV conflict! ntupleResult = "<<ntupleResult<<" passPV results = "<<pass<<endl;
-    for (unsigned int ipv = 0; ipv<pv_isFake->size(); ipv++) {
-      cout<<ipv<<"\t"
-	  <<pv_isFake->at(ipv) <<" "
-	  <<fabs(pv_z->at(ipv))<<" "
-	  <<fabs(pv_rho->at(ipv))<<" "
-	  <<pv_ndof->at(ipv)<<endl;
-    }
-  }
-  */
+  return npass; 
+}
 
-  return pass; 
+bool basicLoop::passPV() {
+
+
+  //i have now understood the discrepancies between the PVSelector and the hand-calculated result
+  //the PV selector only looks at the first PV.
+
+  //this is precomputed PVSelector result
+  return pv_pass;
+
 }
 
 int basicLoop::countGenBJets(float threshold) {
@@ -2103,6 +2098,21 @@ so we set that automatically in setMETuncType()
   return make_pair(myMETx,myMETy);
 }
 
+float basicLoop::getJESExtraUnc(unsigned int ijet) {
+  //add all of these pieces in quadrature
+
+  float  unc = 0.015 * 0.015; //c_sw
+  //          e_PU   JA  AvgPU    pT
+  unc += pow(0.75 * 0.8 * 2.2 / loosejetPt->at(ijet) ,2);
+  //b jet uncertainty
+  if (abs(loosejetFlavor->at(ijet)) == 5) {
+    if ( loosejetPt->at(ijet)>50 && loosejetPt->at(ijet)<200 && fabs(loosejetEta->at(ijet))<2 ) unc += 0.02*0.02;
+    else unc += 0.03*0.03;
+  }
+
+  return sqrt(unc);
+}
+
 std::pair<float,float> basicLoop::getJESAdjustedMETxy() {
 
   if (theJESType_ == kJES0) {assert(0);}
@@ -2138,12 +2148,15 @@ std::pair<float,float> basicLoop::getJESAdjustedMETxy() {
     myMETy += jetUy;
     float jes_factor=1;
     if (theJESType_ == kJESup) {
-      float unc =  sqrt( loosejetJECUncPlus->at(ijet) * loosejetJECUncPlus->at(ijet) +0.053 * 0.053);
+      float unc =   loosejetJECUncPlus->at(ijet);
+      float cor = getJESExtraUnc(ijet);
+      unc = sqrt(unc*unc + cor*cor);
       jes_factor += unc;
     }
     else if (theJESType_ == kJESdown) {
-      float unc =  sqrt( loosejetJECUncMinus->at(ijet) * loosejetJECUncMinus->at(ijet) +0.053 * 0.053);
-      jes_factor -= unc;
+      float unc =  loosejetJECUncMinus->at(ijet);
+      float cor = getJESExtraUnc(ijet);
+      jes_factor -= sqrt(unc*unc + cor*cor);
     }
     else {assert(0);}
     jetUx *= jes_factor;
@@ -2696,7 +2709,6 @@ float basicLoop::getHT_Sync1() {
 
 //the main accessor for jet pt
 //automatically adjust for jes rescaling
-//this includes an extra uncertainty of 5.3%
 //according to https://twiki.cern.ch/twiki/bin/viewauth/CMS/TopLeptonPlusJets2010Systematics
 
 //also adjust for JER according to that twiki
@@ -2708,11 +2720,13 @@ float basicLoop::getLooseJetPt( unsigned int ijet ) {
   if ( theJESType_ == kJES0 && theJERType_ == kJER0) return loosejetPt->at(ijet);
   //then JES variations
   else if (theJESType_ == kJESup && theJERType_ == kJER0) {
-    float unc =  sqrt( loosejetJECUncPlus->at(ijet) * loosejetJECUncPlus->at(ijet) +0.053 * 0.053);
+    float cor = getJESExtraUnc(ijet);
+    float unc =  sqrt( loosejetJECUncPlus->at(ijet) * loosejetJECUncPlus->at(ijet) + cor*cor);
     return (1+unc) * loosejetPt->at(ijet) ;
   }
   else if (theJESType_ == kJESdown && theJERType_ == kJER0) {
-    float unc =  sqrt( loosejetJECUncMinus->at(ijet) * loosejetJECUncMinus->at(ijet) +0.053 * 0.053);
+    float cor = getJESExtraUnc(ijet);
+    float unc =  sqrt( loosejetJECUncMinus->at(ijet) * loosejetJECUncMinus->at(ijet) + cor*cor);
     return (1-unc) *loosejetPt->at(ijet) ;
   }
   //now do JER variations
@@ -2787,6 +2801,17 @@ bool basicLoop::isGoodJet(unsigned int ijet) {
 bool basicLoop::isGoodJet30(unsigned int ijet) {
 
   if ( getLooseJetPt(ijet) <30) return false;
+  if ( fabs(loosejetEta->at(ijet)) > 2.4) return false;
+  if (doJetID_ && !(loosejetPassLooseID->at(ijet)) ) return false;
+
+  return true;
+}
+
+//i should really just make the pT cut an argument of the function.
+//but at this point i'm too nervous to change existing code
+bool basicLoop::isGoodJet10(unsigned int ijet) {
+
+  if ( getLooseJetPt(ijet) <10) return false;
   if ( fabs(loosejetEta->at(ijet)) > 2.4) return false;
   if (doJetID_ && !(loosejetPassLooseID->at(ijet)) ) return false;
 
@@ -3183,7 +3208,7 @@ void basicLoop::fillWTop() {
 
       //note how owen does the loop indexing here
       for (unsigned int j2i =j1i+1; j2i<loosejetPt->size(); j2i++) {
-	if ( isGoodJet30(j1i)) { //owen is using a pT>10 cut here!
+	if ( isGoodJet10(j1i)) { //owen is using a pT>10 cut here!
 
 	  if (passSSVM(j2i)) continue; //veto b jets
 
@@ -3198,7 +3223,7 @@ void basicLoop::fillWTop() {
 
 	      if (j3i==j1i || j3i==j2i) continue;
 
-	      if ( isGoodJet30(j3i) && passSSVM(j3i)) { //owen uses 10 GeV pT cut
+	      if ( isGoodJet10(j3i) && passSSVM(j3i)) { //owen uses 10 GeV pT cut
 
 		double m3j = calc_mNj(j1i,j2i,j3i);
 
@@ -3602,6 +3627,23 @@ TString basicLoop::getSampleName(TString inname) {
   else if (inname.Contains("/QCD-Pt1400to1800-PythiaZ2/")) return "PythiaQCD1400";
   else if (inname.Contains("/QCD-Pt1800toInf-PythiaZ2/"))  return "PythiaQCD1800";
 
+  else if (inname.Contains("/QCD-Pt0to5-PythiaZ2-PU2010/"))       return "PythiaPUQCD0";
+  else if (inname.Contains("/QCD-Pt5to15-PythiaZ2-PU2010/"))      return "PythiaPUQCD5";
+  else if (inname.Contains("/QCD-Pt15to30-PythiaZ2-PU2010/"))     return "PythiaPUQCD15";
+  else if (inname.Contains("/QCD-Pt30to50-PythiaZ2-PU2010/"))     return "PythiaPUQCD30";
+
+  else if (inname.Contains("/QCD-Pt50to80-PythiaZ2-PU2010/"))     return "PythiaPUQCD50";
+  else if (inname.Contains("/QCD-Pt80to120-PythiaZ2-PU2010/"))    return "PythiaPUQCD80";
+  else if (inname.Contains("/QCD-Pt120to170-PythiaZ2-PU2010/"))   return "PythiaPUQCD120";
+  else if (inname.Contains("/QCD-Pt170to300-PythiaZ2-PU2010/"))   return "PythiaPUQCD170";
+  else if (inname.Contains("/QCD-Pt300to470-PythiaZ2-PU2010/"))   return "PythiaPUQCD300";
+  else if (inname.Contains("/QCD-Pt470to600-PythiaZ2-PU2010/"))   return "PythiaPUQCD470";
+  else if (inname.Contains("/QCD-Pt600to800-PythiaZ2-PU2010/"))   return "PythiaPUQCD600";
+  else if (inname.Contains("/QCD-Pt800to1000-PythiaZ2-PU2010/"))  return "PythiaPUQCD800";
+  else if (inname.Contains("/QCD-Pt1000to1400-PythiaZ2-PU2010/")) return "PythiaPUQCD1000";
+  else if (inname.Contains("/QCD-Pt1400to1800-PythiaZ2-PU2010/")) return "PythiaPUQCD1400";
+  else if (inname.Contains("/QCD-Pt1800toInf-PythiaZ2-PU2010/"))  return "PythiaPUQCD1800";
+
   else if (inname.Contains("/QCD-Pt15to3000-PythiaZ2-Flat-PU2010/"))  return "PythiaPUQCDFlat";
 
 
@@ -3704,6 +3746,24 @@ double basicLoop::getCrossSection( TString inname) {
   else if (inname.Contains("QCD-Pt1000to1400-PythiaZ2/"))  return 3.321e-1;
   else if (inname.Contains("QCD-Pt1400to1800-PythiaZ2/"))  return 1.087e-2;
   else if (inname.Contains("QCD-Pt1800toInf-PythiaZ2/"))   return 3.575e-4;
+
+  //these numbers are exactly the same as those above for the non-PU samples
+  else if (inname.Contains("/QCD-Pt0to5-PythiaZ2-PU2010/"))       return 4.844e10;
+  else if (inname.Contains("/QCD-Pt5to15-PythiaZ2-PU2010/"))      return 3.675e10;
+  else if (inname.Contains("/QCD-Pt15to30-PythiaZ2-PU2010/"))     return 8.159e8;
+  else if (inname.Contains("/QCD-Pt30to50-PythiaZ2-PU2010/"))     return 5.312e7;
+
+  else if (inname.Contains("/QCD-Pt50to80-PythiaZ2-PU2010/"))     return 6.359e6;
+  else if (inname.Contains("/QCD-Pt80to120-PythiaZ2-PU2010/"))    return 7.843e5;
+  else if (inname.Contains("/QCD-Pt120to170-PythiaZ2-PU2010/"))   return 1.151e5;
+  else if (inname.Contains("/QCD-Pt170to300-PythiaZ2-PU2010/"))   return 2.426e4;
+  else if (inname.Contains("/QCD-Pt300to470-PythiaZ2-PU2010/"))   return 1.168e3;
+  else if (inname.Contains("/QCD-Pt470to600-PythiaZ2-PU2010/"))   return 7.022e1;
+  else if (inname.Contains("/QCD-Pt600to800-PythiaZ2-PU2010/"))   return 1.555e1;
+  else if (inname.Contains("QCD-Pt800to1000-PythiaZ2-PU2010/"))   return 1.844;
+  else if (inname.Contains("QCD-Pt1000to1400-PythiaZ2-PU2010/"))  return 3.321e-1;
+  else if (inname.Contains("QCD-Pt1400to1800-PythiaZ2-PU2010/"))  return 1.087e-2;
+  else if (inname.Contains("QCD-Pt1800toInf-PythiaZ2-PU2010/"))   return 3.575e-4;
 
   else if (inname.Contains("/QCD-Pt15to3000-PythiaZ2-Flat-PU2010/"))  return 2.213e+10;
 
