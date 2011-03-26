@@ -10,7 +10,7 @@ root -b -l -q run_ABCDLoop.C++
 
 Updated for ECAL dead cell cleaning!
 */
-const TString version = "V00-02-03";
+const TString version = "V00-03-01";
 const TString ecalDeadCellPath = "/cu1/joshmt/ECALDeadCellNtuples/"; //hard coded for dellcmscornell
 
 void run_ABCDLoop()
@@ -41,9 +41,8 @@ void run_ABCDLoop()
     samplefiles+="/*.root";
 
     if(samplefiles.Contains("DATA")) continue;
+    if(!samplefiles.Contains("PythiaZ2-PU2010")) continue;
     cout<<"About to start on sample: "<<samplename<<endl;
-
-    //if(!samplefiles.Contains("LM")) continue;
 
     //fetch ecal dead cell info
     TFile fEcal(ecalDeadCellPath + samplename + "/deadCellFilterProfile.root"); //hadd files together into one
@@ -58,11 +57,12 @@ void run_ABCDLoop()
     //important! this is where cuts are defined
     //looper.setCutScheme(basicLoop::kRA2); //usually this is kRA2
     looper.setCutScheme(basicLoop::kBaseline0); //usually this is kRA2
-
     looper.setMETType(basicLoop::kpfMET);
-    looper.setLeptonType(basicLoop::kPFLeptons);
+    looper.setDPType(basicLoop::kminDP);
+    looper.setLeptonType(basicLoop::kPFLeptonsRA2);
     looper.setJetType(basicLoop::kPF);
-    looper.setCleaningType(basicLoop::kMuonEcalCleaning);
+    looper.setCleaningType(basicLoop::kMuonCleaning);
+    looper.setJERType(basicLoop::kJERbias);
 
     looper.setBCut(0);
     
