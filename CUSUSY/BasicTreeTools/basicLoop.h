@@ -3195,8 +3195,8 @@ void basicLoop::fillWTop() {
 
   // cout<<" == event =="<<endl;
 
-  double bestM2j=1e9;//, bestM2j_j1pt=0, bestM2j_j2pt=0;
-  double bestM3j=1e9;//, bestM3j_j3pt=0;
+  double bestM2j=-9999;//, bestM2j_j1pt=0, bestM2j_j2pt=0;
+  double bestM3j=-9999;//, bestM3j_j3pt=0;
 
   //adopting this code from Owen -- note the loop goes to the second to last jet only
   for (unsigned int j1i = 0; j1i < loosejetPt->size() -1; j1i++) {
