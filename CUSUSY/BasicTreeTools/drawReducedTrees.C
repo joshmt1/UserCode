@@ -39,7 +39,7 @@ std::map<TString, UInt_t> sampleColor_;
 std::map<TString, TString> sampleLabel_;
 std::map<TString, UInt_t> sampleMarkerStyle_;
 
-TString inputPath = "/cu2/joshmt/";
+TString inputPath = "/cu2/joshmt/V00-03-00/";
 //TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
 TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLepRA20e0mu_minDP_MuonEcalCleaning";
 //TString cutdesc = "Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonEcalCleaning";
@@ -74,6 +74,7 @@ THStack* thestack=0;
 TH1D* totalsm=0;
 TH1D* totalewk=0;
 TH1D* totalqcdttbar=0;
+TH1D* totalnonttbar=0;
 TH1D* ratio=0; float ratioMin=0; float ratioMax=2;
 TGraphErrors* qcderrors=0;
 bool loaded_=false; //bookkeeping
@@ -202,6 +203,32 @@ TString getCutString(TString extraSelection="") {
 void addOverflowBin(TH1D* theHist) {
   //this code was written for when there was a customizable plot range (post-histo creation)
   //it could be made a lot simpler now
+
+  int lastVisibleBin = theHist->GetNbinsX();
+  //  cout<<theHist<<"  "<<lastVisibleBin<<"\t";
+
+  //in case there is no custom range, the code should just add the overflow bin to the last bin of the histo
+  double lastBinContent = theHist->GetBinContent(lastVisibleBin);
+  double lastBinError = pow(theHist->GetBinError(lastVisibleBin),2); //square in prep for addition
+
+  //  cout<<"Overflow addition: "<<lastBinContent<<" +/- "<<sqrt(lastBinError)<<" --> ";
+
+  //now loop over the bins that aren't being shown at the moment (including the overflow bin)
+  for (int ibin = lastVisibleBin+1; ibin <= 1 + theHist->GetNbinsX() ; ++ibin) {
+    lastBinContent += theHist->GetBinContent( ibin);
+    lastBinError += pow(theHist->GetBinError( ibin),2);
+  }
+  lastBinError = sqrt(lastBinError);
+
+  theHist->SetBinContent(lastVisibleBin,lastBinContent);
+  theHist->SetBinError(lastVisibleBin,lastBinError);
+  cout<<lastBinContent<<" +/- "<<lastBinError<<endl;
+}
+
+void addOverflowBin(TH1F* theHist) {
+  //this code was written for when there was a customizable plot range (post-histo creation)
+  //it could be made a lot simpler now
+  //this one is copied from the function of the same name that takes a TH1D
 
   int lastVisibleBin = theHist->GetNbinsX();
   //  cout<<theHist<<"  "<<lastVisibleBin<<"\t";
@@ -358,6 +385,8 @@ float drawSimple(const TString var, const int nbins, const float low, const floa
   tree->Project(histname,var,getCutString().Data());
   float theIntegral = hh->Integral(0,nbins+1);
 
+  if (addOverflow_)  addOverflowBin( hh ); //manipulates the TH1F
+
   //at this point i've got a histogram. what more could i want?
   TFile fout(filename,"UPDATE");
   hh->Write();
@@ -408,6 +437,9 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
     if (totalqcdttbar!=0) delete totalqcdttbar;
     totalqcdttbar = (varbins==0) ? new TH1D("totalqcdttbar","",nbins,low,high) : new TH1D("totalqcdttbar","",nbins,varbins);
     totalqcdttbar->Sumw2();
+     if (totalnonttbar!=0) delete totalnonttbar;
+    totalnonttbar = (varbins==0) ? new TH1D("totalnonttbar","",nbins,low,high) : new TH1D("totalnonttbar","",nbins,varbins);
+    totalnonttbar->Sumw2();
     if (doRatio_) {
       if (ratio!=0) delete ratio;
       ratio = (varbins==0) ? new TH1D("ratio","data/(SM MC)",nbins,low,high) : new TH1D("ratio","",nbins,varbins);
@@ -458,7 +490,11 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
       totalqcdttbar->Add(histos_[samples_[isample]]);
       cout << "totalqcdttbar: " << samples_[isample] << endl;
     }
-
+    if (!samples_[isample].Contains("TTbar")){
+      totalnonttbar->Add(histos_[samples_[isample]]);
+      cout << "totalnonttbar: " << samples_[isample] << endl;
+    }
+  
     //now just do a bunch of histogram formatting
     if (!dostack_) {
       //set line color instead of fill color for this type of plot
@@ -1029,7 +1065,7 @@ void drawOwen(bool doMinDPPass) {
 .L drawReducedTrees.C++
   */
   
-  doOverflowAddition(false);
+  doOverflowAddition(true);
 
   const  int nbins = 35;
   const  float min=0;
@@ -1081,23 +1117,32 @@ void drawOwen(bool doMinDPPass) {
     drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_0_50_"+btagstring+"tag_qcd","PythiaPUQCDFlat");
     drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
     TFile fh(histfilename,"UPDATE");  
-    totalsm->SetName("bestM3j_met_0_50_"+btagstring+"tag_totalsm");
-    totalewk->SetName("bestM3j_met_0_50_"+btagstring+"tag_totalewk");
-    totalqcdttbar->SetName("bestM3j_met_0_50_"+btagstring+"tag_totalqcdttbar");
+    totalsm->SetName("bestM3j_met_0_50_"+btagstring+"tag_allsm");
+    totalewk->SetName("bestM3j_met_0_50_"+btagstring+"tag_allewk");
+    totalqcdttbar->SetName("bestM3j_met_0_50_"+btagstring+"tag_allqcdttbar");
     totalsm->Write();          
     totalewk->Write();
     totalqcdttbar->Write();
     fh.Close();   
     
-    TCut SIGMET = "MET>=150 && MET<10000";
+    TCut SIGMET = "MET>=150 && MET<5000";
     TCut theSIGSelection = baseSelection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && SIGMET;
     selection_ = theSIGSelection.GetTitle();
-    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_10000_"+btagstring+"tag_qcd","PythiaPUQCDFlat");
-    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_10000_"+btagstring+"tag_ttbar","TTbarJets");
-    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_10000_"+btagstring+"tag_data","data");
+    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_"+btagstring+"tag_qcd","PythiaPUQCDFlat");
+    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_"+btagstring+"tag_ttbar","TTbarJets");
+    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_"+btagstring+"tag_data","data");
 
+    TCut T2MET = "MET>=50 && MET<5000";
+    const  TCut baseT2Selection = "cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && ((nElectrons==0 && nMuons==1) || (nElectrons==1 && nMuons==0))"; //no MET, no minDeltaPhi, no cleaning, no b tag
+    TCut theT2Selection = baseT2Selection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && T2MET;
+    selection_ = theT2Selection.GetTitle();
+    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_50_5000_t2_"+btagstring+"tag_data","data");
+    drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+    TFile fh2(histfilename,"UPDATE");  
+    totalsm->SetName("bestM3j_met_50_5000_t2_"+btagstring+"tag_allsm");
+    totalsm->Write();          
+    fh2.Close(); 
 
-    
     //this one is going to be handled by the flexible MET version....
     //   TCut SBMET = "MET>=70 && MET<150";
     //   TCut theSBSelection = baseSelection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && SBMET;
@@ -1107,11 +1152,13 @@ void drawOwen(bool doMinDPPass) {
     //now for a flexible MET region
     //  int metCutLow = 60;
     //  int metCutHigh = 140;
-    for (int metCutLow = 70; metCutLow <=100; metCutLow+=30) {
+    for (int metCutLow = 100; metCutLow <=100; metCutLow+=30) {
       for (int metCutHigh = 150; metCutHigh <=150; metCutHigh+=5) {
 	TString metCutString; metCutString.Form("MET >= %d && MET < %d",metCutLow,metCutHigh);
 	ofile<<metCutString<<endl;
 	TCut METselection(metCutString.Data());
+	
+	//Use minDeltaPhi cut passed to this function
 	TCut theSelection = baseSelection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && METselection;
 	selection_ = theSelection.GetTitle();
 	TString nameOfHist;
@@ -1121,16 +1168,32 @@ void drawOwen(bool doMinDPPass) {
 	drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"data","data");
 	drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
 	TFile fh(histfilename,"UPDATE");
-	totalsm->SetName(nameOfHist+"totalsm");
-	totalewk->SetName(nameOfHist+"totalewk");
-	totalqcdttbar->SetName(nameOfHist+"totalqcdttbar");
+	totalsm->SetName(nameOfHist+"allsm");
+	totalewk->SetName(nameOfHist+"allewk");
+	totalqcdttbar->SetName(nameOfHist+"allqcdttbar");
+	totalnonttbar->SetName(nameOfHist+"nonttbar");
 	totalsm->Write();
 	totalewk->Write();
 	totalqcdttbar->Write();
+	totalnonttbar->Write();
 	fh.Close();
+
+	//Use fail minDeltaPhi cut
+      	theSelection = baseSelection && passCleaning && TCut("cutDeltaPhi==0") && theBTaggingCut && METselection;
+	selection_ = theSelection.GetTitle();
+	nameOfHist.Form( "bestM3j_met_%d_%d_invdphi_%stag_",metCutLow,metCutHigh,btagstring.Data());
+	drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"data","data");
+	drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+	TFile fh2(histfilename,"UPDATE");
+	totalsm->SetName(nameOfHist+"allsm");
+	totalsm->Write();
+	fh2.Close();
+
       }
     }
     
+    
+ 
   }
   ofile.close();
 
