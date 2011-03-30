@@ -445,7 +445,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
      if (totalnonttbar!=0) delete totalnonttbar;
     totalnonttbar = (varbins==0) ? new TH1D("totalnonttbar","",nbins,low,high) : new TH1D("totalnonttbar","",nbins,varbins);
     totalnonttbar->Sumw2();
-    if (totalnonqcd!=0) delete totalnonttbar;
+    if (totalnonqcd!=0) delete totalnonqcd;
     totalnonqcd = (varbins==0) ? new TH1D("totalnonqcd","",nbins,low,high) : new TH1D("totalnonqcd","",nbins,varbins);
     totalnonqcd->Sumw2();
     if (doRatio_) {
@@ -1095,15 +1095,15 @@ void drawOwen(bool doMinDPPass) {
   const  float min=0;
   const  float max=800;
 
-  /* for variable binning, do something like this:
+  bool vb = true;//variable binning ON or OFF
   const int nvarbins=5;
-  const float varbins[]={0,167,177,250,400,800};
-    drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_150_10000_"+btagstring+"tag_qcd","PythiaPUQCDFlat");
-*/
+  const float varbins[]={0.,160.,180.,260.,400.,800.};
+  //use like this drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_150_10000_"+btagstring+"tag_qcd","PythiaPUQCDFlat");
+
 
   const  TCut baseSelection = "cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1"; //no MET, no minDeltaPhi, no cleaning, no b tag
   // "cutCleaning==1"; //apply all cleaning 
-  const  TCut passCleaning ="passInconsistentMuon == 1 && passBadPFMuon==1"; //apply cleaning but without ECAL dead cells
+  const  TCut passCleaning ="passInconsistentMuon == 1 && passBadPFMuon==1 && weight<1000"; //apply cleaning but without ECAL dead cells.  Notice the weight cut!
   const  TCut passMinDeltaPhi = "cutDeltaPhi==1";
   const  TCut failMinDeltaPhi = "cutDeltaPhi==0";
   const  TCut ge1b =  "nbjets >= 1";
@@ -1131,37 +1131,41 @@ void drawOwen(bool doMinDPPass) {
     }
     else assert(0);
     ofile<<" == "<<btagstring<<" == "<<endl;
-
  
    //these regions define the PDFs (templates)
     TCut LSBMET = "MET>=0 && MET<50";
     TCut theLSBSelection = baseSelection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && LSBMET;
     selection_ = theLSBSelection.GetTitle();
-    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_0_50_"+btagstring+"tag_data","data");
-    //drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_0_50_"+btagstring+"tag_qcd","PythiaPUQCDFlat");
-    drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+    if(vb){
+     drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_0_50_"+btagstring+"tag_data","data");
+     drawPlots("bestTopMass",nvarbins,varbins,"","","deleteme");
+    }
+    else{
+      drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_0_50_"+btagstring+"tag_data","data");
+      drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+    }
     TFile fh(histfilename,"UPDATE");  
     totalsm->SetName("bestM3j_met_0_50_"+btagstring+"tag_allsm");
-    //totalewk->SetName("bestM3j_met_0_50_"+btagstring+"tag_allewk");
-    //totalqcdttbar->SetName("bestM3j_met_0_50_"+btagstring+"tag_allqcdttbar");
     totalsm->Write();          
-    //totalewk->Write();
-    //totalqcdttbar->Write();
     fh.Close();   
-    
-    TCut SIGMET = "MET>=150 && MET<5000";
-    TCut theSIGSelection = baseSelection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && SIGMET;
-    selection_ = theSIGSelection.GetTitle();
-    //drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_"+btagstring+"tag_qcd","PythiaPUQCDFlat");
-    //drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_"+btagstring+"tag_ttbar","TTbarJets");
-    //drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_"+btagstring+"tag_data","data");
+        
+    //for fitting high-MET low-minDeltaPhi region
+    //   TCut SIGMET = "MET>=150 && MET<5000";
+    //   TCut theSIGSelection = baseSelection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && SIGMET;
+    //   selection_ = theSIGSelection.GetTitle();
 
     TCut T2MET = "MET>=50 && MET<5000";
     const  TCut baseT2Selection = "cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && ((nElectrons==0 && nMuons==1) || (nElectrons==1 && nMuons==0))"; //no MET, no minDeltaPhi, no cleaning, no b tag
     TCut theT2Selection = baseT2Selection && passCleaning && theMinDeltaPhiCut && theBTaggingCut && T2MET;
     selection_ = theT2Selection.GetTitle();
-    drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_50_5000_t2_"+btagstring+"tag_data","data");
-    drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+    if(vb){
+      drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_50_5000_t2_"+btagstring+"tag_data","data");
+      drawPlots("bestTopMass",nvarbins,varbins,"","","deleteme");
+    }
+    else{
+      drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_50_5000_t2_"+btagstring+"tag_data","data");
+      drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+    }
     TFile fh2(histfilename,"UPDATE");  
     totalsm->SetName("bestM3j_met_50_5000_t2_"+btagstring+"tag_allsm");
     totalsm->Write();          
@@ -1174,8 +1178,6 @@ void drawOwen(bool doMinDPPass) {
     //   drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_70_150_ge1btag_ttbar","TTbarJets");
     
     //now for a flexible MET region
-    //  int metCutLow = 60;
-    //  int metCutHigh = 140;
     for (int metCutLow = 100; metCutLow <=100; metCutLow+=30) {
       for (int metCutHigh = 150; metCutHigh <=150; metCutHigh+=5) {
 	TString metCutString; metCutString.Form("MET >= %d && MET < %d",metCutLow,metCutHigh);
@@ -1187,29 +1189,40 @@ void drawOwen(bool doMinDPPass) {
 	selection_ = theSelection.GetTitle();
 	TString nameOfHist;
 	nameOfHist.Form( "bestM3j_met_%d_%d_%stag_",metCutLow,metCutHigh,btagstring.Data());
-	ofile<<"ttbar = "<<drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"ttbar","TTbarJets")<<endl;
-	//ofile<<"qcd   = "<<drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"qcd","PythiaPUQCDFlat")<<endl;
-	drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"data","data");
-	drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+
+	if(vb){
+	  ofile<<"ttbar = "<<drawSimple("bestTopMass",nvarbins,varbins,histfilename, nameOfHist+"ttbar","TTbarJets")<<endl;
+	  ofile<<"qcd   = "<<drawSimple("bestTopMass",nvarbins,varbins,histfilename, nameOfHist+"qcd","PythiaPUQCD")<<endl;
+	  drawSimple("bestTopMass",nvarbins,varbins,histfilename, nameOfHist+"data","data");
+	  drawPlots("bestTopMass",nvarbins,varbins,"","","deleteme");
+	}
+	else{
+	  ofile<<"ttbar = "<<drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"ttbar","TTbarJets")<<endl;
+	  ofile<<"qcd   = "<<drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"qcd","PythiaPUQCD")<<endl;
+	  drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"data","data");
+	  drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+	}
 	TFile fh(histfilename,"UPDATE");
-	//totalsm->SetName(nameOfHist+"allsm");
-	//totalewk->SetName(nameOfHist+"allewk");
-	//totalqcdttbar->SetName(nameOfHist+"allqcdttbar");
 	totalnonttbar->SetName(nameOfHist+"nonttbar");
-	//totalnonqcd->SetName(nameOfHist+"nonqcd");
-	//totalsm->Write();
-	//totalewk->Write();
-	//totalqcdttbar->Write();
+	totalnonqcd->SetName(nameOfHist+"nonqcd");
+	totalewk->SetName(nameOfHist+"allewk");
 	totalnonttbar->Write();
-	//totalnonqcd->Write();
+	totalnonqcd->Write();
+	totalewk->Write();
 	fh.Close();
 
 	//Use fail minDeltaPhi cut
       	theSelection = baseSelection && passCleaning && TCut("cutDeltaPhi==0") && theBTaggingCut && METselection;
 	selection_ = theSelection.GetTitle();
 	nameOfHist.Form( "bestM3j_met_%d_%d_invdphi_%stag_",metCutLow,metCutHigh,btagstring.Data());
-	drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"data","data");
-	drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+	if(vb){
+	  drawSimple("bestTopMass",nvarbins,varbins,histfilename, nameOfHist+"data","data");
+	  drawPlots("bestTopMass",nvarbins,varbins,"","","deleteme");
+	}
+	else{
+	  drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"data","data");
+	  drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+	}
 	TFile fh2(histfilename,"UPDATE");
 	totalsm->SetName(nameOfHist+"allsm");
 	totalsm->Write();
@@ -1217,9 +1230,7 @@ void drawOwen(bool doMinDPPass) {
 
       }
     }
-    
-    
- 
+     
   }
   ofile.close();
 
