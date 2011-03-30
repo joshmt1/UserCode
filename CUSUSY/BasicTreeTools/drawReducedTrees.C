@@ -39,9 +39,9 @@ std::map<TString, UInt_t> sampleColor_;
 std::map<TString, TString> sampleLabel_;
 std::map<TString, UInt_t> sampleMarkerStyle_;
 
-TString inputPath = "/cu2/joshmt/V00-03-00/";
+TString inputPath = "/cu2/joshmt/V00-03-01/";
 //TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
-TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLepRA20e0mu_minDP_MuonEcalCleaning";
+TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning";
 //TString cutdesc = "Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonEcalCleaning";
 //TString cutdesc = "Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
 TString selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
@@ -281,14 +281,15 @@ void loadSamples() {
 
   //this block controls what samples will enter your plot
   //careful -- QCD must have 'QCD' in its name somewhere.
-  //  samples_.push_back("QCD");
-  //  samples_.push_back("PythiaQCD");
-  samples_.push_back("PythiaPUQCDFlat");
+  //samples_.push_back("QCD"); //madgraph
+  //samples_.push_back("PythiaQCD");
+  samples_.push_back("PythiaPUQCD");
   samples_.push_back("TTbarJets");
   samples_.push_back("SingleTop");
   samples_.push_back("WJets");
   samples_.push_back("ZJets");
   samples_.push_back("Zinvisible");
+
   samples_.push_back("LM13");
 
   //these 3 blocks are just a "dictionary"
@@ -296,6 +297,7 @@ void loadSamples() {
   sampleColor_["LM13"] = kGray; //borrowed from a different sample
   sampleColor_["QCD"] = kYellow;
   sampleColor_["PythiaQCD"] = kYellow;
+  sampleColor_["PythiaPUQCD"] = kYellow;
   sampleColor_["PythiaPUQCDFlat"] = kYellow;
   sampleColor_["TTbarJets"]=kRed+1;
   sampleColor_["SingleTop"] = kMagenta;
@@ -306,7 +308,8 @@ void loadSamples() {
   sampleLabel_["LM13"] = "LM13";
   sampleLabel_["QCD"] = "QCD";
   sampleLabel_["PythiaQCD"] = "QCD (Pythia Z2)";
-  sampleLabel_["PythiaPUQCDFlat"] = "QCD (Pileup)";
+  sampleLabel_["PythiaPUQCDFlat"] = "QCD (Pileup)"; 
+  sampleLabel_["PythiaPUQCD"] = "QCD (Pileup)";
   sampleLabel_["TTbarJets"]="t#bar{t}";
   sampleLabel_["SingleTop"] = "Single-Top";
   sampleLabel_["WJets"] = "W#rightarrowl#nu";
@@ -316,7 +319,8 @@ void loadSamples() {
   sampleMarkerStyle_["LM13"] = kFullStar;
   sampleMarkerStyle_["QCD"] = kFullCircle;
   sampleMarkerStyle_["PythiaQCD"] = kOpenCircle;
-  sampleMarkerStyle_["PythiaPUQCDFlat"] = kOpenCircle;
+  sampleMarkerStyle_["PythiaPUQCDFlat"] = kOpenCircle;  
+  sampleMarkerStyle_["PythiaPUQCD"] = kOpenCircle;
   sampleMarkerStyle_["TTbarJets"]= kFullSquare;
   sampleMarkerStyle_["SingleTop"] = kOpenSquare;
   sampleMarkerStyle_["WJets"] = kMultiply;
@@ -817,6 +821,10 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
   doData(true);
   doRatioPlot(true);
 
+  int nbins;
+  float low,high;
+  TString var,xtitle;
+
   //  setQCDErrorMode(true);
   // PROBLEMS -- CMS style ruins the hash marks. central value on the TGraphErrors is wrong!
   //might be easiest to accumulate a total MC uncertainty and plot that!
@@ -824,12 +832,9 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
   //the strength and weakness of this tree-based method is that I need to apply the cuts now!
   //most straightforward way is to manually set the cut string before each plot
 
-  int nbins;
-  float low,high;
-  TString var,xtitle;
 
   // ==== MET plots ====
-  setLogY(true);   setPlotMinimum(1e-2);
+  setLogY(true);   setPlotMinimum(1e-1);
   nbins=25; low= 0; high=260;
   var="MET"; xtitle="E_{T}^{miss} [GeV]";
   ratioMin = 0; ratioMax = 2;
@@ -1063,6 +1068,17 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
 
 //   selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
 //   drawPlots(var,nbins,low,high,xtitle,"Events", "Hjetpt1_ge2b");
+   
+// ==== number of primary vertices ====
+   nbins =9; low=1; high=9;
+   resetPlotMinimum();
+   setLogY(false);
+   var="nGoodPV"; xtitle="# of good PVs";
+   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "nGoodPV_SB_ge1b");
+   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && MET>=100 && MET<150 && cutDeltaPhi==0 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "nGoodPV_SBfail_ge1b");
+
 
 }
 
