@@ -9,7 +9,7 @@ use:
 root -b -l -q run_cutflow.C++
 */
 
-const TString version = "V00-02-03";
+const TString version = "V00-03-01";
 
 //const TString extrapath = "SUSYPATv8_363"; //pass an empty string unless you need something else
 const TString extrapath = "";
@@ -47,8 +47,10 @@ void run_cutflow()
     cout<<"About to start on sample: "<<samplename<<endl;
 
     if (samplefiles.Contains("DATA")) continue; //skip data (use run_cutflow_data.C)
+    
+    //if (!samplefiles.Contains("LM") ) continue;
 
-    //    if (!samplefiles.Contains("PU")) continue;
+    if (samplefiles.Contains("QCD") && !samplefiles.Contains("PU")) continue;
 
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
@@ -69,17 +71,18 @@ void run_cutflow()
     looper.setMETRange(basicLoop::kHigh); //signal region
     //looper.setMETRange(basicLoop::kMedhigh);
     looper.setJetType(basicLoop::kPF);
-    looper.setLeptonType(basicLoop::kPFLeptons);
+    looper.setLeptonType(basicLoop::kPFLeptonsRA2);
     looper.setDPType(basicLoop::kminDP);
 
-    looper.setCleaningType(basicLoop::kMuonEcalCleaning);
+    looper.setCleaningType(basicLoop::kMuonCleaning);
+    looper.setJERType(basicLoop::kJERbias);
 
     //    looper.setMETuncType(basicLoop::kMETuncUp);
 
     looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
 
     //    looper.setMuonReq(1); //inverted muon veto
-    //    looper.setRequiredCut("cut4SUSYb");
+    //looper.setRequiredCut("cut2SUSYb");
 
     looper.cutflow(false); //true means write verbose event count files
   }

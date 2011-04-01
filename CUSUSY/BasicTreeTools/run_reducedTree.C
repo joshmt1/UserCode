@@ -41,18 +41,9 @@ void run_reducedTree()
 
     if(samplefiles.Contains("DATA")) continue;
     cout<<"About to start on sample: "<<samplename<<endl;
-    if (!samplefiles.Contains("WJets") ) continue;
-    //if (samplefiles.Contains("QCD") && !samplefiles.Contains("PU")) continue;
 
-  //want to skip samples that aren't ready, and also ZJets
-//     if (!
-//  	(samplefiles.Contains("LM")
-// 	 // 	 || samplefiles.Contains("PU")
-// 	 // 	 || samplefiles.Contains("Single")
-//  	 || samplefiles.Contains("TTbarJets")
-//  	 )
-//  	) continue;
-    
+    //    if (samplefiles.Contains("QCD") && !samplefiles.Contains("PU")) continue;
+
     //fetch ecal dead cell info
     TFile fEcal(ecalDeadCellPath + samplename + "/deadCellFilterProfile.root"); //hadd files together into one
     TTree* ecalTree = fEcal.IsZombie() ? 0 : (TTree*) fEcal.Get("filter");
@@ -67,15 +58,13 @@ void run_reducedTree()
     looper.setCutScheme(basicLoop::kBaseline0); //usually this is kRA2
     looper.setMETType(basicLoop::kpfMET);
     looper.setMETRange(basicLoop::kHigh); //signal region
-    //looper.setLeptonType(basicLoop::kPFLeptons);
     looper.setLeptonType(basicLoop::kPFLeptonsRA2);
     looper.setJetType(basicLoop::kPF);
-    //looper.setCleaningType(basicLoop::kMuonCleaning);
-    looper.setCleaningType(basicLoop::kMuonEcalCleaning);
+    looper.setCleaningType(basicLoop::kMuonCleaning);
     looper.setJERType(basicLoop::kJERbias);
     looper.setDPType(basicLoop::kminDP);
 
-    looper.reducedTree("/home/joshmt/");  //go!
+    looper.reducedTree("/cu2/joshmt/V00-03-01_2/");  //go!
   }
 
 }

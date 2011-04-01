@@ -52,11 +52,13 @@ void run_reducedTree_data()
   //looper.setCutScheme(basicLoop::kRA2); //usually this is kRA2
   looper.setCutScheme(basicLoop::kBaseline0); //usually this is kRA2
   looper.setMETType(basicLoop::kpfMET);
+  looper.setMETRange(basicLoop::kHigh); //signal region
   looper.setLeptonType(basicLoop::kPFLeptonsRA2);
   looper.setJetType(basicLoop::kPF);
-  looper.setCleaningType(basicLoop::kMuonEcalCleaning);
-  
-  //  looper.reducedTree("/cu2/joshmt/");  //go!
-  looper.reducedTree("/home/joshmt/");  //go!
+  looper.setCleaningType(basicLoop::kMuonCleaning);
+  looper.setDPType(basicLoop::kminDP);
+
+  looper.reducedTree("/cu2/joshmt/V00-03-01_2/");  //go!
+  //  looper.reducedTree("/home/joshmt/");  //go!
 
 }
