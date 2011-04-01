@@ -3208,9 +3208,9 @@ void basicLoop::fillWTop() {
 
       //note how owen does the loop indexing here
       for (unsigned int j2i =j1i+1; j2i<loosejetPt->size(); j2i++) {
-	if ( isGoodJet10(j1i)) { //owen is using a pT>10 cut here!
+	if ( isGoodJet10(j2i)) { //owen is using a pT>10 cut here!
 
-	  if (passSSVM(j2i)) continue; //veto b jets
+	  if (isGoodJet30(j2i) && passSSVM(j2i)) continue; //veto b jets with >30 gev
 
 	  double m2j = calc_mNj(j1i,j2i);
 	  if ( fabs(m2j- mW_) < fabs(bestM2j - mW_) ) {
@@ -3223,7 +3223,7 @@ void basicLoop::fillWTop() {
 
 	      if (j3i==j1i || j3i==j2i) continue;
 
-	      if ( isGoodJet10(j3i) && passSSVM(j3i)) { //owen uses 10 GeV pT cut
+	      if ( isGoodJet30(j3i) && passSSVM(j3i)) { //owen uses 30 GeV pT cut
 
 		double m3j = calc_mNj(j1i,j2i,j3i);
 
