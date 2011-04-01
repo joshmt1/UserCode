@@ -202,7 +202,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   //open output file
   //FIXME hardcoded for dellcmscornell here
   //TString outfilename="/cu1/joshmt/ABCDtrees/ABCDtree.";
-  TString outfilename="/cu1/joshmt/ABCDtrees/11Mar22/ABCDtree.";
+  TString outfilename="/cu1/joshmt/ABCDtrees/11Mar30/ABCDtree.";
   outfilename+=getCutDescriptionString();
   outfilename+=".";    outfilename+=getBCutDescriptionString(); 
   outfilename+=".";    outfilename+=sampleName; 
@@ -452,9 +452,6 @@ a function of eta,phi) later.
 
   reducedTree.Branch("caloMET",&caloMET,"caloMET/F");
   reducedTree.Branch("caloMHT",&caloMHT,"caloMHT/F");
-
-  reducedTree.Branch("MET",&MET,"MET/F");
-  reducedTree.Branch("MET",&MET,"MET/F");
 
   reducedTree.Branch("bestWMass",&bestWMass_,"bestWMass/F");
   reducedTree.Branch("bestTopMass",&bestTopMass_,"bestTopMass/F");
