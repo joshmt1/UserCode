@@ -786,6 +786,11 @@ selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
 setLogY(true);
  drawR("minDeltaPhi",0.3,50,0,250);
 
+
+
+
+
+
  //njets == 3
 selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutCleaning==1 && njets==3";
 setLogY(true);
@@ -1017,7 +1022,7 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
   nbins=10; low=50; high= 550;
   resetPlotMinimum();
   setLogY(false);
-  var="bestTopMass"; xtitle="Best top mass (GeV)";
+  var="bestTopMass"; xtitle="3-jet mass (GeV)";
 
   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>=100 && MET<150";
   drawPlots(var,nbins,low,high,xtitle,"Events", "bestTopMass_ge1b");
@@ -1080,8 +1085,78 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
   drawPlots(var,nbins,low,high,xtitle,"Events", "nGoodPV_SBfail_ge1b");
 
 
+
+
 }
 
+void countABCD() {
+
+  double fitResult[]={52.6, 40.5, 14.1};
+  double fitResultErr[]={15.1, 15.9, 8.0};
+
+  loadSamples();
+
+  const  TCut baseSelection = "cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1"; //no MET, no minDeltaPhi, no cleaning, no b tag
+  const  TCut passCleaning ="passInconsistentMuon == 1 && passBadPFMuon==1 && weight<1000"; //apply cleaning but without ECAL dead cells
+  const  TCut passMinDeltaPhi = "cutDeltaPhi==1";
+  const  TCut failMinDeltaPhi = "cutDeltaPhi==0";
+  const  TCut ge1b =  "nbjets >= 1";
+  const  TCut ge2b =  "nbjets >= 2";
+  const  TCut eq1b =  "nbjets == 1";
+
+  for (int ibtag = 0; ibtag<3; ibtag++) { //do this an ugly way for now
+    TCut theBTaggingCut = ge1b; TString btagstring = "ge1b";
+    if (ibtag==0) { //nothing to do
+    }
+    else if (ibtag==1) {
+      theBTaggingCut = eq1b; 
+      btagstring = "eq1b";
+    }
+    else if (ibtag==2) {
+      theBTaggingCut = ge2b; 
+      btagstring = "ge2b";
+    }
+    else assert(0);
+
+    TTree* tree= (TTree*) fdata->Get("reducedTree");
+    TH1D dummyhist("dummyhist","",1,0,1e9); //kludge!
+    dummyhist.Sumw2(); //not really needed for data
+
+    cout<<" ---- "<<btagstring<<" ---- "<<endl;
+
+    TCut METC = "MET>=150 && MET<5000";
+    TCut theSIGSelection = baseSelection && passCleaning && passMinDeltaPhi && theBTaggingCut && METC;
+    selection_ = theSIGSelection.GetTitle();
+    tree->Project("dummyhist","HT",getCutString().Data());
+    cout<<"N_SIG = "<<dummyhist.Integral()<<endl;
+
+    dummyhist.Reset();
+    if (dummyhist.Integral() != 0) assert(0);
+
+    TCut METD = "MET>=150 && MET<5000";
+    TCut theDSelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && METD;
+    selection_ = theDSelection.GetTitle();
+    tree->Project("dummyhist","HT",getCutString().Data());
+    double nd = dummyhist.Integral();
+    cout<<"N_D = "<<nd<<endl;
+
+    TCut META = "MET>=100 && MET<150";
+    TCut theASelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && META;
+    selection_ = theASelection.GetTitle();
+    tree->Project("dummyhist","HT",getCutString().Data());
+    double na = dummyhist.Integral();
+    cout<<"N_A = "<<na<<endl;
+
+    double R = nd/na;
+    double Rerr = R*sqrt(1/nd + 1/na);
+    cout<<"R   = "<<R<<" +/- "<<Rerr<<endl;
+
+    double est=R*fitResult[ibtag];
+    double estErr = est*sqrt( pow(Rerr/R,2) + pow(fitResultErr[ibtag]/fitResult[ibtag],2));
+    cout<<"estimate = "<<est<<" +/- "<<estErr<<endl;
+
+  }
+}
 
 void drawOwen(bool doMinDPPass) {
 
