@@ -50,7 +50,7 @@ void run_cutflow()
     
     //if (!samplefiles.Contains("LM") ) continue;
 
-    if (samplefiles.Contains("QCD") && !samplefiles.Contains("PU")) continue;
+    //if (samplefiles.Contains("QCD") && !samplefiles.Contains("PU")) continue;
 
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
