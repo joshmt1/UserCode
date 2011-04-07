@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.20 2011/03/18 13:24:22 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.21 2011/03/18 16:17:35 joshmt Exp $
 //
 //
 
@@ -293,6 +293,15 @@ string is the jetAlgorithmTag
   std::vector<int> topDecayCode;
   int ZDecayMode;
   int flavorHistory;
+
+  //susy scan variables
+  double susy_tanBeta;
+  double susy_A0;
+  double susy_crossSection;
+  double susy_m0;
+  double susy_m12;
+  double susy_mu;
+  double susy_run;
 
 };
 

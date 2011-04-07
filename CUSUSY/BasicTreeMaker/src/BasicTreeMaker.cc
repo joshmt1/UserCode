@@ -22,7 +22,7 @@ https://wiki.lepp.cornell.edu/lepp/bin/view/CMS/JMTBasicNtuples
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.cc,v 1.34 2011/03/18 16:17:35 joshmt Exp $
+// $Id: BasicTreeMaker.cc,v 1.35 2011/03/25 22:25:45 joshmt Exp $
 //
 //
 
@@ -412,6 +412,40 @@ BasicTreeMaker::fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iSet
   }
   //cout << endl;
 
+  // === get mSugra scan information (if available) ===
+  //in reality the handle can probably be reused. but who cares....
+  edm::Handle<double> mSugraHandle1;
+  iEvent.getByLabel("susyScantanbeta", mSugraHandle1);
+
+  edm::Handle<double> mSugraHandle2;
+  iEvent.getByLabel("susyScanA0", mSugraHandle2);
+
+  edm::Handle<double> mSugraHandle3;
+  iEvent.getByLabel("susyScanCrossSection", mSugraHandle3);
+
+  edm::Handle<double> mSugraHandle4;
+  iEvent.getByLabel("susyScanM0", mSugraHandle4);
+
+  edm::Handle<double> mSugraHandle5;
+  iEvent.getByLabel("susyScanM12", mSugraHandle5);
+
+  edm::Handle<double> mSugraHandle6;
+  iEvent.getByLabel("susyScanMu", mSugraHandle6);
+
+  edm::Handle<double> mSugraHandle7;
+  iEvent.getByLabel("susyScanRun", mSugraHandle7);
+
+  //some of these numbers are probably really integers,
+  //so i'm tempted to cast them as such here
+  //but i don't want to tempt fate
+
+  if (mSugraHandle1.isValid())  susy_tanBeta = *mSugraHandle1;
+  if (mSugraHandle2.isValid())  susy_A0      = *mSugraHandle2;
+  if (mSugraHandle3.isValid())  susy_crossSection=*mSugraHandle3;
+  if (mSugraHandle4.isValid())  susy_m0      = *mSugraHandle4;
+  if (mSugraHandle5.isValid())  susy_m12     = *mSugraHandle5;
+  if (mSugraHandle6.isValid())  susy_mu      = *mSugraHandle6;
+  if (mSugraHandle7.isValid())  susy_run     = *mSugraHandle7;
 
 }
 
@@ -1322,6 +1356,14 @@ BasicTreeMaker::resetTreeVariables() {
   ZDecayMode=-99;
   flavorHistory=-99;
 
+  susy_tanBeta=-99;
+  susy_A0=-99;
+  susy_crossSection=-99;
+  susy_m0=-99;
+  susy_m12=-99;
+  susy_mu=-99;
+  susy_run=-99;
+
   runNumber=0;
   eventNumber=0;
   lumiSection=0;
@@ -1654,6 +1696,14 @@ BasicTreeMaker::beginJob()
   tree_->Branch("topDecayCode",&topDecayCode);
   tree_->Branch("ZDecayMode",&ZDecayMode,"ZDecayMode/I");
   tree_->Branch("flavorHistory",&flavorHistory,"flavorHistory/I");
+
+  tree_->Branch("susy_tanBeta",&susy_tanBeta,"susy_tanBeta/D");
+  tree_->Branch("susy_A0",&susy_A0,"susy_A0/D");
+  tree_->Branch("susy_crossSection",&susy_crossSection,"susy_crossSection/D");
+  tree_->Branch("susy_m0",&susy_m0,"susy_m0/D");
+  tree_->Branch("susy_m12",&susy_m12,"susy_m12/D");
+  tree_->Branch("susy_mu",&susy_mu,"susy_mu/D");
+  tree_->Branch("susy_run",&susy_run,"susy_run/D");
 
   thetimer_->start();
 }

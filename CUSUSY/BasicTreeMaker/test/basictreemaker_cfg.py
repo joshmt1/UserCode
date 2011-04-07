@@ -13,6 +13,8 @@ process.source = cms.Source("PoolSource",
     # replace 'myfile.root' with the source file you want to use
     fileNames = cms.untracked.vstring(
 #   'file:/cu1/joshmt/AOD/Fall10-QCD_TuneD6T_HT-1000_7TeV-madgraph-C473857E-99DA-DF11-8531-00163691DC86.SUSYPAT.root'
+#    'file:/cu1/joshmt/AOD/387/QCD_Pt_80to120_TuneZ2_pythia6_PU_Fall10_387_PAT_70_1_RCp.root'
+#    'file:/cu1/joshmt/Validation/mSugra_tanBeta50_SUSYPAT.root'
   'INPUT'
  #   'file:/afs/cern.ch/user/s/ssekmen/public/Sezen_PAT.root'
 #    'file:/cu1/joshmt/AOD/387/TTJets_TuneD6T_Fall10_387_PAT_9_1_rY1.root'
@@ -187,7 +189,7 @@ process.BasicTreeMaker = cms.EDAnalyzer('BasicTreeMaker',
 )
 
 process.TFileService = cms.Service("TFileService", fileName = cms.string('BasicNtuple.root') )
-#process.TFileService = cms.Service("TFileService", fileName = cms.string('/cu2/joshmt/BasicNtuple_temp.root') )
+#process.TFileService = cms.Service("TFileService", fileName = cms.string('/home/joshmt/BasicNtuple.root') )
 
 if isMC:
     process.p = cms.Path(process.RA2electronSelector*process.RA2electronSelectorPF*process.RA2muonSelector*process.RA2muonSelectorPF

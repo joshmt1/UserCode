@@ -1,6 +1,8 @@
 Release notes
 --
 
+V00-03-02 - add ntuple variables for mSugra scan. No other changes.
+
 V00-03-01 - critical bug fix in muon cleaning. Also add some additional variables to facilitate studying other tail cleaning.
 
 V00-03-00 - add RA2 Leptons (requires checking out RA2 code), add PDF uncertainties (requires special code and special setup for compilation)
