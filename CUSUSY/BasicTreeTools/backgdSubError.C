@@ -30,12 +30,15 @@ void nfromtree(double *n, TString file, TString cut) {
 void runit()
 {
 
-  TString qcdfile="/cu1/joshmt/ABCDtrees/11Feb08/ABCDtree.Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP_MuonCleaning_NoMET_NoDeltaPhi.ge0b.QCD.root";
-  //hack -- I have made a directory with symlinks to only the background I want1
+  TString qcdfile="/cu1/joshmt/ABCDtrees/11Mar30/ABCDtree.Baseline0_PF_JERbias_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning_NoMET_NoDeltaPhi.ge0b.PythiaPUQCDFlat.root";
+  //hack -- I have made a directory with symlinks to only the background I want
   TString smfile="SMnonQCD/*.root";
-  TString datafile="/cu1/joshmt/ABCDtrees/11Feb08/ABCDtree.Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP_MuonCleaning_NoMET_NoDeltaPhi.ge0b.data-0.root";
+  TString datafile="/cu1/joshmt/ABCDtrees/11Mar30/ABCDtree.Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning_NoMET_NoDeltaPhi.ge0b.data-0.root";
 
-  TString cut = "minDeltaPhiMET<0.3 && MET >=150 && nbSSVM==1";
+  //  TString cut = "minDeltaPhiMET>0.3 &&  nbSSVM>=2";
+  TString cut = "minDeltaPhiMET<0.3 && MET >=150 &&  nbSSVM>=1";
+  //  TString cut = "minDeltaPhiMET>0.3 && MET>=100 && MET<150 && nbSSVM>=1";
+  //  TString cut = "minDeltaPhiMET>0.3 && MET>=150 && nbSSVM==1";
 
   double qcd[2], data[2], other[2];
 
