@@ -49,6 +49,7 @@ TString selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cut
 
 float leg_x1 = 0.696, leg_x2=0.94, leg_y1=0.5, leg_y2=0.92;
 
+bool quiet_=false;
 bool doRatio_=false;
 bool logy_=false;
 bool dostack_=true;
@@ -80,6 +81,10 @@ TH1D* totalnonqcd=0;
 TH1D* ratio=0; float ratioMin=0; float ratioMax=2;
 TGraphErrors* qcderrors=0;
 bool loaded_=false; //bookkeeping
+
+void setQuiet(bool q) {
+  quiet_ = q;
+}
 
 void setQCDErrorMode(bool drawErrors) {
   drawQCDErrors_=drawErrors;
@@ -158,10 +163,10 @@ void renewCanvas(const TString opt="") {
     const float padding=0.01; const float ydivide=0.2;
     thecanvas->GetPad(1)->SetPad( padding, ydivide + padding, 1-padding, 1-padding);
     thecanvas->GetPad(2)->SetPad( padding, padding, 1-padding, ydivide-padding);
-    cout<< thecanvas->GetPad(1)->GetXlowNDC() <<"\t"
-	<< thecanvas->GetPad(1)->GetWNDC() <<"\t"
-	<< thecanvas->GetPad(1)->GetYlowNDC() <<"\t"
-	<< thecanvas->GetPad(1)->GetHNDC() <<endl;
+    if (!quiet_)  cout<< thecanvas->GetPad(1)->GetXlowNDC() <<"\t"
+		      << thecanvas->GetPad(1)->GetWNDC() <<"\t"
+		      << thecanvas->GetPad(1)->GetYlowNDC() <<"\t"
+		      << thecanvas->GetPad(1)->GetHNDC() <<endl;
     if (logy_) thecanvas->GetPad(1)->SetLogy();
   }
   else { if (logy_) thecanvas->SetLogy(); }
@@ -198,7 +203,7 @@ TString getCutString(TString extraSelection="") {
     weightedcut +=extraSelection;
     weightedcut+=")";
   }
-  cout<<weightedcut<<endl;
+  if (!quiet_)  cout<<weightedcut<<endl;
   return weightedcut;
 }
 
@@ -224,7 +229,7 @@ void addOverflowBin(TH1D* theHist) {
 
   theHist->SetBinContent(lastVisibleBin,lastBinContent);
   theHist->SetBinError(lastVisibleBin,lastBinError);
-  cout<<lastBinContent<<" +/- "<<lastBinError<<endl;
+  if (!quiet_)  cout<<lastBinContent<<" +/- "<<lastBinError<<endl;
 }
 
 void addOverflowBin(TH1F* theHist) {
@@ -250,7 +255,7 @@ void addOverflowBin(TH1F* theHist) {
 
   theHist->SetBinContent(lastVisibleBin,lastBinContent);
   theHist->SetBinError(lastVisibleBin,lastBinError);
-  cout<<lastBinContent<<" +/- "<<lastBinError<<endl;
+  if (!quiet_)  cout<<lastBinContent<<" +/- "<<lastBinError<<endl;
 }
 
 void drawVerticalLine() {
@@ -348,7 +353,7 @@ void loadSamples() {
     fname.Prepend(inputPath);
     files_[samples_[isample]] = new TFile(fname);
     if (files_[samples_[isample]]->IsZombie() ) cout<<"file error with "<<samples_[isample]<<endl;
-    else     cout<<"Added sample: "<<samples_[isample]<<endl;
+    else { if (!quiet_)    cout<<"Added sample: "<<samples_[isample]<<endl;}
   }
 
   //load data file too
@@ -381,7 +386,7 @@ float drawSimple(const TString var, const int nbins, const float low, const floa
   else {
     for (unsigned int isample=0; isample<samples_.size(); isample++) {
       if ( samples_[isample] == samplename) {
-	cout <<samples_[isample]<<endl;
+	if (!quiet_) cout <<samples_[isample]<<endl;
 	tree = (TTree*) files_[samples_[isample]]->Get("reducedTree");
       }
     }
@@ -471,7 +476,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
   resetHistos(); //delete existing histograms
   TString opt="hist e";
   for (unsigned int isample=0; isample<samples_.size(); isample++) {
-    cout <<samples_[isample]<<endl;
+    if (!quiet_)   cout <<samples_[isample]<<endl;
 
     gROOT->cd();
     //should each histo have a different name? maybe
@@ -500,23 +505,23 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
     }
     if (!samples_[isample].Contains("LM")) {
       totalsm->Add(histos_[samples_[isample]]);
-        cout << "totalsm: " << samples_[isample] << endl;
+      if (!quiet_)    cout << "totalsm: " << samples_[isample] << endl;
     }
     if (!samples_[isample].Contains("LM") && !samples_[isample].Contains("QCD") && !samples_[isample].Contains("TTbar")) {
       totalewk->Add(histos_[samples_[isample]]);
-      cout << "totalewk: " << samples_[isample] << endl;
+      if (!quiet_) cout << "totalewk: " << samples_[isample] << endl;
     }
     if (samples_[isample].Contains("QCD") || samples_[isample].Contains("TTbar")){
       totalqcdttbar->Add(histos_[samples_[isample]]);
-      cout << "totalqcdttbar: " << samples_[isample] << endl;
+      if (!quiet_) cout << "totalqcdttbar: " << samples_[isample] << endl;
     }
     if (!samples_[isample].Contains("TTbar") && !samples_[isample].Contains("LM")){
       totalnonttbar->Add(histos_[samples_[isample]]);
-      cout << "totalnonttbar: " << samples_[isample] << endl;
+      if (!quiet_) cout << "totalnonttbar: " << samples_[isample] << endl;
     }
     if (!samples_[isample].Contains("QCD") && !samples_[isample].Contains("LM")){
        totalnonqcd->Add(histos_[samples_[isample]]);
-      cout << "totalnonqcd: " << samples_[isample] << endl;
+      if (!quiet_) cout << "totalnonqcd: " << samples_[isample] << endl;
     }
 
     //now just do a bunch of histogram formatting
@@ -569,7 +574,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
 
     if (dodata_) {
       gROOT->cd();
-      cout<<"Drawing data!"<<endl;
+      if (!quiet_)     cout<<"Drawing data!"<<endl;
       if (hdata != 0) delete hdata;
       TString hname = var; hname += "_"; hname += "data";
       hdata = (varbins==0) ? new TH1D(hname,"",nbins,low,high) : new TH1D(hname,"",nbins,varbins);
@@ -606,9 +611,11 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
       }
       //      if (doSubtraction_) hdataSubtracted->Draw("SAME");
 
-      cout<<"Integral of data, total SM: "<<hdata->Integral()<<" ; "<<totalsm->Integral()<<endl;
-      cout<<"Chi^2 Test results: "<<hdata->Chi2Test(totalsm,"UW P")<<endl;
-      cout<<"KS Test results: "<<hdata->KolmogorovTest(totalsm,"N")<<endl;;
+      if (!quiet_) {
+	cout<<"Integral of data, EW, total SM: "<<hdata->Integral()<<" ; "<<totalewk->Integral()<<" ; "<<totalsm->Integral()<<endl;
+	cout<<"Chi^2 Test results: "<<hdata->Chi2Test(totalsm,"UW P")<<endl;
+	cout<<"KS Test results: "<<hdata->KolmogorovTest(totalsm,"N")<<endl;;
+      }
       if (doRatio_) {
 	thecanvas->cd(2);
 	ratio->Divide(hdata,totalsm);
@@ -680,7 +687,7 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
   float max=-1e9; TString firsthist="";
   for (unsigned int isample=0; isample<samples_.size(); isample++) {
 
-    cout <<samples_[isample]<<endl;
+    if (!quiet_) cout <<samples_[isample]<<endl;
     TTree* tree = (TTree*) files_[samples_[isample]]->Get("reducedTree");
 
     gROOT->cd();
@@ -714,7 +721,7 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
     //   cout<<"content of bin 2: "<<histos_[hnameP]->GetBinContent(2)<<" / "<< histos_[hnameF]->GetBinContent(2)<<" = "<<histos_[hnameR]->GetBinContent(2)<<endl;
 
     //now format the histograms
-    cout<<"setting color to: "<<sampleColor_[samples_[isample]]<<endl;
+    if (!quiet_) cout<<"setting color to: "<<sampleColor_[samples_[isample]]<<endl;
     histos_[hnameR]->SetLineColor(sampleColor_[samples_[isample]]);
     histos_[hnameR]->SetMarkerStyle(sampleMarkerStyle_[samples_[isample]]);
     histos_[hnameR]->SetMarkerColor(sampleColor_[samples_[isample]]);
@@ -735,7 +742,7 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
 
   if (dodata_) {
     gROOT->cd();
-    cout<<"Drawing data!"<<endl;
+    if (!quiet_)   cout<<"Drawing data!"<<endl;
     if (hdata != 0) delete hdata;
 
     TString hname = var; hname += "_"; hname += "data";
@@ -905,6 +912,56 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
 
   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && (nElectrons==0 && nMuons==1) && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET_IMV_ge1b");
+
+  // == replacements for Don's ILV plots (but without fancy ttbar categories)
+  //these are in the MET>150 region
+  doRatioPlot(false);
+  setLogY(false);   setPlotMinimum(0);
+  nbins=6; low=1; high=7;
+  var="njets"; xtitle="Jet multiplicity";
+  //ratioMin = 0; ratioMax = 2;
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && (nElectrons==0 && nMuons==1) && cutDeltaPhi==1 && cutMET==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "njet_imv_1btag");
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && (nElectrons==0 && nMuons==1) && cutDeltaPhi==1 && cutMET==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "njet_imv_eq1btag");
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && (nElectrons==0 && nMuons==1) && cutDeltaPhi==1 && cutMET==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "njet_imv_2btag");
+
+  doRatioPlot(true);
+  setLogY(false);   setPlotMinimum(0);
+  nbins=10; low= 0; high=200;
+  var="MET"; xtitle="E_{T}^{miss} [GeV]";
+  ratioMin = 0; ratioMax = 2;
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1  && (nElectrons==0 && nMuons==1) && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_imv_1btag");
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1  && (nElectrons==0 && nMuons==1) && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_imv_eq1btag");
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1  && (nElectrons==0 && nMuons==1) && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_imv_2btag");
+
+  doRatioPlot(false);
+  setLogY(false);   setPlotMinimum(0);
+  nbins=6; low=1; high=7;
+  var="njets"; xtitle="Jet multiplicity";
+  //ratioMin = 0; ratioMax = 2;
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && (nElectrons==1 && nMuons==0) && cutDeltaPhi==1 && cutMET==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "njet_iev_1btag");
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && (nElectrons==1 && nMuons==0) && cutDeltaPhi==1 && cutMET==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "njet_iev_eq1btag");
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && (nElectrons==1 && nMuons==0) && cutDeltaPhi==1 && cutMET==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "njet_iev_2btag");
+
+  doRatioPlot(true);
+  setLogY(false);   setPlotMinimum(0);
+  nbins=10; low= 0; high=200;
+  var="MET"; xtitle="E_{T}^{miss} [GeV]";
+  ratioMin = 0; ratioMax = 2;
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1  && (nElectrons==1 && nMuons==0) && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_iev_1btag");
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1  && (nElectrons==1 && nMuons==0) && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_iev_eq1btag");
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1  && (nElectrons==1 && nMuons==0) && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_iev_2btag");
 
 
   // ==== MHT plot === (no MET cut)
@@ -1240,6 +1297,62 @@ void countABCD() {
   }
 }
 
+void countILV() {
+  setQuiet(true);
+  loadSamples();
+  const  TCut baseSelection = "cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutDeltaPhi==1 && cutMET==1"; //no cleaning, no b tag
+  const  TCut passCleaning ="passInconsistentMuon == 1 && passBadPFMuon==1 && weight<1000"; //apply cleaning but without ECAL dead cells
+
+  const  TCut ge1b =  "nbjets >= 1";
+  const  TCut ge2b =  "nbjets >= 2";
+  const  TCut eq1b =  "nbjets == 1";
+
+  const TCut muVeto = "nMuons==0";
+  const TCut eVeto = "nElectrons==0";
+
+  const TCut IMV = "nMuons==1";
+  const TCut IEV = "nElectrons==1";
+
+  //want to compare SM MC to data
+  TCut IMVselection = baseSelection && passCleaning && eVeto && IMV;
+  TCut IEVselection = baseSelection && passCleaning && muVeto && IEV;
+
+  TCut IMV_ge1b = IMVselection && ge1b;
+  TCut IMV_eq1b = IMVselection && eq1b;
+  TCut IMV_ge2b = IMVselection && ge2b;
+
+  TCut IEV_ge1b = IEVselection && ge1b;
+  TCut IEV_eq1b = IEVselection && eq1b;
+  TCut IEV_ge2b = IEVselection && ge2b;
+
+  doOverflowAddition(false);
+
+  selection_=IMV_ge1b.GetTitle();
+  drawPlots("HT",1,0,10000,"","","deleteme");
+  cout<<"[IMV ge1b] Integral of data, total SM: "<<hdata->GetBinContent(1)<<" ; "<<totalsm->GetBinContent(1)<< " +/- "<<totalsm->GetBinError(1)<<endl;
+
+  selection_=IMV_eq1b.GetTitle();
+  drawPlots("HT",1,0,10000,"","","deleteme");
+  cout<<"[IMV eq1b] Integral of data, total SM: "<<hdata->GetBinContent(1)<<" ; "<<totalsm->GetBinContent(1)<< " +/- "<<totalsm->GetBinError(1)<<endl;
+
+  selection_=IMV_ge2b.GetTitle();
+  drawPlots("HT",1,0,10000,"","","deleteme");
+  cout<<"[IMV ge2b] Integral of data, total SM: "<<hdata->GetBinContent(1)<<" ; "<<totalsm->GetBinContent(1)<< " +/- "<<totalsm->GetBinError(1)<<endl;
+
+  selection_=IEV_ge1b.GetTitle();
+  drawPlots("HT",1,0,10000,"","","deleteme");
+  cout<<"[IEV ge1b] Integral of data, total SM: "<<hdata->GetBinContent(1)<<" ; "<<totalsm->GetBinContent(1)<< " +/- "<<totalsm->GetBinError(1)<<endl;
+
+  selection_=IEV_eq1b.GetTitle();
+  drawPlots("HT",1,0,10000,"","","deleteme");
+  cout<<"[IEV eq1b] Integral of data, total SM: "<<hdata->GetBinContent(1)<<" ; "<<totalsm->GetBinContent(1)<< " +/- "<<totalsm->GetBinError(1)<<endl;
+
+  selection_=IEV_ge2b.GetTitle();
+  drawPlots("HT",1,0,10000,"","","deleteme");
+  cout<<"[IEV ge2b] Integral of data, total SM: "<<hdata->GetBinContent(1)<<" ; "<<totalsm->GetBinContent(1)<< " +/- "<<totalsm->GetBinError(1)<<endl;
+
+}
+
 void drawOwen() {
 
   /*
@@ -1349,7 +1462,7 @@ void drawOwen() {
 
 
     //now for a flexible MET region
-    for (int metCutLow = 100; metCutLow <=100; metCutLow+=10) {
+    for (int metCutLow = 80; metCutLow <=110; metCutLow+=10) {
       for (int metCutHigh = 150; metCutHigh <=150; metCutHigh+=5) {
 	TString metCutString; metCutString.Form("MET >= %d && MET < %d",metCutLow,metCutHigh);
 	ofile<<metCutString<<endl;
