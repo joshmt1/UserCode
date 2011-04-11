@@ -1154,15 +1154,15 @@ void drawMinDeltaPhiMETslices(){
     selection_ = baseSelection && theBTaggingCut && theseCuts;
     drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+"_MinDeltaPhi_MET_0_50");
     //50 < MET < 100 
-    theseCuts = "MET<100. && MET>50.";
+    theseCuts = "MET<100. && MET>=50.";
     selection_ = baseSelection && theBTaggingCut && theseCuts;
     drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+"_MinDeltaPhi_MET_50_100");
     //100 < MET < 150
-    theseCuts = "MET<150. && MET>100.";
+    theseCuts = "MET<150. && MET>=100.";
     selection_ = baseSelection && theBTaggingCut && theseCuts;
     drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+"_MinDeltaPhi_MET_100_150");
     //MET < 150
-    theseCuts = "MET>150.";
+    theseCuts = "MET>=150.";
     selection_ = baseSelection && theBTaggingCut && theseCuts;
     drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+"_MinDeltaPhi_MET_150_inf");
     
