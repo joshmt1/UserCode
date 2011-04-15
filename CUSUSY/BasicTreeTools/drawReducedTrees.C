@@ -4,6 +4,8 @@
 -- drawSimple() -- very simple function to draw exactly one sample and put it in a file
 -- drawR() -- draws r(MET). not necessarily up to date.
 
+In non-stacked mode, the histograms are normalized to unit area
+
 Various utility functions are at the top (should probably be moved elsewhere for better readability)
 Samples to plot are currently hard-coded in loadSamples().
 
@@ -20,7 +22,6 @@ The input files are the reducedTrees.
 Potential improvements:
  -- renormalizeBins_ doesn't have a setter function at the moment
  -- the calls to renormBins() currently have a kludge that hard-codes the reference bin to 2
- -- non-stacked drawing is not yet implemented
  -- The samples to be plotted are currently defined at compile time.
 Could make it so that all samples are always loaded, but there is an
 independent list that controls which samples are plotted. This would
@@ -519,6 +520,8 @@ float drawSimple(const TString var, const int nbins, const float* varbins, const
 
 
 void drawPlots(const TString var, const int nbins, const float low, const float high, const TString xtitle, TString ytitle, TString filename="", const float* varbins=0) {
+  //  cout<<"[drawPlots] var = "<<var<<endl;
+
   loadSamples();
 
   if (filename=="") filename=var;
@@ -534,7 +537,6 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
 
   thecanvas->cd(mainPadIndex);
 
-  //FIXME -- could add recode these numbers as a config option
   if (leg!=0) delete leg;
   leg = new TLegend(leg_x1, leg_y1, leg_x2, leg_y2);
   leg->SetBorderSize(0);
@@ -545,31 +547,33 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
   if (dostack_) {
     if (thestack!= 0 ) delete thestack;
     thestack = new THStack("thestack","--");
-    if (totalsm!=0) delete totalsm;
-    totalsm = (varbins==0) ? new TH1D("totalsm","",nbins,low,high) : new TH1D("totalsm","",nbins,varbins);
-    totalsm->Sumw2();
-    if (totalewk!=0) delete totalewk;
-    totalewk = (varbins==0) ? new TH1D("totalewk","",nbins,low,high) : new TH1D("totalewk","",nbins,varbins);
-    totalewk->Sumw2();
-    if (totalqcdttbar!=0) delete totalqcdttbar;
-    totalqcdttbar = (varbins==0) ? new TH1D("totalqcdttbar","",nbins,low,high) : new TH1D("totalqcdttbar","",nbins,varbins);
-    totalqcdttbar->Sumw2();
-     if (totalnonttbar!=0) delete totalnonttbar;
-    totalnonttbar = (varbins==0) ? new TH1D("totalnonttbar","",nbins,low,high) : new TH1D("totalnonttbar","",nbins,varbins);
-    totalnonttbar->Sumw2();
-    if (totalnonqcd!=0) delete totalnonqcd;
-    totalnonqcd = (varbins==0) ? new TH1D("totalnonqcd","",nbins,low,high) : new TH1D("totalnonqcd","",nbins,varbins);
-    totalnonqcd->Sumw2();
     if (doRatio_) {
       if (ratio!=0) delete ratio;
       ratio = (varbins==0) ? new TH1D("ratio","data/(SM MC)",nbins,low,high) : new TH1D("ratio","",nbins,varbins);
       ratio->Sumw2();
     }
   }
+  if (totalsm!=0) delete totalsm;
+  totalsm = (varbins==0) ? new TH1D("totalsm","",nbins,low,high) : new TH1D("totalsm","",nbins,varbins);
+  totalsm->Sumw2();
+  if (totalewk!=0) delete totalewk;
+  totalewk = (varbins==0) ? new TH1D("totalewk","",nbins,low,high) : new TH1D("totalewk","",nbins,varbins);
+  totalewk->Sumw2();
+  if (totalqcdttbar!=0) delete totalqcdttbar;
+  totalqcdttbar = (varbins==0) ? new TH1D("totalqcdttbar","",nbins,low,high) : new TH1D("totalqcdttbar","",nbins,varbins);
+  totalqcdttbar->Sumw2();
+  if (totalnonttbar!=0) delete totalnonttbar;
+  totalnonttbar = (varbins==0) ? new TH1D("totalnonttbar","",nbins,low,high) : new TH1D("totalnonttbar","",nbins,varbins);
+  totalnonttbar->Sumw2();
+  if (totalnonqcd!=0) delete totalnonqcd;
+  totalnonqcd = (varbins==0) ? new TH1D("totalnonqcd","",nbins,low,high) : new TH1D("totalnonqcd","",nbins,varbins);
+  totalnonqcd->Sumw2();
+  
   //here is the part that is really different from the previous implementation
   //need to make new histograms
   resetHistos(); //delete existing histograms
   TString opt="hist e";
+  double histMax=-1e9;
   for (unsigned int isample=0; isample<samples_.size(); isample++) {
     if (!quiet_)   cout <<samples_[isample]<<endl;
 
@@ -647,15 +651,20 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
 //       }
     }
     else {
+      //normalize
+      if ( histos_[samples_[isample]]->Integral() >0)  histos_[samples_[isample]]->Scale( 1.0 / histos_[samples_[isample]]->Integral() );
+      if ( findOverallMax( histos_[samples_[isample]]) > histMax) histMax = findOverallMax(histos_[samples_[isample]]);
+
       histos_[samples_[isample]]->Draw(opt);
       if (!opt.Contains("same")) opt+=" same";
     }
   }
 
   if (!dostack_) {
-    //not implemented yet
-    //    hh.normalize(); //normalize all histos to 1
-    //hh.SetMaximum( hh.GetMaximum()*1.05);
+    //this is all a re-implemenataion of stuff done is HistHolder. Oh well.
+    for (unsigned int isample=0; isample<samples_.size(); isample++) {
+      histos_[samples_[isample]]->SetMaximum( histMax*1.05);
+    }
     //should implement use of customPlotMax_, i guess
   }
   else {
@@ -724,7 +733,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
     }
     if (doCustomPlotMax_) thestack->SetMaximum(customPlotMax_);
     if (doCustomPlotMin_) thestack->SetMinimum(customPlotMin_);
-  }
+  } //if doStack_
 
   thecanvas->cd(mainPadIndex);
   if (doleg_)  leg->Draw();
@@ -939,8 +948,8 @@ void drawForANandPAS () {
 
   doOverflowAddition(false);
 
-  // === plots for AN and PAS (aspect ratio adjusted)
   var="bestTopMass"; xtitle="best 3-jet mass (GeV)";
+  // === plots for AN and PAS (aspect ratio adjusted)
   const int nvarbins=5;
   const float varbins[]={0.,160.,180.,260.,400.,800.};
   //SB region
@@ -992,6 +1001,15 @@ void drawForANandPAS () {
   drawPlots(var,nbins,low,high,xtitle,"Events", "mcdata_bestM3j_met_50_inf_ge2btag");
   renormalizeBins_=true;
   drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_50_inf_ge2btag_vbrn");
+
+  // -- SB region, compare shapes --
+  setStackMode(false);
+  renormalizeBins_=false;
+  nbins=10; low=0; high=800;
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>=100 && MET<150";
+  drawPlots(var,nbins,low,high,xtitle,"Arbitrary Units", "m3j_shapesInMC_SB_ge1btag");
+  drawPlots(var,nvarbins,varbins,xtitle,"Arbitrary Units", "m3j_shapesInMC_SB_ge1btag_vb");
+
 
   resetPadDimensions();
 
@@ -1535,7 +1553,7 @@ void drawOwen() {
   const  float min=0;
   const  float max=800;
 
-  bool vb = false;//variable binning ON or OFF
+  bool vb = true;//variable binning ON or OFF
   const int nvarbins=5;
   const float varbins[]={0.,160.,180.,260.,400.,800.};
   //use like this drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_150_10000_"+btagstring+"tag_qcd","PythiaPUQCDFlat");
