@@ -1,12 +1,40 @@
 /*
-after replacing drawBasicPlot.C with drawCutflowPlots.C,
-I will now work on replacing drawCutflowPlots.C with this code.
+====== this is the nominal code for drawing RA2b data/MC comparison plots =======
+-- drawPlots() -- main plotting routine to draw pretty stacks of MC with data on top
+-- drawSimple() -- very simple function to draw exactly one sample and put it in a file
+-- drawR() -- draws r(MET). not necessarily up to date.
 
-This code will not use the plots created by the Nminus1 code,
-but rather it will work from the reducedTrees
+Various utility functions are at the top (should probably be moved elsewhere for better readability)
+Samples to plot are currently hard-coded in loadSamples().
 
-known bugs:
-non-stacked drawing is not yet implemented
+Various routines at the bottom call the above functions. Some of them (e.g. drawSomething() ) I usually
+use in a quasi-interactive mode.
+
+-- drawOwen() -- uses drawPlots() and drawSimple() to make a file with the histograms needed for
+toys and fits to data.
+
+Details:
+This code replaces drawCutflowPlots.C (which had replaced drawBasicPlots.C). 
+The input files are the reducedTrees.
+
+Potential improvements:
+ -- renormalizeBins_ doesn't have a setter function at the moment
+ -- the calls to renormBins() currently have a kludge that hard-codes the reference bin to 2
+ -- non-stacked drawing is not yet implemented
+ -- The samples to be plotted are currently defined at compile time.
+Could make it so that all samples are always loaded, but there is an
+independent list that controls which samples are plotted. This would
+allow the user to switch the plotted samples on the fly.
+[any mechanism like this would also have to allow the user to control
+the order in which the samples are stack. This is currently defined
+by the order of the push_backs in loadSamples()]
+ -- The cuts are defined by the user settings the selection_ string
+directly. This can be error prone. A better interface would allow the user
+to set cuts more intutitively and with less change of e.g. accidentally 
+forgotten cuts (while still preserving the current flexibility).
+
+ -- someday I should test whether I can get rid of duplicate
+functionality for TH1F and TH1D e.g. the case of addOverflowBin()
 */
 
 #include "TROOT.h"
@@ -58,6 +86,7 @@ bool dodata_=true;
 bool addOverflow_=true;
 //bool doSubtraction_=false;
 bool drawQCDErrors_=false;
+bool renormalizeBins_=false;
 
 bool doVerticalLine_=false;
 double verticalLinePosition_=0;
@@ -145,7 +174,7 @@ void drawLegend(bool doleg) {
   doleg_=doleg;
 }
 
-int mainpadWidth = 600; int mainpadHeight=550;
+int mainpadWidth; int mainpadHeight;
 int ratiopadHeight = 250;
 // TPad* mainPad=0;
 // TPad* ratioPad=0;
@@ -177,6 +206,16 @@ void renewCanvas(const TString opt="") {
 
 }
 
+void resetPadDimensions() {
+  mainpadWidth = 600; 
+  mainpadHeight=550;
+}
+
+void setPadDimensions(int x, int y) {
+
+  mainpadWidth = x; 
+  mainpadHeight= y;
+}
 
 void resetHistos() {
   for ( std::map<TString, TH1D*>::iterator i = histos_.begin(); i!=histos_.end(); ++i) {
@@ -185,6 +224,40 @@ void resetHistos() {
       i->second= 0;
     }
   }
+}
+
+double findOverallMax(const TH1D* hh) {
+
+  double max=-1e9;
+
+  for (int i=1; i<= hh->GetNbinsX(); i++) {
+    double val = hh->GetBinContent(i) + hh->GetBinError(i);
+    if (val>max) max=val;
+  }
+  return max;
+}
+
+//code largely lifted from Owen
+//returned string is the y title of the renormalized histo
+TString renormBins( TH1D* hp, int refbin ) {
+
+  if ( hp==0 ) return "PROBLEM";
+
+  double refbinwid = hp->GetBinLowEdge( refbin+1 ) - hp->GetBinLowEdge( refbin ) ;
+  if (!quiet_)  printf(" reference bin: [%6.1f,%6.1f], width = %6.3f\n",  hp->GetBinLowEdge( refbin ), hp->GetBinLowEdge( refbin+1 ), refbinwid ) ;
+  
+  for ( int bi=1; bi<= hp->GetNbinsX(); bi++ ) {
+    double binwid = hp->GetBinLowEdge( bi+1 ) - hp->GetBinLowEdge( bi ) ;
+    double sf = refbinwid / binwid ;
+    if (!quiet_)    printf("  bin %d : width= %6.2f, sf=%7.3f\n", bi, binwid, sf ) ;
+    hp->SetBinContent( bi, sf*(hp->GetBinContent( bi )) ) ;
+    hp->SetBinError( bi, sf*(hp->GetBinError( bi )) ) ;
+  } // bi.
+
+  TString ytitle;
+  ytitle.Form("(Events / bin) * (%5.1f / bin width)", refbinwid );
+
+  return ytitle;
 }
 
 TString getCutString(TString extraSelection="") {
@@ -285,20 +358,30 @@ void loadSamples() {
   if (loaded_) return;
   loaded_=true;
 
+  resetPadDimensions();
+
   //this block controls what samples will enter your plot
+  //order of this vector controls order of samples in stack
+
   //careful -- QCD must have 'QCD' in its name somewhere.
   //samples_.push_back("QCD"); //madgraph
   //samples_.push_back("PythiaQCD");
   samples_.push_back("PythiaPUQCD");
   samples_.push_back("TTbarJets");
-  samples_.push_back("SingleTop");
+
+  //flip this bool to control whether SingleTop is loaded as one piece or 2
+  if (true) samples_.push_back("SingleTop");
+  else {
+    samples_.push_back("SingleTop-sChannel");
+    samples_.push_back("SingleTop-tChannel");
+    samples_.push_back("SingleTop-tWChannel");
+  }
   samples_.push_back("WJets");
   samples_.push_back("ZJets");
   samples_.push_back("Zinvisible");
-
   // samples_.push_back("LM13");
 
-  //these 3 blocks are just a "dictionary"
+  //these blocks are just a "dictionary"
   //no need to ever comment these out
   sampleColor_["LM13"] = kGray; //borrowed from a different sample
   sampleColor_["QCD"] = kYellow;
@@ -310,6 +393,9 @@ void loadSamples() {
   sampleColor_["WJets"] = kGreen-3;
   sampleColor_["ZJets"] = kAzure-2;
   sampleColor_["Zinvisible"] = kOrange-3;
+  sampleColor_["SingleTop-sChannel"] = kMagenta+1; //for special cases
+  sampleColor_["SingleTop-tChannel"] = kMagenta+2; //for special cases
+  sampleColor_["SingleTop-tWChannel"] = kMagenta+3; //for special cases
 
   sampleLabel_["LM13"] = "LM13";
   sampleLabel_["QCD"] = "QCD";
@@ -321,6 +407,9 @@ void loadSamples() {
   sampleLabel_["WJets"] = "W#rightarrowl#nu";
   sampleLabel_["ZJets"] = "Z/#gamma*#rightarrowl^{+}l^{-}";
   sampleLabel_["Zinvisible"] = "Z#rightarrow#nu#nu";
+  sampleLabel_["SingleTop-sChannel"] = "Single-Top (s)";
+  sampleLabel_["SingleTop-tChannel"] = "Single-Top (t)";
+  sampleLabel_["SingleTop-tWChannel"] = "Single-Top (tW)";
 
   sampleMarkerStyle_["LM13"] = kFullStar;
   sampleMarkerStyle_["QCD"] = kFullCircle;
@@ -332,6 +421,9 @@ void loadSamples() {
   sampleMarkerStyle_["WJets"] = kMultiply;
   sampleMarkerStyle_["ZJets"] = kFullTriangleUp;
   sampleMarkerStyle_["Zinvisible"] = kFullTriangleDown;
+  sampleMarkerStyle_["SingleTop-sChannel"] = kOpenSquare;
+  sampleMarkerStyle_["SingleTop-tChannel"] = kOpenSquare;
+  sampleMarkerStyle_["SingleTop-tWChannel"] = kOpenSquare;
 
   sampleOwenName_["LM13"] = "lm13";
   sampleOwenName_["QCD"] = "qcd";
@@ -343,6 +435,9 @@ void loadSamples() {
   sampleOwenName_["WJets"] = "wjets";
   sampleOwenName_["ZJets"] = "zjets";
   sampleOwenName_["Zinvisible"] = "zinvis";
+  sampleOwenName_["SingleTop-sChannel"] = "singletops";
+  sampleOwenName_["SingleTop-tChannel"] = "singletopt";
+  sampleOwenName_["SingleTop-tWChannel"] = "singletoptw";
 
   for (unsigned int isample=0; isample<samples_.size(); isample++) {
     TString fname="reducedTree.";
@@ -423,7 +518,7 @@ float drawSimple(const TString var, const int nbins, const float* varbins, const
 }
 
 
-void drawPlots(const TString var, const int nbins, const float low, const float high, const TString xtitle, const TString ytitle, TString filename="", const float* varbins=0) {
+void drawPlots(const TString var, const int nbins, const float low, const float high, const TString xtitle, TString ytitle, TString filename="", const float* varbins=0) {
   loadSamples();
 
   if (filename=="") filename=var;
@@ -484,9 +579,6 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
     histos_[samples_[isample]] = (varbins==0) ? new TH1D(hname,"",nbins,low,high) : new TH1D(hname,"",nbins,varbins);
     histos_[samples_[isample]]->Sumw2();
 
-    histos_[samples_[isample]]->SetXTitle(xtitle);
-    histos_[samples_[isample]]->SetYTitle(ytitle);
-
     //qcd reweighting not implemented yet
 
     TTree* tree = (TTree*) files_[samples_[isample]]->Get("reducedTree");
@@ -494,7 +586,10 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
     tree->Project(hname,var,getCutString().Data());
     //now the histo is filled
     
+    if (renormalizeBins_) ytitle=renormBins(histos_[samples_[isample]],2 ); //manipulates the TH1D //FIXME hard-coded "2"
     if (addOverflow_)  addOverflowBin( histos_[samples_[isample]] ); //manipulates the TH1D
+    histos_[samples_[isample]]->SetXTitle(xtitle);
+    histos_[samples_[isample]]->SetYTitle(ytitle);
 
     //if we're going to draw QCD errors, create a TGraphErrors from the QCD histogram
     if (drawQCDErrors_ && samples_[isample].Contains("QCD")) {
@@ -589,6 +684,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
       hdata->SetLineWidth(2);
       hdata->SetMarkerStyle(kFullCircle);
       hdata->SetMarkerSize(1);
+      if (renormalizeBins_) renormBins(hdata,2 ); //manipulates the histogram //FIXME hard-coded "2"
       if (addOverflow_)     addOverflowBin(hdata); // manipulates the histogram!
 
 //       if (doSubtraction_) { //plot data - MC
@@ -605,13 +701,12 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
 //       }
 
       hdata->Draw("SAME");
-      //      cout<<hdata->GetMaximum()<<"\t"<<thestack->GetMaximum()<<endl;
-      if (hdata->GetMaximum() > thestack->GetMaximum()) {
-	thestack->SetMaximum( hdata->GetMaximum());
+      if (findOverallMax(hdata) > thestack->GetMaximum()) {
+	thestack->SetMaximum( findOverallMax(hdata));
       }
       //      if (doSubtraction_) hdataSubtracted->Draw("SAME");
 
-      if (!quiet_) {
+      if (!quiet_ && !renormalizeBins_) {
 	cout<<"Integral of data, EW, total SM: "<<hdata->Integral()<<" ; "<<totalewk->Integral()<<" ; "<<totalsm->Integral()<<endl;
 	cout<<"Chi^2 Test results: "<<hdata->Chi2Test(totalsm,"UW P")<<endl;
 	cout<<"KS Test results: "<<hdata->KolmogorovTest(totalsm,"N")<<endl;;
@@ -824,6 +919,81 @@ setLogY(true);
 selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutCleaning==1 && njets==5";
 setLogY(true);
  drawR("minDeltaPhi",0.3,50,0,250);
+
+}
+
+void drawForANandPAS () {
+  /*
+.L drawReducedTrees.C++
+  */
+  setStackMode(true);
+  doData(true);
+  doRatioPlot(false);
+  resetPlotMinimum();
+  setPadDimensions(700,500);
+  setLogY(false);
+
+  int nbins;
+  float low,high;
+  TString var,xtitle;
+
+  doOverflowAddition(false);
+
+  // === plots for AN and PAS (aspect ratio adjusted)
+  var="bestTopMass"; xtitle="best 3-jet mass (GeV)";
+  const int nvarbins=5;
+  const float varbins[]={0.,160.,180.,260.,400.,800.};
+  //SB region
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>=100 && MET<150";
+  renormalizeBins_=false;
+  setPlotMaximum(25);
+  drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_100_150_ge1btag_vb");
+  renormalizeBins_=true;
+  resetPlotMaximum();
+  drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_100_150_ge1btag_vbrn");
+
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>=100 && MET<150";
+  renormalizeBins_=false;
+  setPlotMaximum(20);
+  drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_100_150_eq1btag_vb");
+  renormalizeBins_=true;
+  resetPlotMaximum();
+  drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_100_150_eq1btag_vbrn");
+
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>=100 && MET<150";
+  renormalizeBins_=false;
+  //  setPlotMaximum(8);
+  drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_100_150_ge2btag_vb");
+  renormalizeBins_=true;
+  resetPlotMaximum();
+  drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_100_150_ge2btag_vbrn");
+
+  //-------------- signal region ---------------
+  nbins=10; low=0; high=800;
+
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && cutMET==1";
+  renormalizeBins_=false;
+  drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_50_inf_ge1btag_vb");
+  drawPlots(var,nbins,low,high,xtitle,"Events", "mcdata_bestM3j_met_50_inf_ge1btag");
+  renormalizeBins_=true;
+  drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_50_inf_ge1btag_vbrn");
+
+
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && cutMET==1";
+  renormalizeBins_=false;
+  drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_50_inf_eq1btag_vb");
+  drawPlots(var,nbins,low,high,xtitle,"Events", "mcdata_bestM3j_met_50_inf_eq1btag");
+  renormalizeBins_=true;
+  drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_50_inf_eq1btag_vbrn");
+
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && cutMET==1";
+  renormalizeBins_=false;
+  drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_50_inf_ge2btag_vb");
+  drawPlots(var,nbins,low,high,xtitle,"Events", "mcdata_bestM3j_met_50_inf_ge2btag");
+  renormalizeBins_=true;
+  drawPlots(var,nvarbins,varbins,xtitle,"Events", "mcdata_bestM3j_met_50_inf_ge2btag_vbrn");
+
+  resetPadDimensions();
 
 }
 
@@ -1106,7 +1276,7 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
   nbins=20; low=0; high= 800;
   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "bestTopMass_ge1b_SIG");
-  //SB region (but wide met range)
+  //SB region
   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>=100 && MET<150";
   drawPlots(var,nbins,low,high,xtitle,"Events", "bestTopMass_ge1b_wide");
   //LSB region
@@ -1365,7 +1535,7 @@ void drawOwen() {
   const  float min=0;
   const  float max=800;
 
-  bool vb = true;//variable binning ON or OFF
+  bool vb = false;//variable binning ON or OFF
   const int nvarbins=5;
   const float varbins[]={0.,160.,180.,260.,400.,800.};
   //use like this drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_150_10000_"+btagstring+"tag_qcd","PythiaPUQCDFlat");
@@ -1450,19 +1620,26 @@ void drawOwen() {
 
     //need invdphi in data in the SR
     TCut invdpSelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && SRMET;
+    TString nameOfIDPhist = "bestM3j_met_150_5000_invdphi_";
+    nameOfIDPhist+=btagstring; nameOfIDPhist+="tag_";
     selection_ = invdpSelection.GetTitle();
-    if(vb){
-      drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_150_5000_invdphi_"+btagstring+"tag_qcd" ,"PythiaPUQCD");
-      drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_150_5000_invdphi_"+btagstring+"tag_data" ,"data");
+    if (vb) {
+      drawSimple("bestTopMass",nvarbins,varbins,histfilename, nameOfIDPhist+"qcd" ,"PythiaPUQCD");
+      drawSimple("bestTopMass",nvarbins,varbins,histfilename, nameOfIDPhist+"data" ,"data");
+      drawPlots("bestTopMass",nvarbins,varbins,"","","deleteme");
     }
-    else{
-      drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_invdphi_"+btagstring+"tag_qcd" ,"PythiaPUQCD");
-      drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_invdphi_"+btagstring+"tag_data" ,"data");
+    else {
+      drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfIDPhist+"qcd" ,"PythiaPUQCD");
+      drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfIDPhist+"data" ,"data");
+      drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
     }
-
+    TFile fh3(histfilename,"UPDATE");
+    totalnonqcd->SetName(nameOfIDPhist+"nonqcd");
+    totalnonqcd->Write();
+    fh3.Close();
 
     //now for a flexible MET region
-    for (int metCutLow = 80; metCutLow <=110; metCutLow+=10) {
+    for (int metCutLow = 80; metCutLow <=100; metCutLow+=10) {
       for (int metCutHigh = 150; metCutHigh <=150; metCutHigh+=5) {
 	TString metCutString; metCutString.Form("MET >= %d && MET < %d",metCutLow,metCutHigh);
 	ofile<<metCutString<<endl;
@@ -1477,7 +1654,7 @@ void drawOwen() {
 	TString nameOfHist;
 	nameOfHist.Form( "bestM3j_met_%d_%d_%stag_",metCutLow,metCutHigh,btagstring.Data());
 
-	if(vb) {
+	if (vb) {
 	  //plot all samples
 	  for (unsigned int isample=0; isample<samples_.size(); isample++) {
 	    TString oname=sampleOwenName_[samples_[isample]];
@@ -1507,7 +1684,7 @@ void drawOwen() {
 	  //fills plots that are combinations of various samples (to be accessed via global pointers)
 	  drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
 	}
-	TFile fh3(histfilename,"UPDATE");
+	TFile fh4(histfilename,"UPDATE");
 	totalnonttbar->SetName(nameOfHist+"nonttbar");
 	totalnonqcd->SetName(nameOfHist+"nonqcd");
 	totalewk->SetName(nameOfHist+"allewk");
@@ -1516,7 +1693,7 @@ void drawOwen() {
 	totalnonqcd->Write();
 	totalewk->Write();
 	totalsm->Write();
-	fh3.Close();
+	fh4.Close();
 
 	//Use fail minDeltaPhi cut
       	theSelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && METselection;
@@ -1532,32 +1709,16 @@ void drawOwen() {
 	  drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"qcd","PythiaPUQCD");
 	  drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
 	}
-	TFile fh2(histfilename,"UPDATE");
+	TFile fh5(histfilename,"UPDATE");
+	totalnonqcd->SetName(nameOfHist+"nonqcd");
 	totalsm->SetName(nameOfHist+"allsm");
+	totalnonqcd->Write();
 	totalsm->Write();
-	fh2.Close();
-
+	fh5.Close();
       }
     }
      
   }
   ofile.close();
 
-  //trick to get the total SM histo filled. make sure SingleTop is commented out in the master list
-  /*
-  drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
-  TFile fh(histfilename,"UPDATE");
-  totalsm->SetName("bestM3j_met_80_150_ge1btag_allsm");
-  totalsm->Write();
-  fh.Close();
-
-  drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_80_150_ge1btag_data","data"); //for the real fit
-  drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_80_150_ge1btag_qcd","PythiaPUQCDFlat");
-  drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_80_150_ge1btag_ttbar","TTbarJets");
-
-  drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_80_150_ge1btag_wjets","WJets");
-  drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_80_150_ge1btag_zjets","ZJets");
-
-  drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_80_150_ge1btag_zinvis","Zinvisible");
-  */
 }
