@@ -1630,12 +1630,20 @@ void drawOwen() {
     if (vb) {
       drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_150_5000_t2_"+btagstring+"tag_ttbar","TTbarJets");
       drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_150_5000_t2_"+btagstring+"tag_data","data");
+      drawPlots("bestTopMass",nvarbins,varbins,"","","deleteme");
     }
     else{
       drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_t2_"+btagstring+"tag_ttbar","TTbarJets");
       drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_t2_"+btagstring+"tag_data","data");
+      drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
     }
-
+    TFile fh22(histfilename,"UPDATE");  
+    totalnonttbar->SetName("bestM3j_met_150_5000_t2_"+btagstring+"tag_nonttbar");
+    totalewk->SetName("bestM3j_met_150_5000_t2_"+btagstring+"tag_allewk");
+    totalnonttbar->Write();          
+    totalewk->Write();          
+    fh22.Close(); 
+    
     //need invdphi in data in the SR
     TCut invdpSelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && SRMET;
     TString nameOfIDPhist = "bestM3j_met_150_5000_invdphi_";
@@ -1671,7 +1679,8 @@ void drawOwen() {
 	selection_ = theSelection.GetTitle();
 	TString nameOfHist;
 	nameOfHist.Form( "bestM3j_met_%d_%d_%stag_",metCutLow,metCutHigh,btagstring.Data());
-
+	
+	//*** nominal selection ***//
 	if (vb) {
 	  //plot all samples
 	  for (unsigned int isample=0; isample<samples_.size(); isample++) {
@@ -1680,10 +1689,6 @@ void drawOwen() {
 	  }
 	  //plot data
 	  drawSimple("bestTopMass",nvarbins,varbins,histfilename, nameOfHist+"data","data");
-	  selection_ = theT2Selection.GetTitle(); //change to t2 selection
-	  drawSimple("bestTopMass",nvarbins,varbins,histfilename, nameOfT2Hist+"data","data");
-	  drawSimple("bestTopMass",nvarbins,varbins,histfilename, nameOfT2Hist+"ttbar","TTbarJets");
-	  selection_ = theSelection.GetTitle(); //revert to normal selection
 	  //fills plots that are combinations of various samples (to be accessed via global pointers)
 	  drawPlots("bestTopMass",nvarbins,varbins,"","","deleteme");
 	}
@@ -1695,10 +1700,6 @@ void drawOwen() {
 	  }
 	  //plot data
 	  drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfHist+"data","data");
-	  selection_ = theT2Selection.GetTitle(); //change to t2 selection
-	  drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfT2Hist+"data","data");
-	  drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfT2Hist+"ttbar","TTbarJets");
-	  selection_ = theSelection.GetTitle(); //revert to normal selection
 	  //fills plots that are combinations of various samples (to be accessed via global pointers)
 	  drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
 	}
@@ -1712,8 +1713,27 @@ void drawOwen() {
 	totalewk->Write();
 	totalsm->Write();
 	fh4.Close();
+	
+	//*** T2 selection ***//
+	selection_ = theT2Selection.GetTitle(); //change to t2 selection
+	if (vb) {
+	  drawSimple("bestTopMass",nvarbins,varbins,histfilename, nameOfT2Hist+"data","data");
+	  drawSimple("bestTopMass",nvarbins,varbins,histfilename, nameOfT2Hist+"ttbar","TTbarJets");
+	  drawPlots("bestTopMass",nvarbins,varbins,"","","deleteme");
+	}
+	else {
+	  drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfT2Hist+"data","data");
+	  drawSimple("bestTopMass",nbins,min,max,histfilename, nameOfT2Hist+"ttbar","TTbarJets");
+	  drawPlots("bestTopMass",nbins,min,max,"","","deleteme");
+	}
+	TFile fh44(histfilename,"UPDATE");  
+	totalnonttbar->SetName(nameOfT2Hist+"nonttbar");
+	totalewk->SetName(nameOfT2Hist+"allewk");
+	totalnonttbar->Write();          
+	totalewk->Write();          
+	fh44.Close(); 
 
-	//Use fail minDeltaPhi cut
+	//*** fail mdp selection ***//
       	theSelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && METselection;
 	selection_ = theSelection.GetTitle();
 	nameOfHist.Form( "bestM3j_met_%d_%d_invdphi_%stag_",metCutLow,metCutHigh,btagstring.Data());
