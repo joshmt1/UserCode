@@ -101,6 +101,8 @@ const char *jesTypeNames_[] = {"JES0","JESup","JESdown"};
 const char *jerTypeNames_[] = {"JER0","JERbias","JERup"}; //this one is weird -- 0==0==down, bias=0.1, up=0.2
 const char *unclusteredMetUncNames_[] = {"METunc0","METdown","METup"};
 
+const char *btagEffTypeNames_[] = {"BTagEff0","BTagEffup","BTagEffdown"};
+
 const char *tailCleaningNames_[] = {"NoCleaning","MuonCleaning","MuonEcalCleaning"};
 
 //in 1/pb
@@ -134,6 +136,8 @@ public :
   JERType theJERType_;
   enum METuncType {kMETunc0=0,kMETuncDown,kMETuncUp};
   METuncType theMETuncType_;
+  enum BTagEffType {kBTagEff0=0,kBTagEffup,kBTagEffdown};
+  BTagEffType theBTagEffType_;
   enum tailCleaningType {kNoCleaning=0, kMuonCleaning, kMuonEcalCleaning};
   tailCleaningType theCleaningType_;
 
@@ -633,6 +637,7 @@ public :
    virtual void triggerPlotData();
    virtual void triggerTest();
    virtual void Nminus1plots();
+   virtual void calculateTagProb();
    void cutflow(bool writeFiles=false);
    void cutflowPlotter();
 
@@ -670,6 +675,8 @@ public :
    void setMuonReq(int nmu);
    TString getCutDescriptionString();
    TString getBCutDescriptionString();
+
+   void setBTagEffType(BTagEffType btagefftype);
 
    //really special configuration options (for expert use)
    void specifyEvent(ULong64_t run, ULong64_t lumisection, ULong64_t event);
@@ -743,6 +750,9 @@ public :
    bool isGoodJet30(unsigned int ijet); //index here is on the loose jet list
    bool isGoodJetMHT(unsigned int ijet); //index here is on the loose jet list
    bool isLooseJet_Sync1(unsigned int ijet); //looser pt cut
+
+   float jetBTagEff(unsigned int ijet); //index here is on the loose jet list
+
    unsigned int nGoodJets_Sync1();
    unsigned int nGoodJets();
    float jetPtOfN(unsigned int n);
@@ -2837,6 +2847,130 @@ bool basicLoop::isBadJet(unsigned int ijet) {
   return true;
 }
 
+
+//get MC btag efficiency
+float basicLoop::jetBTagEff(unsigned int ijet) {
+
+  float btageff=0;
+  float pt = getLooseJetPt(ijet);
+  float eta = loosejetEta->at(ijet);
+  int flavor = loosejetFlavor->at(ijet);
+
+  if(isGoodJet30(ijet)){
+
+    //double SF = 0.9;
+    //double SF = 1;
+    float SF_cen[5] = {0.948,0.883,0.856,0.848,0.91};   // 5 bins of pt 
+    float SF_for[5] = {0.889,0.861,0.791,0.655,0.96};   // 5 bins of pt
+    //double SF_unc = 1.15;                            
+    //double SF_unc = 0.85;                            
+    //float SF_unc = 1;
+    float SFU_cen[5] = {1,1,1,1,1};
+    float SFU_for[5] = {1,1,1,1,1};
+
+    if (theBTagEffType_ == kBTagEffup) {
+      SFU_cen[0] = 1.077;
+      SFU_cen[1] = 1.042;
+      SFU_cen[2] = 1.076;
+      SFU_cen[3] = 1.034;
+      SFU_cen[4] = 1.041;
+      SFU_for[0] = 1.050;
+      SFU_for[1] = 1.052;
+      SFU_for[2] = 1.15;
+      SFU_for[3] = 1.021;
+      SFU_for[4] = 1.094;
+    }
+    else if (theBTagEffType_ == kBTagEffdown) {
+      SFU_cen[0] = 0.967;
+      SFU_cen[1] = 0.977;
+      SFU_cen[2] = 0.958;
+      SFU_cen[3] = 0.955;
+      SFU_cen[4] = 0.800;
+      SFU_for[0] = 0.962;
+      SFU_for[1] = 0.976;
+      SFU_for[2] = 0.936;
+      SFU_for[3] = 0.960;
+      SFU_for[4] = 0.967;     
+    }
+    
+
+
+    if(fabs(eta)<1.4){ //"central" jets     
+      if( abs(flavor) == 5){
+	if( pt < 50 )        return SF_cen[0]*SFU_cen[0]*0.536914;
+	else if ( pt < 75 )  return SF_cen[1]*SFU_cen[1]*0.623229;
+	else if ( pt < 100 ) return SF_cen[2]*SFU_cen[2]*0.663002;
+	else if ( pt < 150 ) return SF_cen[3]*SFU_cen[3]*0.671216;
+	else                 return SF_cen[4]*SFU_cen[4]*0.623814;
+      }
+      else if (abs(flavor) == 4){
+	if( pt < 50 ) return 0.123408;
+	else if ( pt < 75 ) return 0.161444;
+	else if ( pt < 100 ) return 0.181389;
+	else if ( pt < 150 ) return 0.192003;
+	else return 0.180417;
+      }
+      else if (abs(flavor) == 1 || abs(flavor) == 2
+	       || abs(flavor) == 3 || abs(flavor) == 21){
+	if( pt < 50 ) return 0.00829395;
+	else if ( pt < 75 ) return 0.011271;
+	else if ( pt < 100 ) return 0.013844;
+	else if ( pt < 150 ) return 0.0166908;
+	else return 0.0224991;
+      }
+    }
+    else{//"forward" jets      
+      if( abs(flavor) == 5){
+	if( pt < 50 )        return SF_for[0]*SFU_for[0]*0.402681;
+	else if ( pt < 75 )  return SF_for[1]*SFU_for[1]*0.560273;
+	else if ( pt < 100 ) return SF_for[2]*SFU_for[2]*0.632681;
+	else if ( pt < 150 ) return SF_for[3]*SFU_for[3]*0.662464;
+	else                 return SF_for[4]*SFU_for[4]*0.66867;
+      }
+      else if (abs(flavor) == 4){
+	if( pt < 50 ) return 0.0960317;
+	else if ( pt < 75 ) return 0.144701;
+	else if ( pt < 100 ) return 0.162798;
+	else if ( pt < 150 ) return 0.190575;
+	else return 0.186154;
+      }
+      else if (abs(flavor) == 1 || abs(flavor) == 2
+	       || abs(flavor) == 3 || abs(flavor) == 21){
+	if( pt < 50 ) return 0.00645874;
+	else if ( pt < 75 ) return 0.0112103;
+	else if ( pt < 100 ) return 0.0162004;
+	else if ( pt < 150 ) return 0.0234471;
+	else return 0.033612;
+      }
+    }
+
+
+  }
+
+  return btageff;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void basicLoop::getSphericityJetMET(float & lambda1, float & lambda2, float & det,
 				    const int jetmax, bool addMET) {
   double l1,l2,d;
@@ -3825,6 +3959,11 @@ void basicLoop::setMETuncType(METuncType metunctype) {
     cout<<"NOTE -- I am turning on the Jet Energy Resolution bias correction because you selected an Unclustered MET Correction!"<<endl;
   }
 }
+
+void basicLoop::setBTagEffType(BTagEffType btagefftype) {
+  theBTagEffType_ = btagefftype;
+}
+
 
 void basicLoop::setJetType(jetType jettype) {
   theJetType_ = jettype;

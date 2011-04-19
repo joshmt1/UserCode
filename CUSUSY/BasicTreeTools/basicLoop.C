@@ -165,6 +165,7 @@ void basicLoop::cutflow(bool writeFiles)
 	cout<<ccc<<endl;
 	file <<"==1b"<<"\t"<<setprecision(20) << weighted<<"\t" << weighted_error<<endl;
 	fileU <<"==1b"<<"\t"<<setprecision(20) << npass_eq1b<<endl;
+
       }
     }
   }
@@ -2573,5 +2574,73 @@ void basicLoop::lookForPrescalePass()
 
    cout<<"N pass prescaled and fail HT150U_v3 = "<<preCutCount<<endl;
    cout<<"same, after NJet and HT cuts        = "<<postCutCount<<endl;
+
+}
+
+
+void basicLoop::calculateTagProb()
+{
+   if (fChain == 0) return;
+
+   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+
+   float n0BJetProb = 0;
+   float nGEQ1BJetProb = 0;
+   float n1BJetProb = 0;
+   float nGEQ2BJetProb = 0;
+
+   Long64_t nbytes = 0, nb = 0;
+   startTimer();  //keep track of performance
+   for (Long64_t jentry=0; jentry<nentries;jentry++) {
+      Long64_t ientry = LoadTree(jentry);
+      if (ientry < 0) break;
+      if (jentry%1000000==0) checkTimer(jentry,nentries);
+      nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
+
+      setBCut(0);
+      if (Cut(ientry) < 0) continue; //jmt use cut
+
+      float Prob1 = 0, ProbGEQ1 = 1, Prob0 = 1, ProbGEQ2 = 0;
+
+      for (unsigned int ijet=0; ijet<loosejetPt->size(); ijet++) {
+	if(isGoodJet30(ijet)){
+	  //std::cout << "jetBTagEff = " << jetBTagEff(ijet) << std::endl;
+	  float effi = jetBTagEff(ijet);
+	  Prob0 = Prob0* ( 1 - effi);
+
+
+	  double product = 1;
+	  for (unsigned int kjet=0; kjet<loosejetPt->size(); kjet++) {
+	    if(isGoodJet30(kjet)){
+	      float effk = jetBTagEff(kjet);
+	      if(kjet != ijet) product = product*(1-effk);
+
+	    }
+	  }
+
+	  Prob1 += effi*product;
+
+
+	}
+      }
+
+      ProbGEQ1 = 1 - Prob0;
+      ProbGEQ2 = 1- Prob1 - Prob0;
+      //std::cout << "Prob = " << Prob << std::endl;
+
+      n0BJetProb +=Prob0;
+      nGEQ1BJetProb += ProbGEQ1;
+      //std::cout << "nGEQ1BJetProb = " << nGEQ1BJetProb << std::endl; 
+
+      n1BJetProb += Prob1;
+      nGEQ2BJetProb += ProbGEQ2;
+
+
+   }
+   stopTimer(nentries);
+   std::cout << "n0BJetProb = " << n0BJetProb << std::endl;
+   std::cout << "n1BJetProb = " << n1BJetProb << std::endl;
+   std::cout << "nGEQ1BJetProb = " << nGEQ1BJetProb << std::endl;
+   std::cout << "nGEQ2BJetProb = " << nGEQ2BJetProb << std::endl;
 
 }

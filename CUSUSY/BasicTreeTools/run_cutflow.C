@@ -48,9 +48,17 @@ void run_cutflow()
 
     if (samplefiles.Contains("DATA")) continue; //skip data (use run_cutflow_data.C)
     
-    //if (!samplefiles.Contains("LM") ) continue;
+    if (!samplefiles.Contains("LM9") ) continue;
+    //if (!samplefiles.Contains("LM13") ) continue;
+    //if (!samplefiles.Contains("TTbarJets") ) continue;
+    //if (!samplefiles.Contains("WJets") ) continue;
+    //if (!samplefiles.Contains("ZJets") ) continue;
+    //if (!samplefiles.Contains("SingleTop-sChannel") ) continue;
+    //if (!samplefiles.Contains("SingleTop-tWChannel") ) continue;
+    //if (!samplefiles.Contains("Zinvisible") ) continue;
 
     //if (samplefiles.Contains("QCD") && !samplefiles.Contains("PU")) continue;
+    //if (!(samplefiles.Contains("QCD") && samplefiles.Contains("PU"))) continue;
 
     TChain ch("BasicTreeMaker/tree");
     TChain info("BasicTreeMaker/infotree");
@@ -77,6 +85,7 @@ void run_cutflow()
     looper.setCleaningType(basicLoop::kMuonCleaning);
     looper.setJERType(basicLoop::kJERbias);
 
+    //looper.setJESType(basicLoop::kJESup);  
     //    looper.setMETuncType(basicLoop::kMETuncUp);
 
     looper.setBCut(3); //require 3 b tags so that we make the full cut flow table
@@ -85,6 +94,14 @@ void run_cutflow()
     //looper.setRequiredCut("cut2SUSYb");
 
     looper.cutflow(false); //true means write verbose event count files
+
+    ////does this work?
+    looper.calculateTagProb();//default
+    //looper.setBTagEffType(basicLoop::kBTagEffup);
+    //looper.calculateTagProb();
+    //looper.setBTagEffType(basicLoop::kBTagEffdown);
+    //looper.calculateTagProb();
+
   }
 
 }
