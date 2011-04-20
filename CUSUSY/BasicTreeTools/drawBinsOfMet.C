@@ -1,15 +1,33 @@
-//void plotMETDeltaPhiCorrelation()
+//void plotSlices( const TCut btag = "nbjets>=1")
 {
+
+  const TCut btag = "nbjets>=2";
+
+  //  const TString var ="minDeltaPhi";
+  const TString var ="bestTopMass";
+
+  const bool drawLSB = true;
+  const bool drawMSB = false;
+  const bool drawSB = true;
+  const bool drawSIG = false;
+
+  const float customMax = 0.4;
+
   //updated to use reducedTrees
+
+  bool addOverflow = false;
+  if (var=="minDeltaPhi") addOverflow=false;
+
   //  gROOT->SetStyle("CMS");
   gStyle->SetOptStat(0);
 
-  TCut baseline ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && passInconsistentMuon==1 && passBadPFMuon==1  && weight<1000"; //&&cutDeltaPhi==1
+  TCut baseline ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && passInconsistentMuon==1 && passBadPFMuon==1  && weight<1000"; //no mindp, no MET
+  TCut minDPcut = "cutDeltaPhi==1";
+  if (var!="minDeltaPhi") baseline = baseline&&minDPcut;
   TCut LSB = "MET<50";
   TCut MSB = "MET>=50 && MET<100";
   TCut SB = "MET>=100 && MET <150";
   TCut SIG = "MET>150";
-  TCut btag = "nbjets==1";
 
   TCut cut1=baseline && LSB && btag;
   TCut cut2=baseline && MSB && btag;
@@ -30,14 +48,17 @@
   TChain py("reducedTree");
   py.Add("/cu2/joshmt/V00-03-01_2/reducedTree.Baseline0_PF_JERbias_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning.PythiaQCD.root");
 
+  TChain pypuflat("reducedTree");
+  pypuflat.Add("/cu2/joshmt/V00-03-01_2/reducedTree.Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning.PythiaPUQCDFlat.root");
+
   TH1::SetDefaultSumw2(); //trick to turn on Sumw2 for all histos
 
   //const int nbins=6;
   //  const double varbins[]={0.,160.,180.,260.,400.,800.,2000};
-  int nbins=50;
+  int nbins=40;
   float min=0;
   float max=TMath::Pi();
-    //float max=800;
+  if (var=="bestTopMass") max=800;
   
   TH1D Hlow("Hlow","",nbins,min,max);
   TH1D Hmed("Hmed","",nbins,min,max);
@@ -49,9 +70,9 @@
   TH1D Hmh("Hmh","",nbins,varbins);
   TH1D Hhigh("Hhigh","",nbins,varbins);
   */
-  Hlow.SetLineColor(1);
-  Hmed.SetLineColor(2);
-  Hmh.SetLineColor(4);
+  Hlow.SetLineColor(kBlue);
+  Hmed.SetLineColor(1);
+  Hmh.SetLineColor(kRed);
   Hhigh.SetLineColor(6);
 
   float width=2.5;
@@ -61,38 +82,60 @@
   Hhigh.SetLineWidth(width);
 
   //was minDeltaPhi, bestTopMass
-  pypu.Draw("minDeltaPhi>>Hlow",selection1);
-  pypu.Draw("minDeltaPhi>>Hmed",selection2);
-  pypu.Draw("minDeltaPhi>>Hmh",selection3);
-  pypu.Draw("minDeltaPhi>>Hhigh",selection4);
+  if (drawLSB) pypu.Draw(var+">>Hlow",selection1);
+  if (drawMSB) pypu.Draw(var+">>Hmed",selection2);
+  if (drawSB) pypu.Draw(var+">>Hmh",selection3);
+  if (drawSIG) pypu.Draw(var+">>Hhigh",selection4);
 
-  Hlow.SetBinContent(nbins, Hlow.GetBinContent(nbins)+Hlow.GetBinContent(nbins+1));
-  Hmed.SetBinContent(nbins, Hmed.GetBinContent(nbins)+Hmed.GetBinContent(nbins+1));
-  Hmh.SetBinContent(nbins, Hmh.GetBinContent(nbins)+Hmh.GetBinContent(nbins+1));
-  Hhigh.SetBinContent(nbins, Hhigh.GetBinContent(nbins)+Hhigh.GetBinContent(nbins+1));
+  if (addOverflow) {
+    Hlow.SetBinContent(nbins, Hlow.GetBinContent(nbins)+Hlow.GetBinContent(nbins+1));
+    Hmed.SetBinContent(nbins, Hmed.GetBinContent(nbins)+Hmed.GetBinContent(nbins+1));
+    Hmh.SetBinContent(nbins, Hmh.GetBinContent(nbins)+Hmh.GetBinContent(nbins+1));
+    Hhigh.SetBinContent(nbins, Hhigh.GetBinContent(nbins)+Hhigh.GetBinContent(nbins+1));
+  }
 
   if (Hlow.Integral()>0) Hlow.Scale( 1.0 / Hlow.Integral());
   if (Hmed.Integral()>0) Hmed.Scale( 1.0 / Hmed.Integral());
   if (Hmh.Integral()>0) Hmh.Scale( 1.0 / Hmh.Integral());
   if (Hhigh.Integral()>0) Hhigh.Scale( 1.0 / Hhigh.Integral());
   
-  Hhigh.SetXTitle("#Delta #phi_{min}");
-  Hhigh.SetYTitle("Arbitrary units");
+  if (var=="minDeltaPhi")  Hhigh.SetXTitle("#Delta #phi_{min}");
+  else if (var=="bestTopMass")  {
+    TString title="best 3-jet mass (GeV)";
+    Hhigh.SetXTitle(title);
+    Hmh.SetXTitle(title);
+    Hmed.SetXTitle(title);
+    Hlow.SetXTitle(title);
+  }
+  TString ytitle="Arbitrary units";
+  Hhigh.SetYTitle(ytitle);
+  Hmh.SetYTitle(ytitle);
+  Hmed.SetYTitle(ytitle);
+  Hlow.SetYTitle(ytitle);
+  TString thetitle=btag.GetTitle();
+  Hhigh.SetTitle(thetitle);
+  Hmh.SetTitle(thetitle);
+  Hmed.SetTitle(thetitle);
+  Hlow.SetTitle(thetitle);
 
-  Hhigh.Draw();
-  Hmh.Draw("same");
-  Hmed.Draw("same");
-  Hlow.Draw("same");
 
-  Hhigh.SetMinimum(0);
-  Hhigh.GetXaxis()->SetRangeUser(0,2);
+  TString drawopt="hist e";
+  if (drawSIG)  {Hhigh.Draw(drawopt); drawopt="hist e SAME"; if (customMax>0) Hhigh.SetMaximum(customMax);}
+  if (drawSB)   {Hmh.Draw(drawopt); drawopt="hist e SAME";   if (customMax>0) Hmh.SetMaximum(customMax);}
+  if (drawMSB)  {Hmed.Draw(drawopt); drawopt="hist e SAME";  if (customMax>0) Hmed.SetMaximum(customMax);}
+  if (drawLSB)  {Hlow.Draw(drawopt); drawopt="hist e SAME";  if (customMax>0) Hlow.SetMaximum(customMax);}
 
-  TLegend leg(0.4,0.4,0.85,0.8);
+  if (var=="minDeltaPhi") {
+    Hhigh.SetMinimum(0);
+    Hhigh.GetXaxis()->SetRangeUser(0,2);
+  }
+
+  TLegend leg(0.55,0.55,0.85,0.85);
   leg.SetFillColor(0);
-  leg.AddEntry(&Hlow,"E_{T}^{miss} < 50 GeV");
-  leg.AddEntry(&Hmed,"50 < E_{T}^{miss} < 100 GeV");
-  leg.AddEntry(&Hmh,"100 < E_{T}^{miss} < 150 GeV");
-  leg.AddEntry(&Hhigh,"E_{T}^{miss} > 150 GeV");
+  if (drawLSB)  leg.AddEntry(&Hlow,"E_{T}^{miss} < 50 GeV (LSB)");
+  if (drawMSB)  leg.AddEntry(&Hmed,"50 < E_{T}^{miss} < 100 GeV");
+  if (drawSB)   leg.AddEntry(&Hmh,"100 < E_{T}^{miss} < 150 GeV (SB)");
+  if (drawSIG)  leg.AddEntry(&Hhigh,"E_{T}^{miss} > 150 GeV");
   leg.Draw();
 
 //   double chi2=0;
@@ -106,3 +149,21 @@
 //   Hlow.Chi2Test(&Hmh,"WW p");
 
 }
+
+// plotAll() {
+
+//   TCanvas cplots("cplots","plots",900,600);
+//   cplots.Divide(1,3);
+
+//   cplots.cd(1);
+//   plotSlices("nbjets==1");
+
+//   cplots.cd(2);
+//   plotSlices("nbjets>=1");
+
+//   cplots.cd(3);
+//   plotSlices("nbjets>=2");
+
+//   cplots.SaveAs("compM3jsbvslsb.eps");
+
+// }
