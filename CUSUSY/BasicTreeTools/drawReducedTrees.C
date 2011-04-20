@@ -370,8 +370,8 @@ void loadSamples() {
   samples_.push_back("PythiaPUQCD");
   samples_.push_back("TTbarJets");
 
-  //flip this bool to control whether SingleTop is loaded as one piece or 2
-  if (true) samples_.push_back("SingleTop");
+  //flip this bool to control whether SingleTop is loaded as one piece or 3
+  if (false) samples_.push_back("SingleTop");
   else {
     samples_.push_back("SingleTop-sChannel");
     samples_.push_back("SingleTop-tChannel");
@@ -380,7 +380,7 @@ void loadSamples() {
   samples_.push_back("WJets");
   samples_.push_back("ZJets");
   samples_.push_back("Zinvisible");
-  // samples_.push_back("LM13");
+  samples_.push_back("LM13");
 
   //these blocks are just a "dictionary"
   //no need to ever comment these out
@@ -1644,6 +1644,24 @@ void drawOwen() {
     totalewk->Write();          
     fh22.Close(); 
     
+    // == signal region ==
+    TCut theSRSelection = baseSelection && passCleaning && passMinDeltaPhi && theBTaggingCut && SRMET;
+    selection_ = theSRSelection.GetTitle();
+    if (vb) {
+      //plot all samples
+      for (unsigned int isample=0; isample<samples_.size(); isample++) {
+	TString oname=sampleOwenName_[samples_[isample]];
+	drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_150_5000_"+oname,samples_[isample]);
+      }
+    }
+    else {
+      //plot all samples
+      for (unsigned int isample=0; isample<samples_.size(); isample++) {
+	TString oname=sampleOwenName_[samples_[isample]];
+	drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_"+oname,samples_[isample]);
+      }
+    }
+
     //need invdphi in data in the SR
     TCut invdpSelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && SRMET;
     TString nameOfIDPhist = "bestM3j_met_150_5000_invdphi_";
