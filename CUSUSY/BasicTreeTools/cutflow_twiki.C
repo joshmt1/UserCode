@@ -22,14 +22,16 @@ TCanvas * Ccutflow;
 //filestub_  -- what input files to use (just the middle part of the filename)
 //mode_      -- what type of table to print
 //latexMode_ -- do you want your table formatted for latex or for twiki
-const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning_Witheq4SUSYb";
-//const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning";
+//const TString filestub_ ="Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning_Witheq4SUSYb";
+const TString filestub_ ="Baseline0_PF_JERbias_pfMEThigh_PFLepRA20e0mu_minDPinv_MuonCleaning";
 //mode 1 is print cut flow table (B & S) ; mode 2 is print S/sqrt(S+B) table ; mode 3 is S/sqrt(B)
 //mode 4 is like 1 but B only, 5 is like 1 but S only
 //mode 6 is print S/B table
 //mode 7 prints signal efficiency table (%)
-const int mode_ = 7;
+const int mode_ = 4;
 const bool latexMode_ = true; //true=latex, false=TWiki
+
+const bool printew = false; //this controls whether a separate column of "Total EW" is printed or not
 
 //nb: this routine is hard-coded to use 3 SingleTop samples
 //also, the list of input sample is hard-coded below
@@ -72,7 +74,7 @@ This is exactly how QCD used to be treated in the main function, but now I want 
   std::vector<TString> cutnames;
   std::map<TString, std::vector<double> > n;
   std::map<TString, std::vector<double> > err;
-
+  cout<<" == combining == "<<endl;
   //first load the event counts and errors for the input samples
   for (unsigned int i=0 ; i<nToCombine; i++) {
     TString filename = "cutflow.";
@@ -92,6 +94,7 @@ This is exactly how QCD used to be treated in the main function, but now I want 
     }
     file.close();
   }
+  cout<<" == done reading input == "<<endl;
 
   //open a file for output
   TString outfilename="cutflow."; 
@@ -136,12 +139,12 @@ void cutflow_twiki()
   std::vector<TString> cutnames;
 
   int nbackground = 6; //we now override this number automatically if we fail to load some of the files
-  char *background_list[]={"PythiaPUQCDFlat","TTbarJets","SingleTop","WJets","ZJets","Zinvisible"}; //this one corresponds to filenames
-  //gala's variation
-  //char *background_list[]={"TTbarJets","SingleTop","Zinvisible","WJets","ZJets"}; //this one corresponds to filenames
+  char *background_list[]={"PythiaPUQCD","TTbarJets","SingleTop","WJets","ZJets","Zinvisible"}; //this one corresponds to filenames
+  //EW only
+  //  char *background_list[]={"SingleTop","Zinvisible","WJets","ZJets"}; //this one corresponds to filenames
   //FIXME -- this is hard-coded for Latex output:
   char *background_names[]={"QCD","\\ttbar","Single-Top","\\WJets","\\ZJets","\\Zinvisible"}; //this one has printed names
-  //char *background_names[]={"ttbar","Single-Top","Zinvisible","WJets","ZJets"}; //this one has printed names
+  //char *background_names[]={"Single-Top","Zinvisible","WJets","ZJets"}; //this one has printed names
   int nsignal = 2;//5;//16;
   //  char *signal_list[]={"LM0", "LM1", "LM2", "LM4", "LM5", "LM6","LM7", "LM8","LM9","LM9p", "LM9t175", "LM10", "LM11", "LM12","LM13","mMSSM"};
   //  char *signal_list[]={"LM0", "LM1", "LM9","LM13","mMSSMv3"};
@@ -154,17 +157,29 @@ void cutflow_twiki()
     singletopnames.push_back("SingleTop-tChannel");
     singletopnames.push_back("SingleTop-tWChannel");
     combineSamples("SingleTop",singletopnames);
-  }
-
-  //combine qcd into one
-//   std::vector<TString> qcdnames;
-//   qcdnames.push_back("QCD100");
-//   qcdnames.push_back("QCD250");
-//   qcdnames.push_back("QCD500");
-//   qcdnames.push_back("QCD1000");
-//   combineSamples("QCD",qcdnames);
   
-
+    
+    //combine qcd into one
+    std::vector<TString> qcdnames;
+    qcdnames.push_back("PythiaPUQCD0");
+    qcdnames.push_back("PythiaPUQCD1000");
+    qcdnames.push_back("PythiaPUQCD120");
+    qcdnames.push_back("PythiaPUQCD1400");
+    qcdnames.push_back("PythiaPUQCD15");
+    qcdnames.push_back("PythiaPUQCD170");
+    qcdnames.push_back("PythiaPUQCD1800");
+    qcdnames.push_back("PythiaPUQCD30");
+    qcdnames.push_back("PythiaPUQCD300");
+    qcdnames.push_back("PythiaPUQCD470");
+    qcdnames.push_back("PythiaPUQCD5");
+    qcdnames.push_back("PythiaPUQCD50");
+    qcdnames.push_back("PythiaPUQCD600");
+    qcdnames.push_back("PythiaPUQCD80");
+    qcdnames.push_back("PythiaPUQCD800");
+    combineSamples("PythiaPUQCD",qcdnames);
+    
+  }
+    
   //these are only relevant for mode==1
   const int drawsignalindex = 3; //this is the signal to use for the plot
   const TString mysig = signal_list[drawsignalindex];
@@ -286,6 +301,9 @@ void cutflow_twiki()
       cout<<col;
     }
     //after the individual backgrounds, print the background total
+    if (printew) {
+      cout<<"Total EW"<<col;
+    }
     cout<<"Total Background";
     if (!(mode_==4 && latexMode_ ))    cout<<col;
     else if ( mode_==4 && latexMode_ ) cout<<endtex;
@@ -311,6 +329,8 @@ void cutflow_twiki()
     //qcd is now treated as just another background
     double background_total=0;
     double background_total_err=0;
+    double ew_total=0;
+    double ew_total_err=0;
 
     for (int ibackground=0 ; ibackground<nbackground; ibackground++) {
       //      bool lastInRow = ibackground==nbackground-1;
@@ -320,13 +340,22 @@ void cutflow_twiki()
 
       background_total += background[background_list[ibackground]].at(i);
       background_total_err += pow(backgrounderr[background_list[ibackground]].at(i),2);
+      if (!(  TString(background_list[ibackground]).Contains("QCD") || TString(background_list[ibackground]).Contains("TTbarJets") )) {
+	ew_total += background[background_list[ibackground]].at(i);
+	ew_total_err += pow(backgrounderr[background_list[ibackground]].at(i),2);
+      }
     }
 
     //now that we've summed the squares, take the square root
     background_total_err = sqrt(background_total_err);
+    ew_total_err = sqrt(ew_total_err);
 
     //before printing the signal, if we're in mode 1 or 4, then print the background total!
     if (mode_==1 || mode_==4) {
+      if (printew) {
+	cout<<format_nevents(ew_total, ew_total_err)<<col;
+      }
+
       cout<<format_nevents( background_total, background_total_err);
       if (mode_==1 )  cout<< col;
       else if (mode_==4 && !latexMode_) cout<<col;
