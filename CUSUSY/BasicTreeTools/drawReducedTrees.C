@@ -20,7 +20,9 @@ This code replaces drawCutflowPlots.C (which had replaced drawBasicPlots.C).
 The input files are the reducedTrees.
 
 Potential improvements:
+ -- drawTotalSM_,drawTotalSMSusy_,drawSusyOnly_ don't have a setter function at the moment
  -- renormalizeBins_ doesn't have a setter function at the moment
+ -- same with drawMarkers_
  -- the calls to renormBins() currently have a kludge that hard-codes the reference bin to 2
  -- The samples to be plotted are currently defined at compile time.
 Could make it so that all samples are always loaded, but there is an
@@ -89,6 +91,13 @@ bool addOverflow_=true;
 bool drawQCDErrors_=false;
 bool renormalizeBins_=false;
 
+bool normalized_=false;
+
+bool drawTotalSM_=false;
+bool drawTotalSMSusy_=false;
+bool drawSusyOnly_=false;
+bool drawMarkers_=true;
+
 bool doVerticalLine_=false;
 double verticalLinePosition_=0;
 
@@ -98,12 +107,14 @@ double customPlotMax_=0;
 bool doCustomPlotMin_=false;
 double customPlotMin_=0;
 
+float maxScaleFactor_ = 1.05;
 
 TCanvas* thecanvas=0;
 //TCanvas* cratio=0;
 TLegend* leg=0;
 THStack* thestack=0;
 TH1D* totalsm=0;
+TH1D* totalsmsusy=0;
 TH1D* totalewk=0;
 TH1D* totalqcdttbar=0;
 TH1D* totalnonttbar=0;
@@ -161,10 +172,13 @@ void doOverflowAddition(bool doOv) {
 
 void setLogY(bool dolog) {
   logy_=dolog;
+  if (logy_) maxScaleFactor_=3;
+  else maxScaleFactor_=1.05;
 }
 
-void setStackMode(bool dostack) {
+void setStackMode(bool dostack, bool normalized=false) {
   dostack_=dostack;
+  normalized_=normalized;
 }
 
 void doData(bool dodata) {
@@ -371,7 +385,7 @@ void loadSamples() {
   samples_.push_back("TTbarJets");
 
   //flip this bool to control whether SingleTop is loaded as one piece or 3
-  if (false) samples_.push_back("SingleTop");
+  if (true) samples_.push_back("SingleTop");
   else {
     samples_.push_back("SingleTop-sChannel");
     samples_.push_back("SingleTop-tChannel");
@@ -384,7 +398,7 @@ void loadSamples() {
 
   //these blocks are just a "dictionary"
   //no need to ever comment these out
-  sampleColor_["LM13"] = kGray; //borrowed from a different sample
+  sampleColor_["LM13"] = kRed-9;//kGray; //borrowed from a different sample
   sampleColor_["QCD"] = kYellow;
   sampleColor_["PythiaQCD"] = kYellow;
   sampleColor_["PythiaPUQCD"] = kYellow;
@@ -397,6 +411,8 @@ void loadSamples() {
   sampleColor_["SingleTop-sChannel"] = kMagenta+1; //for special cases
   sampleColor_["SingleTop-tChannel"] = kMagenta+2; //for special cases
   sampleColor_["SingleTop-tWChannel"] = kMagenta+3; //for special cases
+  sampleColor_["TotalSM"] = kBlue+2;
+  sampleColor_["Total"] = kGreen+3;
 
   sampleLabel_["LM13"] = "LM13";
   sampleLabel_["QCD"] = "QCD";
@@ -411,6 +427,8 @@ void loadSamples() {
   sampleLabel_["SingleTop-sChannel"] = "Single-Top (s)";
   sampleLabel_["SingleTop-tChannel"] = "Single-Top (t)";
   sampleLabel_["SingleTop-tWChannel"] = "Single-Top (tW)";
+  sampleLabel_["TotalSM"] = "SM";
+  sampleLabel_["Total"] = "SM + LM13"; //again, this is a hack
 
   sampleMarkerStyle_["LM13"] = kFullStar;
   sampleMarkerStyle_["QCD"] = kFullCircle;
@@ -425,6 +443,8 @@ void loadSamples() {
   sampleMarkerStyle_["SingleTop-sChannel"] = kOpenSquare;
   sampleMarkerStyle_["SingleTop-tChannel"] = kOpenSquare;
   sampleMarkerStyle_["SingleTop-tWChannel"] = kOpenSquare;
+  sampleMarkerStyle_["TotalSM"] = kDot; //FIXME?
+  sampleMarkerStyle_["Total"] = kDot; //FIXME?
 
   sampleOwenName_["LM13"] = "lm13";
   sampleOwenName_["QCD"] = "qcd";
@@ -432,13 +452,15 @@ void loadSamples() {
   sampleOwenName_["PythiaPUQCDFlat"] = "qcd"; 
   sampleOwenName_["PythiaPUQCD"] = "qcd";
   sampleOwenName_["TTbarJets"]="ttbar";
-  sampleOwenName_["SingleTop"] = "singletop"; //not actually in his code
+  sampleOwenName_["SingleTop"] = "singletop";
   sampleOwenName_["WJets"] = "wjets";
   sampleOwenName_["ZJets"] = "zjets";
   sampleOwenName_["Zinvisible"] = "zinvis";
   sampleOwenName_["SingleTop-sChannel"] = "singletops";
   sampleOwenName_["SingleTop-tChannel"] = "singletopt";
   sampleOwenName_["SingleTop-tWChannel"] = "singletoptw";
+  sampleOwenName_["TotalSM"] = "totalsm";
+  sampleOwenName_["Total"] = "total";  
 
   for (unsigned int isample=0; isample<samples_.size(); isample++) {
     TString fname="reducedTree.";
@@ -556,6 +578,9 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
   if (totalsm!=0) delete totalsm;
   totalsm = (varbins==0) ? new TH1D("totalsm","",nbins,low,high) : new TH1D("totalsm","",nbins,varbins);
   totalsm->Sumw2();
+  if (totalsmsusy!=0) delete totalsmsusy;
+  totalsmsusy = (varbins==0) ? new TH1D("totalsmsusy","",nbins,low,high) : new TH1D("totalsmsusy","",nbins,varbins);
+  totalsmsusy->Sumw2();
   if (totalewk!=0) delete totalewk;
   totalewk = (varbins==0) ? new TH1D("totalewk","",nbins,low,high) : new TH1D("totalewk","",nbins,varbins);
   totalewk->Sumw2();
@@ -568,7 +593,19 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
   if (totalnonqcd!=0) delete totalnonqcd;
   totalnonqcd = (varbins==0) ? new TH1D("totalnonqcd","",nbins,low,high) : new TH1D("totalnonqcd","",nbins,varbins);
   totalnonqcd->Sumw2();
-  
+
+  totalsm->SetMarkerColor(sampleColor_["TotalSM"]);
+  totalsm->SetLineColor(sampleColor_["TotalSM"]);
+  totalsm->SetLineWidth(2);
+  totalsm->SetMarkerStyle(sampleMarkerStyle_["TotalSM"]);
+  if (!drawMarkers_)  totalsm->SetMarkerSize(0); //no marker for this one
+
+  totalsmsusy->SetMarkerColor(sampleColor_["Total"]);
+  totalsmsusy->SetLineColor(sampleColor_["Total"]);
+  totalsmsusy->SetLineWidth(2);
+  totalsmsusy->SetMarkerStyle(sampleMarkerStyle_["Total"]);
+  if (!drawMarkers_)  totalsmsusy->SetMarkerSize(0); //no marker for this one
+
   //here is the part that is really different from the previous implementation
   //need to make new histograms
   resetHistos(); //delete existing histograms
@@ -622,6 +659,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
        totalnonqcd->Add(histos_[samples_[isample]]);
       if (!quiet_) cout << "totalnonqcd: " << samples_[isample] << endl;
     }
+    totalsmsusy->Add(histos_[samples_[isample]]); //add everything!
 
     //now just do a bunch of histogram formatting
     if (!dostack_) {
@@ -629,7 +667,8 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
       histos_[samples_[isample]]->SetLineColor(sampleColor_[samples_[isample]]);
       histos_[samples_[isample]]->SetMarkerStyle(sampleMarkerStyle_[samples_[isample]]);
       histos_[samples_[isample]]->SetMarkerColor(sampleColor_[samples_[isample]]);
-      
+      if (!drawMarkers_) histos_[samples_[isample]]->SetMarkerSize(0);
+
       //ad hoc additions
       histos_[samples_[isample]]->SetLineWidth(2);
     }
@@ -637,35 +676,47 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
       histos_[samples_[isample]]->SetFillColor(sampleColor_[samples_[isample]]);
       histos_[samples_[isample]]->SetMarkerSize(0);
     }
-    leg->AddEntry(histos_[samples_[isample]], sampleLabel_[samples_[isample]]);
 
-    if (dostack_) {
+    if (dostack_) { //add histo to stack
+      leg->AddEntry(histos_[samples_[isample]], sampleLabel_[samples_[isample]]);
       thestack->Add(histos_[samples_[isample]] );
-//       if (doSubtraction_) {
-// 	if (thestackH==0) {
-// 	  const TH1D* temphist=hh.find(hname,files_[samples_[isample]]);
-// 	  thestackH=new TH1D("thestackH","total MC",temphist->GetNbinsX(),temphist->GetXaxis()->GetXmin(),temphist->GetXaxis()->GetXmax());
-// 	  thestackH->Sumw2();
-// 	}
-// 	thestackH->Add(hh.find(hname,files_[samples_[isample]]));
-//       }
     }
-    else {
+    else { //draw non-stacked histo
       //normalize
-      if ( histos_[samples_[isample]]->Integral() >0)  histos_[samples_[isample]]->Scale( 1.0 / histos_[samples_[isample]]->Integral() );
-      if ( findOverallMax( histos_[samples_[isample]]) > histMax) histMax = findOverallMax(histos_[samples_[isample]]);
+      if ( normalized_ && histos_[samples_[isample]]->Integral() >0)  histos_[samples_[isample]]->Scale( 1.0 / histos_[samples_[isample]]->Integral() );
+      if (!drawSusyOnly_ || samples_[isample].Contains("LM")) { //drawSusyOnly_ means don't draw SM
+	//set max
+	if ( findOverallMax( histos_[samples_[isample]]) > histMax) histMax = findOverallMax(histos_[samples_[isample]]);
+	
+	leg->AddEntry(histos_[samples_[isample]], sampleLabel_[samples_[isample]]);
 
-      histos_[samples_[isample]]->Draw(opt);
-      if (!opt.Contains("same")) opt+=" same";
+	histos_[samples_[isample]]->Draw(opt);
+	if (!opt.Contains("same")) opt+=" same";
+      }
     }
-  }
+  } //loop over samples and fill histograms
+
+  if (drawTotalSM_) leg->AddEntry(totalsm, sampleLabel_["TotalSM"]);
+  if (drawTotalSMSusy_) leg->AddEntry(totalsmsusy, sampleLabel_["Total"]);
 
   if (!dostack_) {
     //this is all a re-implemenataion of stuff done is HistHolder. Oh well.
+
+    if (drawTotalSM_) histMax = totalsm->GetMaximum();
     for (unsigned int isample=0; isample<samples_.size(); isample++) {
-      histos_[samples_[isample]]->SetMaximum( histMax*1.05);
+      double pmx= doCustomPlotMax_ ? customPlotMax_ : histMax*maxScaleFactor_;
+      histos_[samples_[isample]]->SetMaximum(pmx);
+      if (doCustomPlotMin_) histos_[samples_[isample]]->SetMinimum(customPlotMin_);
     }
-    //should implement use of customPlotMax_, i guess
+
+    if (drawTotalSM_) { 
+      totalsm->Draw(opt); 
+      if (doCustomPlotMax_) totalsm->SetMaximum(customPlotMax_);
+    }
+    if (drawTotalSMSusy_) {
+      totalsmsusy->Draw(opt); 
+      if (doCustomPlotMax_) totalsmsusy->SetMaximum(customPlotMax_);
+    }
   }
   else {
     thestack->Draw("hist");
@@ -676,64 +727,58 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
 
     if (drawQCDErrors_) qcderrors->Draw("2 same");
 
-    if (dodata_) {
-      gROOT->cd();
-      if (!quiet_)     cout<<"Drawing data!"<<endl;
-      if (hdata != 0) delete hdata;
-      TString hname = var; hname += "_"; hname += "data";
-      hdata = (varbins==0) ? new TH1D(hname,"",nbins,low,high) : new TH1D(hname,"",nbins,varbins);
-      hdata->Sumw2();
-      TTree* dtree = (TTree*) fdata->Get("reducedTree");
-      gROOT->cd();
-      dtree->Project(hname,var,selection_.Data());
-      //now the histo is filled
-
-      hdata->UseCurrentStyle(); //maybe not needed anymore
-      hdata->SetMarkerColor(kBlack);
-      hdata->SetLineWidth(2);
-      hdata->SetMarkerStyle(kFullCircle);
-      hdata->SetMarkerSize(1);
-      if (renormalizeBins_) renormBins(hdata,2 ); //manipulates the histogram //FIXME hard-coded "2"
-      if (addOverflow_)     addOverflowBin(hdata); // manipulates the histogram!
-
-//       if (doSubtraction_) { //plot data - MC
-// 	hdataSubtracted = (TH1D*)hdata->Clone("hdataSubtracted");
-// 	hdataSubtracted->Add(thestackH,-1);
-// 	cout<<hdataSubtracted->Integral()<<" "<<hdata->Integral()<<endl;
-
-// 	hdataSubtracted->UseCurrentStyle();
-// 	hdataSubtracted->SetMarkerColor(kBlue);
-// 	hdataSubtracted->SetLineColor(kBlue);
-// 	hdataSubtracted->SetLineWidth(2);
-// 	hdataSubtracted->SetMarkerStyle(kOpenCircle);
-// 	hdataSubtracted->SetMarkerSize(1);
-//       }
-
-      hdata->Draw("SAME");
-      if (findOverallMax(hdata) > thestack->GetMaximum()) {
-	thestack->SetMaximum( findOverallMax(hdata));
-      }
-      //      if (doSubtraction_) hdataSubtracted->Draw("SAME");
-
-      if (!quiet_ && !renormalizeBins_) {
-	cout<<"Integral of data, EW, total SM: "<<hdata->Integral()<<" ; "<<totalewk->Integral()<<" ; "<<totalsm->Integral()<<endl;
-	cout<<"Chi^2 Test results: "<<hdata->Chi2Test(totalsm,"UW P")<<endl;
-	cout<<"KS Test results: "<<hdata->KolmogorovTest(totalsm,"N")<<endl;;
-      }
-      if (doRatio_) {
-	thecanvas->cd(2);
-	ratio->Divide(hdata,totalsm);
-	ratio->SetMinimum(ratioMin);
-	ratio->SetMaximum(ratioMax);
-	ratio->GetYaxis()->SetNdivisions(200 + int(ratioMax-ratioMin)+1);    //set ticks ; to be seen if this really works
-	ratio->GetYaxis()->SetLabelSize(0.2); //make y label bigger
-	ratio->Draw();
-	thecanvas->GetPad(2)->SetTopMargin(0.1);
-      }
-    }
     if (doCustomPlotMax_) thestack->SetMaximum(customPlotMax_);
     if (doCustomPlotMin_) thestack->SetMinimum(customPlotMin_);
   } //if doStack_
+
+  if (dodata_) {
+    gROOT->cd();
+    if (!quiet_)     cout<<"Drawing data!"<<endl;
+    if (hdata != 0) delete hdata;
+    TString hname = var; hname += "_"; hname += "data";
+    hdata = (varbins==0) ? new TH1D(hname,"",nbins,low,high) : new TH1D(hname,"",nbins,varbins);
+    hdata->Sumw2();
+    TTree* dtree = (TTree*) fdata->Get("reducedTree");
+    gROOT->cd();
+    dtree->Project(hname,var,selection_.Data());
+    //now the histo is filled
+    
+    hdata->UseCurrentStyle(); //maybe not needed anymore
+    hdata->SetMarkerColor(kBlack);
+    hdata->SetLineWidth(2);
+    hdata->SetMarkerStyle(kFullCircle);
+    hdata->SetMarkerSize(1);
+    if (renormalizeBins_) renormBins(hdata,2 ); //manipulates the histogram //FIXME hard-coded "2"
+    if (addOverflow_)     addOverflowBin(hdata); // manipulates the histogram!
+    leg->AddEntry(hdata,"Data");
+
+    hdata->Draw("SAME");
+    if (!doCustomPlotMax_) {
+      double mymax = dostack_ ? thestack->GetMaximum() : findOverallMax(totalsm); //these probably return near-identical values, in fact
+      if (findOverallMax(hdata) > mymax) {
+	if (dostack_) thestack->SetMaximum( maxScaleFactor_*findOverallMax(hdata));
+	else { //i don't like repeating this loop constantly; at a minimum it should be abstracted
+	  for (unsigned int isample=0; isample<samples_.size(); isample++)  histos_[samples_[isample]]->SetMaximum(maxScaleFactor_*findOverallMax(hdata));
+	}
+      }
+    }
+
+    if (!quiet_ && !renormalizeBins_) {
+      cout<<"Integral of data, EW, total SM: "<<hdata->Integral()<<" ; "<<totalewk->Integral()<<" ; "<<totalsm->Integral()<<endl;
+      cout<<"Chi^2 Test results: "<<hdata->Chi2Test(totalsm,"UW P")<<endl;
+      cout<<"KS Test results: "<<hdata->KolmogorovTest(totalsm,"N")<<endl;;
+    }
+    if (doRatio_) {
+      thecanvas->cd(2);
+      ratio->Divide(hdata,totalsm);
+      ratio->SetMinimum(ratioMin);
+      ratio->SetMaximum(ratioMax);
+      ratio->GetYaxis()->SetNdivisions(200 + int(ratioMax-ratioMin)+1);    //set ticks ; to be seen if this really works
+      ratio->GetYaxis()->SetLabelSize(0.2); //make y label bigger
+      ratio->Draw();
+      thecanvas->GetPad(2)->SetTopMargin(0.1);
+    }
+  }
 
   thecanvas->cd(mainPadIndex);
   if (doleg_)  leg->Draw();
@@ -743,7 +788,8 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
   if (logy_) savename += "-logY";
   //  savename += scaleAppendToFilename;
 
-  if (!dostack_)    savename += "-drawPlain";
+  if (!dostack_ && !normalized_)      savename += "-drawPlain";
+  else if (!dostack_ && normalized_)  savename += "-drawNorm";
   else savename += "-drawStack";
 
   //amazingly, \includegraphics cannot handle an extra dot in the filename. so avoid it.
@@ -841,7 +887,7 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
     if (firsthist="") firsthist = hnameR;
     if (histos_[hnameR]->GetMaximum() > max) max = histos_[hnameR]->GetMaximum();
   }
-  histos_[firsthist]->SetMaximum( max*1.05);
+  histos_[firsthist]->SetMaximum( max*maxScaleFactor_);
   hinteractive =  histos_[firsthist];
 
   if (dodata_) {
@@ -928,6 +974,107 @@ setLogY(true);
 selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutCleaning==1 && njets==5";
 setLogY(true);
  drawR("minDeltaPhi",0.3,50,0,250);
+
+}
+
+void drawForPreAp_smonly() {
+  /*
+comment out LM13
+
+.L drawReducedTrees.C++
+  */
+  setStackMode(false,false);
+  doData(true);
+  doRatioPlot(false);
+  //  setPadDimensions(700,500);
+  setLogY(true);
+
+  int nbins;
+  float low,high;
+  TString var,xtitle;
+
+  doOverflowAddition(true);
+  drawTotalSM_=true;
+  drawMarkers_=false;
+
+  //log scale, no stack, full MET range
+  nbins=35; low=0; high=350;
+  setPlotMinimum(0.1);
+  var="MET"; xtitle="E_{T}^{miss} [GeV]";
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_ge1b");
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_eq1b");
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_ge2b");
+
+  //now linear scale with custom y range
+  resetPlotMinimum();
+  setLogY(false);
+
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  setPlotMaximum(35);
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_ge1b");
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  setPlotMaximum(25);
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_eq1b");
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  setPlotMaximum(11);
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_ge2b");
+
+}
+
+void drawForPreAp_susy() {
+
+  /*
+uncomment LM13
+
+.L drawReducedTrees.C++
+  */
+  setStackMode(false,false);
+  doData(true);
+  doRatioPlot(false);
+  //  setPadDimensions(700,500);
+  setLogY(true);
+
+  int nbins;
+  float low,high;
+  TString var,xtitle;
+
+  doOverflowAddition(true);
+  drawTotalSM_=true;
+  drawTotalSMSusy_=true;
+  drawSusyOnly_=true;
+  drawMarkers_=false;
+
+  nbins=60; low=0; high=600;
+  setPlotMinimum(0.1);
+  var="MET"; xtitle="E_{T}^{miss} [GeV]";
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_withSusy_ge1b");
+
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_withSusy_eq1b");
+
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_withSusy_ge2b");
+
+  setLogY(false);
+  resetPlotMinimum();
+
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  setPlotMaximum(11);
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_withSusy_ge1b");
+
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  setPlotMaximum(7);
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_withSusy_eq1b");
+
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  setPlotMaximum(5);
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_withSusy_ge2b");
+
+
 
 }
 
@@ -1651,14 +1798,14 @@ void drawOwen() {
       //plot all samples
       for (unsigned int isample=0; isample<samples_.size(); isample++) {
 	TString oname=sampleOwenName_[samples_[isample]];
-	drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_150_5000_"+oname,samples_[isample]);
+	drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_150_5000_"+btagstring+"tag_"+oname,samples_[isample]);
       }
     }
     else {
       //plot all samples
       for (unsigned int isample=0; isample<samples_.size(); isample++) {
 	TString oname=sampleOwenName_[samples_[isample]];
-	drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_"+oname,samples_[isample]);
+	drawSimple("bestTopMass",nbins,min,max,histfilename, "bestM3j_met_150_5000_"+btagstring+"tag_"+oname,samples_[isample]);
       }
     }
 
