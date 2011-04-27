@@ -98,7 +98,7 @@ const char *leptonTypeNames_[]={"RegLep","PFLep","PFLepRA2"};
 const char *dpTypeNames_[]={"DeltaPhi", "minDP",  "MPT", "DPSync1", "minDPinv", "minDPAll30"};
 
 const char *jesTypeNames_[] = {"JES0","JESup","JESdown"};
-const char *jerTypeNames_[] = {"JER0","JERbias","JERup"}; //this one is weird -- 0==0==down, bias=0.1, up=0.2
+const char *jerTypeNames_[] = {"JER0","JERbias","JERup","JERbias6"}; //this one is weird -- 0==0==down, bias=0.1, up=0.2
 const char *unclusteredMetUncNames_[] = {"METunc0","METdown","METup"};
 
 const char *btagEffTypeNames_[] = {"BTagEff0","BTagEffup","BTagEffdown"};
@@ -106,7 +106,7 @@ const char *btagEffTypeNames_[] = {"BTagEff0","BTagEffup","BTagEffdown"};
 const char *tailCleaningNames_[] = {"NoCleaning","MuonCleaning","MuonEcalCleaning"};
 
 //in 1/pb
-const double lumi=36.146; //386 Nov4ReReco Datasets - PATIFIED WITH 387
+const double lumi=36.146 * 0.993; //386 Nov4ReReco Datasets - PATIFIED WITH 387
 
 const double mW_ = 80.399;
 const double mtop_ = 172.0;
@@ -132,7 +132,7 @@ public :
   dpType theDPType_;
   enum JESType {kJES0=0,kJESup,kJESdown};
   JESType theJESType_;
-  enum JERType {kJER0=0,kJERbias,kJERup};
+  enum JERType {kJER0=0,kJERbias,kJERup,kJERbias6};
   JERType theJERType_;
   enum METuncType {kMETunc0=0,kMETuncDown,kMETuncUp};
   METuncType theMETuncType_;
@@ -712,6 +712,7 @@ public :
    std::pair<float, float> getJERAdjustedMHTxy();
    std::pair<float,float> getUnclusteredSmearedMETxy() ;
    float getJESExtraUnc(unsigned int ijet);
+   float getJERbiasFactor(unsigned int ijet);
 
    bool cutRequired(TString cutTag) ;
    bool passCut(TString cutTag) ;
@@ -1772,7 +1773,6 @@ int basicLoop::getHLTPrescale(const TString & triggerName) {
 }
 
 bool basicLoop::passCut(const TString cutTag) {
-  //implement special exceptions here
 
   const bool debug=false;  if (debug) cout<<cutTag<<endl;
 
@@ -2124,6 +2124,34 @@ float basicLoop::getJESExtraUnc(unsigned int ijet) {
   return sqrt(unc);
 }
 
+float getJERbiasFactor(unsigned int ijet) {
+
+  if (theJERType_ == kJERbias )    return 0.1; //hard-coded factors from top twiki
+  else if (theJERType_ == kJERup)  return 0.2;
+  else if (theJERType_ == kJERbias6) {
+    //from JME-10-014-pas
+    float abseta = fabs(loosejetEta->at(ijet));
+    if (abseta < 1.1) {
+      return 0.06303;
+    }
+    else if (abseta <1.7 && abseta>=1.1) {
+      return 0.08467;
+    }
+    else if (abseta <2.3 && abseta>=1.7) {
+      return 0.02429;
+    }
+    else if (abseta<5 && abseta>= 2.3) {
+      return 0.15264;
+    }
+    else { //eta>5 not given
+      return 0;
+    }
+  }
+
+  assert(0);
+  return 0;
+}
+
 std::pair<float,float> basicLoop::getJESAdjustedMETxy() {
 
   if (theJESType_ == kJES0) {assert(0);}
@@ -2218,10 +2246,7 @@ std::pair<float,float> basicLoop::getJERAdjustedMETxy() {
     myMETy += jetUy;
 
     float recopt = loosejetPt->at(ijet);
-    float factor = 0;
-    if (theJERType_ == kJERbias )    factor = 0.1; //hard-coded factors from top twiki
-    else if (theJERType_ == kJERup)  factor = 0.2;
-    else {assert(0);}
+    float factor = getJERbiasFactor(ijet);
 
     float  deltapt = (recopt - genpt) * factor;
     float frac = (recopt+deltapt)/recopt;
@@ -2745,11 +2770,7 @@ float basicLoop::getLooseJetPt( unsigned int ijet ) {
     float genpt = loosejetGenPt->at(ijet);
     float recopt = loosejetPt->at(ijet);
     if (genpt >15 ) {
-      float factor = 0;
-      if (theJERType_ == kJERbias )    factor = 0.1; //hard-coded factors from top twiki
-      else if (theJERType_ == kJERup)  factor = 0.2;
-      else {assert(0);}
-
+      float factor = getJERbiasFactor(ijet);
       float  deltapt = (recopt - genpt) * factor;
       float frac = (recopt+deltapt)/recopt;
       float ptscale = frac>0 ? frac : 0;
@@ -2778,11 +2799,7 @@ float basicLoop::getLooseJetPtUncorr( unsigned int ijet) {
     float recopt = loosejetPt->at(ijet);
     float uncorrpt = loosejetPtUncorr->at(ijet);
     if (genpt >15 ) {
-      float factor = 0;
-      if (theJERType_ == kJERbias )    factor = 0.1; //hard-coded factors from top twiki
-      else if (theJERType_ == kJERup)  factor = 0.2;
-      else {assert(0);}
-
+      float factor = getJERbiasFactor(ijet);
       float  deltapt = (recopt - genpt) * factor;
       float frac = (recopt+deltapt)/recopt;
       float ptscale = frac>0 ? frac : 0;

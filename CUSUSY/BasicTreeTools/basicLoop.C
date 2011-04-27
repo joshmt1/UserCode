@@ -528,12 +528,13 @@ a function of eta,phi) later.
 
     Heventcount.SetBinContent(1, Heventcount.GetBinContent(1)+1);
     
-    //HLT + HT (and PV)
-    if (passCut("cutTrigger") && passCut("cutPV") && passCut("cutHT") ) {
+    //HLT + HT //now removing PV from this
+    if (passCut("cutTrigger") && passCut("cutHT") ) {
       Heventcount.SetBinContent(2, Heventcount.GetBinContent(2)+1);
       weight = getWeight(nentries);
 
-      cutHT = true; cutPV = true; cutTrigger = true;      
+      cutHT = true; cutTrigger = true;      
+      cutPV = passCut("cutPV");
       cut3Jets = passCut("cut3Jets");
       cutEleVeto = passCut("cutEleVeto");
       cutMuVeto = passCut("cutMuVeto");
