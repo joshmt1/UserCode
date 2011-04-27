@@ -731,6 +731,7 @@ public :
    void findMostInconsistentPFMuon(float &mostInconsistentMuonPt, float &mostInconsistentMuonPtDiff);
 
    bool passSSVM(int i); //index is for loose jets
+   bool passSSV(int i, const float ssvcut); //index is for loose jets
 
    //note that !(bad jet) != good jet
    //a bad jet is a high pT jet with too wide eta or failing jet ID
@@ -764,6 +765,7 @@ public :
    float bjetEtaOfN(unsigned int n);
    int countBJets_Sync1();
    int countBJets();
+   int countSSVJets(); //count jets with a simple secondary vertex
    bool passDeltaPhi_Sync1() ;
    float getHT_Sync1();
    float getHT();
@@ -1961,10 +1963,24 @@ int basicLoop::countBJets() {
   }
   return nb;
 }
+int basicLoop::countSSVJets() {
+  int nb=0;
+
+  for (unsigned int i=0; i<loosejetPt->size(); i++) {
+    if (isGoodJet30( i) ) {
+      if ( passSSV(i,0) ) nb++;
+    }
+  }
+  return nb;
+}
 
 bool basicLoop::passSSVM(int i) {
   return ( loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags->at(i) >= 1.74 
 	   || loosejetBTagDisc_simpleSecondaryVertexBJetTags->at(i) >=1.74 );
+}
+bool basicLoop::passSSV(int i, const float ssvcut) {
+  return ( loosejetBTagDisc_simpleSecondaryVertexHighEffBJetTags->at(i) >= ssvcut 
+	   || loosejetBTagDisc_simpleSecondaryVertexBJetTags->at(i) >=ssvcut );
 }
 
 int basicLoop::countBJets_Sync1() {

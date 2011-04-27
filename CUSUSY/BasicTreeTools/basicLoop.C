@@ -388,7 +388,7 @@ a function of eta,phi) later.
   //some sort of compilation of the number of mistagged jets
   //etc...
 
-  int njets, nElectrons, nMuons, nbjets;
+  int njets, nElectrons, nMuons, nbjets, nbjetsSSV0;
   //new variables from Luke
   float lambda1_allJets;
   float lambda2_allJets;
@@ -443,6 +443,7 @@ a function of eta,phi) later.
 
   reducedTree.Branch("njets",&njets,"njets/I");
   reducedTree.Branch("nbjets",&nbjets,"nbjets/I");
+  reducedTree.Branch("nbjetsSSV0",&nbjetsSSV0,"nbjetsSSV0/I");
   reducedTree.Branch("nElectrons",&nElectrons,"nElectrons/I");
   reducedTree.Branch("nMuons",&nMuons,"nMuons/I");
 
@@ -556,6 +557,7 @@ a function of eta,phi) later.
       nElectrons = countEle();
       nMuons = countMu();
       nbjets = countBJets();
+      nbjetsSSV0 = countSSVJets();
       nbGen = countGenBJets(30);
       HT=getHT();
       MET=getMET();
