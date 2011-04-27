@@ -1521,7 +1521,7 @@ void drawMinDeltaPhiMETslices(){
   nbins=10; low=0; high = TMath::Pi() + 0.001;
   var="minDeltaPhi"; xtitle="min(#Delta#phi[ jets 1..3, E_{T}^{miss} ] )";
   
-  TCut baseSelection ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  TCut baseSelection ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000";
   TCut theseCuts = ""; 
 
   const  TCut ge1b =  "nbjets >= 1";
@@ -1562,6 +1562,60 @@ void drawMinDeltaPhiMETslices(){
  
 }
 
+
+void drawVJets() {
+
+  doOverflowAddition(true);
+  setStackMode(true);
+  doData(true);
+  doRatioPlot(true);
+  setLogY(false);
+  
+  int nbins;
+  float low,high;
+  TString var,xtitle;
+
+  TCut baseSelection ="cutHT==1 && cutPV==1 && cutTrigger==1 && passInconsistentMuon==1 && passBadPFMuon==1 && cutDeltaPhi==1 && (nElectrons==0 && nMuons==1)" ;
+  TCut njetCut = "njets ==2";  
+
+  const  TCut ge1b =  "nbjets >= 1";
+  const  TCut ge2b =  "nbjets >= 2";
+  const  TCut eq1b =  "nbjets == 1";
+  const  TCut pretagCut =  "1";
+  for (int ibtag = 0; ibtag<4; ibtag++) { //do this an ugly way for now
+    TCut theBTaggingCut = ge1b; TString btagstring = "ge1b";
+    if (ibtag==0) { //nothing to do
+    }
+    else if (ibtag==1) {
+      theBTaggingCut = eq1b; 
+      btagstring = "eq1b";
+    }
+    else if (ibtag==2) {
+      theBTaggingCut = ge2b; 
+      btagstring = "ge2b";
+    }
+    else if(ibtag==3) {
+      theBTaggingCut = pretagCut;
+      btagstring = "pre";
+    }
+    else assert(0);
+   
+    resetPlotMinimum();
+    nbins=10; low=0; high = 10;
+    var="njets"; xtitle="njets";
+    
+    selection_ = baseSelection && theBTaggingCut;
+    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+"_1muon_njets");
+  
+    resetPlotMinimum();
+    nbins=20; low=10; high = 300;
+    var="muonpt1"; xtitle="muonpt1";
+ 
+    selection_ = baseSelection && njetCut && theBTaggingCut;
+    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+"_1muon_muonpt1");
+  }
+
+}
 
 void countABCD() {
 
