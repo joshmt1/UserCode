@@ -1596,18 +1596,20 @@ int basicLoop::countMu() {
   else {assert(0);}
 
   for ( unsigned int i = 0; i< nmu; i++) {
-    float pt=0,eta=0,reliso=0;
+    float pt=0,eta=0,reliso=0,phi=0;
     bool isglobal=false;    
 
     //load information depending on lepton type
     if (theLeptonType_ == kNormal) {
       pt = muonPt->at(i);
+      phi = muonPhi->at(i);
       eta = muonEta->at(i);
       reliso = (muonTrackIso->at(i) + muonHcalIso->at(i) + muonEcalIso->at(i))/muonPt->at(i);
       isglobal = muonIsGlobalMuon->at(i);
     }
     else if (theLeptonType_ ==kPFLeptons ||theLeptonType_ ==kPFLeptonsRA2) {
       pt = muonPt_PF->at(i);
+      phi = muonPhi_PF->at(i);
       eta = muonEta_PF->at(i);
       reliso = (muonTrackIso_PF->at(i) + muonHcalIso_PF->at(i) + muonEcalIso_PF->at(i))/muonPt_PF->at(i);
       isglobal = muonIsGlobalMuon_PF->at(i);
@@ -1629,7 +1631,7 @@ int basicLoop::countMu() {
     //FIXME adding this as a hack...i would like to do this more elegantly, but for now this will work
     if (ngoodmu==0){
       muonpt1_ = pt;
-      muonphi1_ = muonPhi_PF->at(i);
+      muonphi1_ = phi;
     }
 
     ++ngoodmu;
@@ -1661,16 +1663,18 @@ int basicLoop::countEle() {
   else {assert(0);}
 
   for (unsigned int i=0; i < nele; i++) {
-    float et=0,eta=0,reliso=0;
+    float et=0,eta=0,reliso=0,phi=0;
     
     //load information depending on lepton type
     if (theLeptonType_ == kNormal) {
       et = eleEt->at(i);
+      phi = elePhi->at(i);
       eta = eleEta->at(i);
       reliso = (eleTrackIso->at(i) + eleHcalIso->at(i) + eleEcalIso->at(i))/eleEt->at(i);
     }
     else if (theLeptonType_ ==kPFLeptons || theLeptonType_ ==kPFLeptonsRA2) {
       et = eleEt_PF->at(i);
+      phi = elePhi_PF->at(i);
       eta = eleEta_PF->at(i);
       reliso = (eleTrackIso_PF->at(i) + eleHcalIso_PF->at(i) + eleEcalIso_PF->at(i))/eleEt_PF->at(i);
     }
@@ -1690,7 +1694,7 @@ int basicLoop::countEle() {
     //FIXME adding this as a hack...i would like to do this more elegantly, but for now this will work
     if (ngoodele==0){
       eleet1_ = et;
-      elephi1_ = elePhi_PF->at(i);
+      elephi1_ = phi;
     }
 
     ++ngoodele;
