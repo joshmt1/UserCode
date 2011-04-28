@@ -2140,7 +2140,7 @@ float basicLoop::getJESExtraUnc(unsigned int ijet) {
   return sqrt(unc);
 }
 
-float getJERbiasFactor(unsigned int ijet) {
+float basicLoop::getJERbiasFactor(unsigned int ijet) {
 
   if (theJERType_ == kJERbias )    return 0.1; //hard-coded factors from top twiki
   else if (theJERType_ == kJERup)  return 0.2;
