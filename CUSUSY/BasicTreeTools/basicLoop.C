@@ -203,7 +203,8 @@ void basicLoop::ABCDtree(unsigned int dataindex)
   //open output file
   //FIXME hardcoded for dellcmscornell here
   //TString outfilename="/cu1/joshmt/ABCDtrees/ABCDtree.";
-  TString outfilename="/cu1/joshmt/ABCDtrees/11Mar30/ABCDtree.";
+  //TString outfilename="/cu1/joshmt/ABCDtrees/11Mar30/ABCDtree.";
+  TString outfilename="ABCDtree.";
   outfilename+=getCutDescriptionString();
   outfilename+=".";    outfilename+=getBCutDescriptionString(); 
   outfilename+=".";    outfilename+=sampleName; 
@@ -372,6 +373,7 @@ a function of eta,phi) later.
   float maxJetRecoError3, maxJetRecoErrorAll;
   float deltaPhiMETMismeasuredJetAll;
   float deltaPhiTopTwoJets;
+  float MT_Wlep;
 
   bool cutHT,cutPV,cutTrigger; //these will always be true
   bool cut3Jets,cutEleVeto,cutMuVeto,cutMET,cutDeltaPhi,cutCleaning;
@@ -459,6 +461,7 @@ a function of eta,phi) later.
   reducedTree.Branch("bestTopMass",&bestTopMass_,"bestTopMass/F");
   reducedTree.Branch("topCosHel",&topCosHel_,"topCosHel/F");
   reducedTree.Branch("WCosHel",&WCosHel_,"WCosHel/F");
+  reducedTree.Branch("MT_Wlep",&MT_Wlep, "MT_Wlep/F");
 
   reducedTree.Branch("deltaPhiTopTwoJets",&deltaPhiTopTwoJets,"deltaPhiTopTwoJets/F");
 
@@ -562,6 +565,7 @@ a function of eta,phi) later.
       HT=getHT();
       MET=getMET();
       MHT=getMHT();
+      MT_Wlep = getMT_Wlep();
 
       //caloMET is automatically filled from the ntuple
       jetType cachedJetType = theJetType_;

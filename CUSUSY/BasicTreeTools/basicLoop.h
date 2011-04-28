@@ -216,7 +216,7 @@ public :
 
    Int_t nbSSVM;
    float WCosHel_,topCosHel_,bestWMass_,bestTopMass_;
-   float eleet1_,muonpt1_; //FIXME this is a hack that I don't like!
+   float eleet1_,muonpt1_,elephi1_,muonphi1_; //FIXME this is a hack that I don't like!
   // ========================================== end
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
    Int_t           fCurrent; //!current Tree number in a TChain
@@ -771,6 +771,7 @@ public :
    float getHT();
    float getMHT();
    float getMHTphi();
+   float getMT_Wlep();
 
    float getDeltaPhiTopTwoJets();
 
@@ -844,7 +845,7 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree, TTree *ecaltree)
      topCosHel_(-99),
      bestWMass_(1e9),
      bestTopMass_(1e9),
-     eleet1_(-1), muonpt1_(-1),
+     eleet1_(-1), muonpt1_(-1), elephi1_(-1), muonphi1_(-1),
      printedHLT_(false),
      lastTriggerPass_("")
 //====================== end
@@ -924,6 +925,11 @@ Int_t basicLoop::GetEntry(Long64_t entry)
    topCosHel_=-99;
    bestWMass_=1e9;
    bestTopMass_=1e9;
+   muonpt1_ = -1;
+   eleet1_ = -1;
+   muonphi1_ = -1;
+   elephi1_ = -1;
+
    //this order is critical!
    InitJets();
    fillTightJetInfo();
@@ -1621,7 +1627,10 @@ int basicLoop::countMu() {
 
     //once we reach here we've got a good muon in hand
     //FIXME adding this as a hack...i would like to do this more elegantly, but for now this will work
-    if (ngoodmu==0) muonpt1_ = pt;
+    if (ngoodmu==0){
+      muonpt1_ = pt;
+      muonphi1_ = muonPhi_PF->at(i);
+    }
 
     ++ngoodmu;
   }
@@ -1679,7 +1688,10 @@ int basicLoop::countEle() {
     //if any electron passes all of these cuts, then it is good
 
     //FIXME adding this as a hack...i would like to do this more elegantly, but for now this will work
-    if (ngoodele==0) eleet1_ = et;
+    if (ngoodele==0){
+      eleet1_ = et;
+      elephi1_ = elePhi_PF->at(i);
+    }
 
     ++ngoodele;
   }
@@ -3118,6 +3130,44 @@ float basicLoop::getDeltaPhiMismeasuredMET(unsigned int maxjets) {
   return getDeltaPhi(loosejetPhi->at(ibiggest),getMETphi());
 
 }
+
+float basicLoop::getMT_Wlep() {
+
+  float MT = -1.;
+  float MT2;
+  int nE = countEle();
+  int nM = countMu();
+  
+  float myMET = getMET();
+  float myMETphi = getMETphi();
+  float myMETx = myMET * cos(myMETphi);
+  float myMETy = myMET * sin(myMETphi);
+
+  float myP=0., myPphi=0.;
+  bool newMT = false;
+  if(nE==1 && nM==0){
+    newMT = true;
+    myP = eleet1_;
+    myPphi = elephi1_; 
+  }
+  else if(nE==0 && nM==1){
+    newMT=true;
+    myP = muonpt1_;
+    myPphi = muonphi1_;
+  }
+  float px = myP * cos(myPphi);
+  float py = myP * sin(myPphi); 
+  
+  if(newMT){
+    float Et = sqrt( px*px + py*py );
+    MT2 = 2*( Et + myMET - (px*myMETx + py*myMETy) ); 
+    if(MT2>0.) {MT=sqrt(MT2);}
+    else {MT = -2.;}
+  }
+  
+  return MT;
+}
+
 
 bool basicLoop::isGoodJet_Sync1(unsigned int ijet) {
 
