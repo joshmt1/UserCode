@@ -51,6 +51,7 @@ functionality for TH1F and TH1D e.g. the case of addOverflowBin()
 #include "TLegend.h"
 #include "THStack.h"
 #include "TH1.h"
+#include "TH2.h"
 #include "TLine.h"
 #include "TCut.h"
 
@@ -394,25 +395,44 @@ void loadSamples() {
   samples_.push_back("WJets");
   samples_.push_back("ZJets");
   samples_.push_back("Zinvisible");
-  samples_.push_back("LM13");
+  //  samples_.push_back("LM13");
 
   //these blocks are just a "dictionary"
   //no need to ever comment these out
-  sampleColor_["LM13"] = kRed-9;//kGray; //borrowed from a different sample
-  sampleColor_["QCD"] = kYellow;
-  sampleColor_["PythiaQCD"] = kYellow;
-  sampleColor_["PythiaPUQCD"] = kYellow;
-  sampleColor_["PythiaPUQCDFlat"] = kYellow;
-  sampleColor_["TTbarJets"]=kRed+1;
-  sampleColor_["SingleTop"] = kMagenta;
-  sampleColor_["WJets"] = kGreen-3;
-  sampleColor_["ZJets"] = kAzure-2;
-  sampleColor_["Zinvisible"] = kOrange-3;
-  sampleColor_["SingleTop-sChannel"] = kMagenta+1; //for special cases
-  sampleColor_["SingleTop-tChannel"] = kMagenta+2; //for special cases
-  sampleColor_["SingleTop-tWChannel"] = kMagenta+3; //for special cases
-  sampleColor_["TotalSM"] = kBlue+2;
-  sampleColor_["Total"] = kGreen+3;
+  if (false) {
+    sampleColor_["LM13"] = kRed-9;//kGray; //borrowed from a different sample
+    sampleColor_["QCD"] = kYellow;
+    sampleColor_["PythiaQCD"] = kYellow;
+    sampleColor_["PythiaPUQCD"] = kYellow;
+    sampleColor_["PythiaPUQCDFlat"] = kYellow;
+    sampleColor_["TTbarJets"]=kRed+1;
+    sampleColor_["SingleTop"] = kMagenta;
+    sampleColor_["WJets"] = kGreen-3;
+    sampleColor_["ZJets"] = kAzure-2;
+    sampleColor_["Zinvisible"] = kOrange-3;
+    sampleColor_["SingleTop-sChannel"] = kMagenta+1; //for special cases
+    sampleColor_["SingleTop-tChannel"] = kMagenta+2; //for special cases
+    sampleColor_["SingleTop-tWChannel"] = kMagenta+3; //for special cases
+    sampleColor_["TotalSM"] = kBlue+2;
+    sampleColor_["Total"] = kGreen+3;
+  }
+  else { //alternate color scheme requested by Owen
+    sampleColor_["LM13"] = kBlue+2;
+    sampleColor_["QCD"] = 2;
+    sampleColor_["PythiaQCD"] = 2;
+    sampleColor_["PythiaPUQCD"] =2;
+    sampleColor_["PythiaPUQCDFlat"] =2;
+    sampleColor_["TTbarJets"]=4;
+    sampleColor_["SingleTop"] = kMagenta;
+    sampleColor_["WJets"] = kOrange;
+    sampleColor_["ZJets"] = 7;
+    sampleColor_["Zinvisible"] = kOrange+7;
+    sampleColor_["SingleTop-sChannel"] = kMagenta+1; //for special cases
+    sampleColor_["SingleTop-tChannel"] = kMagenta+2; //for special cases
+    sampleColor_["SingleTop-tWChannel"] = kMagenta+3; //for special cases
+    sampleColor_["TotalSM"] =kGreen+2; //owen requested 3
+    sampleColor_["Total"] = 6;
+  }
 
   sampleLabel_["LM13"] = "LM13";
   sampleLabel_["QCD"] = "QCD";
@@ -443,7 +463,7 @@ void loadSamples() {
   sampleMarkerStyle_["SingleTop-sChannel"] = kOpenSquare;
   sampleMarkerStyle_["SingleTop-tChannel"] = kOpenSquare;
   sampleMarkerStyle_["SingleTop-tWChannel"] = kOpenSquare;
-  sampleMarkerStyle_["TotalSM"] = kDot; //FIXME?
+  sampleMarkerStyle_["TotalSM"] = kOpenCross; //FIXME?
   sampleMarkerStyle_["Total"] = kDot; //FIXME?
 
   sampleOwenName_["LM13"] = "lm13";
@@ -484,6 +504,17 @@ void loadSamples() {
     fdata = new TFile(dname);
     if (fdata->IsZombie()) cout<<"Problem with data file! "<<dname<<endl;
   }
+
+}
+
+void renewLegend() {
+
+  if (leg!=0) delete leg;
+  leg = new TLegend(leg_x1, leg_y1, leg_x2, leg_y2);
+  leg->SetBorderSize(0);
+  leg->SetLineStyle(0);
+  leg->SetTextFont(42);
+  leg->SetFillStyle(0);
 
 }
 
@@ -558,13 +589,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
   renewCanvas(canvasOpt);
 
   thecanvas->cd(mainPadIndex);
-
-  if (leg!=0) delete leg;
-  leg = new TLegend(leg_x1, leg_y1, leg_x2, leg_y2);
-  leg->SetBorderSize(0);
-  leg->SetLineStyle(0);
-  leg->SetTextFont(42);
-  leg->SetFillStyle(0);
+  renewLegend();
 
   if (dostack_) {
     if (thestack!= 0 ) delete thestack;
@@ -807,7 +832,8 @@ void drawPlots(const TString var, const int nbins, const float* varbins, const T
 
 
 //could add xtitle and ytitle
-void drawR(const TString vary, const float cutVal, const int nbins, const float low, const float high) {
+void drawR(const TString vary, const float cutVal, const int nbins, const float low, const float high, const TString& savename) {
+  const TString ytitle="N pass / N fail";
 
   const TString var = "MET"; //hardcoded for now
   TString cstring1 = vary, cstring2=vary;
@@ -833,7 +859,37 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
 //   qcdRatio->Sumw2();
 
   resetHistos(); //delete existing histograms
-  TString drawopt="";
+
+  renewLegend();
+
+
+  // === begin correlation hack ====
+  gROOT->cd();
+  TH2D totalsm2d_50("totalsm2d_50","",50,50,100,50,0,TMath::Pi());
+  TH2D totalsm2d_SB("totalsm2d_SB","",50,100,150,50,0,TMath::Pi());
+  totalsm2d_50.Sumw2();
+  totalsm2d_SB.Sumw2();
+  TH2D data2d_50("data2d_50","",50,50,100,50,0,TMath::Pi());
+  TH2D data2d_SB("data2d_SB","",50,100,150,50,0,TMath::Pi());
+  data2d_50.Sumw2();
+  data2d_SB.Sumw2();
+  // === end correlation hack ===
+
+  TH1D  totalsm_pass("totalsm_pass","",nbins,low,high);
+  TH1D  totalsm_fail("totalsm_fail","",nbins,low,high);
+  totalsm_pass.Sumw2(); 
+  totalsm_fail.Sumw2(); 
+  if (totalsm!=0) delete totalsm;
+  totalsm =  new TH1D("totalsm","",nbins,low,high);
+  totalsm->Sumw2();
+
+  totalsm->SetMarkerColor(sampleColor_["TotalSM"]);
+  totalsm->SetLineColor(sampleColor_["TotalSM"]);
+  totalsm->SetLineWidth(2);
+  totalsm->SetMarkerStyle(0);
+  totalsm->SetYTitle(ytitle);
+
+  TString drawopt="hist e";
   float max=-1e9; TString firsthist="";
   for (unsigned int isample=0; isample<samples_.size(); isample++) {
 
@@ -868,6 +924,19 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
     //compute ratio
     histos_[hnameR]->Divide(histos_[hnameP], histos_[hnameF]);
 
+    if (!samples_[isample].Contains("LM")) {
+      totalsm_pass.Add(histos_[hnameP]);
+      totalsm_fail.Add(histos_[hnameF]);
+
+      TH2D this2d_SB("this2d_SB","",50,100,150,50,0,TMath::Pi());
+      tree->Project("this2d_SB","minDeltaPhi:MET",getCutString().Data());
+      TH2D this2d_50("this2d_50","",50,50,100,50,0,TMath::Pi());
+      tree->Project("this2d_50","minDeltaPhi:MET",getCutString().Data());
+
+      totalsm2d_SB.Add(&this2d_SB);
+      totalsm2d_50.Add(&this2d_50);
+    }
+
     //   cout<<"content of bin 2: "<<histos_[hnameP]->GetBinContent(2)<<" / "<< histos_[hnameF]->GetBinContent(2)<<" = "<<histos_[hnameR]->GetBinContent(2)<<endl;
 
     //now format the histograms
@@ -875,20 +944,33 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
     histos_[hnameR]->SetLineColor(sampleColor_[samples_[isample]]);
     histos_[hnameR]->SetMarkerStyle(sampleMarkerStyle_[samples_[isample]]);
     histos_[hnameR]->SetMarkerColor(sampleColor_[samples_[isample]]);
+    histos_[hnameR]->SetYTitle(ytitle);
 
     //ad hoc additions
     histos_[hnameR]->SetLineWidth(2);
 
     //draw
     thecanvas->cd(1);
-    histos_[hnameR]->Draw(drawopt);
-    if (!drawopt.Contains("same")) drawopt+=" same";
+    if (hnameR.Contains("QCD")) { //HACK draw only qcd
+      histos_[hnameR]->Draw(drawopt);
+      if (!drawopt.Contains("same")) drawopt+=" same";
+      
+      if (firsthist="") firsthist = hnameR;
+      if (histos_[hnameR]->GetMaximum() > max) max = histos_[hnameR]->GetMaximum();
+      leg->AddEntry(histos_[hnameR], sampleLabel_[samples_[isample]]);
+    }
 
-    if (firsthist="") firsthist = hnameR;
-    if (histos_[hnameR]->GetMaximum() > max) max = histos_[hnameR]->GetMaximum();
   }
+
   histos_[firsthist]->SetMaximum( max*maxScaleFactor_);
   hinteractive =  histos_[firsthist];
+
+  totalsm->Divide(&totalsm_pass,&totalsm_fail);
+  if (drawTotalSM_) {
+    totalsm->Draw("hist e same");
+    //    leg->Clear();
+    leg->AddEntry(totalsm,sampleLabel_["TotalSM"]);
+  }
 
   if (dodata_) {
     gROOT->cd();
@@ -916,6 +998,9 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
     //compute ratio
     hdata->Divide(histos_[hnameP], histos_[hnameF]);
 
+    dtree->Project("data2d_SB","minDeltaPhi:MET",getCutString().Data());
+    dtree->Project("data2d_50","minDeltaPhi:MET",getCutString().Data());
+
     //    hdata->UseCurrentStyle(); //maybe not needed anymore
     hdata->SetMarkerColor(kBlack);
     hdata->SetLineWidth(2);
@@ -924,20 +1009,53 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
 
     thecanvas->cd(1);
     hdata->Draw("SAME");
-    if (hdata->GetMaximum() > max)  histos_[firsthist]->SetMaximum( hdata->GetMaximum());
-    if (doCustomPlotMin_) histos_[firsthist]->SetMinimum( customPlotMin_);
+    leg->AddEntry(hdata,"Data");
+
+    if (hdata->GetMaximum() > max)  {
+      histos_[firsthist]->SetMaximum( maxScaleFactor_*hdata->GetMaximum());
+      totalsm->SetMaximum(maxScaleFactor_*hdata->GetMaximum());
+    }
+    else if (doCustomPlotMax_) {
+      histos_[firsthist]->SetMaximum( customPlotMax_);
+      totalsm->SetMaximum(customPlotMax_);
+    }
+    if (doCustomPlotMin_) {
+      histos_[firsthist]->SetMinimum( customPlotMin_);
+      totalsm->SetMinimum(customPlotMin_);
+    }
 
     //    cratio->cd();
     thecanvas->cd(2);
     if (ratio!=0) delete ratio;
     ratio = new TH1D("ratio","data/(SM MC)",nbins,low,high);
     ratio->Sumw2();
-    ratio->Divide(hdata,histos_[firsthist]);
+    ratio->Divide(hdata,totalsm); 
     ratio->SetMinimum(ratioMin);
     ratio->SetMaximum(ratioMax);
     ratio->Draw();
+    cout<<"KS Test results (shape only): "<<hdata->KolmogorovTest(totalsm)<<endl;;
   }
+  thecanvas->cd(1);
+  leg->Draw();
 
+  thecanvas->SaveAs("mindpPassOverFail-"+savename+".eps");
+  thecanvas->SaveAs("mindpPassOverFail-"+savename+".pdf");
+  thecanvas->SaveAs("mindpPassOverFail-"+savename+".png");
+
+//   TCanvas* c2d=new TCanvas("c2d","2d",800,800);
+//   c2d->Divide(2,2);
+//   c2d->cd(1);
+//   totalsm2d_50.DrawCopy("colz");
+//   c2d->cd(2);
+//   totalsm2d_SB.DrawCopy("colz");
+//   c2d->cd(3);
+//   data2d_50.DrawCopy("colz");
+//   c2d->cd(4);
+//   data2d_SB.DrawCopy("colz");
+  cout<<"Total SM MC correlation [50<MET<100]  = "<<totalsm2d_50.GetCorrelationFactor()<<endl;
+  cout<<"Total SM MC correlation [100<MET<150] = "<<totalsm2d_SB.GetCorrelationFactor()<<endl;
+  cout<<"Data correlation [50<MET<100]         = "<<data2d_50.GetCorrelationFactor()<<endl;
+  cout<<"Data correlation [100<MET<150]        = "<<data2d_SB.GetCorrelationFactor()<<endl;
 
 }
 
@@ -947,33 +1065,72 @@ void drawrplots() {
   */
 
   setStackMode(false);
-  doData(false);
+  doData(true);
 
   //no met, no mindeltaphi
- setPlotMinimum(1e-2);
-selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1";
-setLogY(true);
- drawR("minDeltaPhi",0.3,50,0,250);
+  setPlotMinimum(1e-2); //setPlotMaximum(1);
 
+ drawTotalSM_=true;
+ leg_y1=0.6;
+ setLogY(true);
 
+ selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000";
+ drawR("minDeltaPhi",0.3,20,0,200,"ge1b");
 
+ selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000";
+ drawR("minDeltaPhi",0.3,20,0,200,"eq1b");
 
+ selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000";
+ drawR("minDeltaPhi",0.3,20,0,200,"ge2b");
+
+ //coarse
+ selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000";
+ drawR("minDeltaPhi",0.3,4,0,200,"ge1b-4bins");
+
+ selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000";
+ drawR("minDeltaPhi",0.3,4,0,200,"eq1b-4bins");
+
+ selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000";
+ drawR("minDeltaPhi",0.3,4,0,200,"ge2b-4bins");
+//  const double epsilon=-1;
+//  double cbias= hinteractive->GetBinContent(4)/hinteractive->GetBinContent(3);
+//  double cbias_syst = (1-cbias)/2;
+//  double cbias_up = cbias+cbias_syst;
+//  double cbias_down = cbias-cbias_syst;
+
+//  double r_up = hinteractive->GetBinContent(3) * cbias_up;
+//  double r_down = hinteractive->GetBinContent(3) * cbias_down;
+//  TLine lup(hinteractive->GetBinCenter(4)+epsilon, r_down, hinteractive->GetBinCenter(4)+epsilon, r_up);
+//  lup.SetLineColor(kMagenta);
+//  lup.SetLineWidth(2);
+//  lup.Draw("SAME");
+
+//not so useful
+ selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000 && bestTopMass>300";
+ drawR("minDeltaPhi",0.3,4,0,200,"ge2b-m3j300");
+
+ //more useful? maybe
+ selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000 && bestTopMass>450";
+ drawR("minDeltaPhi",0.3,4,0,200,"ge1b-m3j450");
+
+ selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000 && bestTopMass>450 && MET>=100&&MET<150";
+ drawR("minDeltaPhi",0.3,5,100,150,"ge1b-SBonly-m3j450");
 
 
  //njets == 3
-selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutCleaning==1 && njets==3";
-setLogY(true);
- drawR("minDeltaPhi",0.3,50,0,250);
+// selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutCleaning==1 && njets==3";
+// setLogY(true);
+//  drawR("minDeltaPhi",0.3,50,0,250);
 
- //4 jets
-selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutCleaning==1 && njets==4";
-setLogY(true);
- drawR("minDeltaPhi",0.3,50,0,250);
+//  //4 jets
+// selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutCleaning==1 && njets==4";
+// setLogY(true);
+//  drawR("minDeltaPhi",0.3,50,0,250);
 
- //5 jets
-selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutCleaning==1 && njets==5";
-setLogY(true);
- drawR("minDeltaPhi",0.3,50,0,250);
+//  //5 jets
+// selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutCleaning==1 && njets==5";
+// setLogY(true);
+//  drawR("minDeltaPhi",0.3,50,0,250);
 
 }
 
@@ -997,10 +1154,11 @@ comment out LM13
   drawTotalSM_=true;
   drawMarkers_=false;
 
+  var="MET"; xtitle="E_{T}^{miss} [GeV]";
+
   //log scale, no stack, full MET range
   nbins=35; low=0; high=350;
   setPlotMinimum(0.1);
-  var="MET"; xtitle="E_{T}^{miss} [GeV]";
   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
   drawPlots(var,nbins,low,high,xtitle,"Events", "met_ge1b");
   selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
@@ -1021,6 +1179,32 @@ comment out LM13
   selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
   setPlotMaximum(11);
   drawPlots(var,nbins,low,high,xtitle,"Events", "met_ge2b");
+
+  //now fail minDeltaPhi for high-ish MET
+  resetPlotMinimum();
+  setLogY(false);
+  nbins=35; low=0; high=350;
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==0 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>0";
+  setPlotMaximum(125);
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_IDP_ge1b");
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==0 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>0";
+  setPlotMaximum(105);
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_IDP_eq1b");
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==0 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>0";
+  setPlotMaximum(23);
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_IDP_ge2b");
+
+  setLogY(true);
+  setPlotMinimum(0.1);
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==0 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>0";
+  setPlotMaximum(150);
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_IDP_ge1b");
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==0 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>0";
+  setPlotMaximum(130);
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_IDP_eq1b");
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==0 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>0";
+  setPlotMaximum(50);
+  drawPlots(var,nbins,low,high,xtitle,"Events", "met_IDP_ge2b");
 
 }
 
