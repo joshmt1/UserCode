@@ -2,7 +2,7 @@
 // This class has been automatically generated on
 // Mon Mar 21 14:11:02 2011 by ROOT version 5.22/00d
 // from TTree tree/tree
-// found on file: /cu1/joshmt/BasicNtuples/V00-03-01/LM13/BasicNtuple.root
+// found on file: /cu1/joshmt/BasicNtuples/V00-03-02/tanbeta50/BasicNtuple_11_1_VJl.root
 //////////////////////////////////////////////////////////
 
 #ifndef basicLoop_h
@@ -417,6 +417,13 @@ public :
    vector<int>     *topDecayCode;
    Int_t           ZDecayMode;
    Int_t           flavorHistory;
+   Double_t        susy_tanBeta;
+   Double_t        susy_A0;
+   Double_t        susy_crossSection;
+   Double_t        susy_m0;
+   Double_t        susy_m12;
+   Double_t        susy_mu;
+   Double_t        susy_run;
 
    // List of branches
    TBranch        *b_runNumber;   //!
@@ -614,6 +621,13 @@ public :
    TBranch        *b_topDecayCode;   //!
    TBranch        *b_ZDecayMode;   //!
    TBranch        *b_flavorHistory;   //!
+   TBranch        *b_susy_tanBeta;   //!
+   TBranch        *b_susy_A0;   //!
+   TBranch        *b_susy_crossSection;   //!
+   TBranch        *b_susy_m0;   //!
+   TBranch        *b_susy_m12;   //!
+   TBranch        *b_susy_mu;   //!
+   TBranch        *b_susy_run;   //!
 
    basicLoop(TTree *tree=0, TTree *infotree=0, TTree *ecaltree=0);    // ========================================== begin, end
    virtual ~basicLoop();
@@ -647,7 +661,11 @@ public :
    //some stuff that is used internally
    void fillTightJetInfo();
    void InitJets();
+   Long64_t getEntries(); //replace fChain->GetEntries()
    void fillEcalVetoList(TTree* ecaltree);
+   bool isV00_03_02() {return findInputName().Contains("/V00-03-02/");}
+
+   bool thisSampleIsLMB();
 
    //performance timing
    void startTimer();
@@ -863,6 +881,16 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree, TTree *ecaltree)
 
    Init(tree);
    // ========================================== begin
+   //give these variables values in case they are not defined in ntuple
+   susy_tanBeta =-1e9;
+   susy_A0=-1e9;
+   susy_crossSection=-1e9;
+   susy_m0=-1e9;
+   susy_m12=-1e9;
+   susy_mu=-1e9;
+   susy_run=-1e9;
+	   
+
    if (ecaltree != 0) fillEcalVetoList(ecaltree); else ecalVetoEvents_.clear();
    specifiedEvents_.clear();
 
@@ -897,8 +925,8 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree, TTree *ecaltree)
    //set isData_
    if (  getSampleName(findInputName()) == "data") {cout<<"Sample is real data!"<<endl; isData_=true;}
 
-   if (  (findInputName()).Contains("/V00-01-")  || (findInputName()).Contains("/V00-02-00") || (findInputName()).Contains("/V00-02-01")|| (findInputName()).Contains("/V00-02-02") ) {
-     std::cout<<"Sorry, I am only compatible with V00-02-03 ntuples!"<<std::endl;
+   if (  (findInputName()).Contains("/V00-01-")  || (findInputName()).Contains("/V00-02-")  ) {
+     std::cout<<"Sorry, I am only compatible with V00-03-XX ntuples!"<<std::endl;
      assert(0);
    }
    // ========================================== end
@@ -1323,6 +1351,15 @@ void basicLoop::Init(TTree *tree)
    fChain->SetBranchAddress("topDecayCode", &topDecayCode, &b_topDecayCode);
    fChain->SetBranchAddress("ZDecayMode", &ZDecayMode, &b_ZDecayMode);
    fChain->SetBranchAddress("flavorHistory", &flavorHistory, &b_flavorHistory);
+   if (isV00_03_02()) {
+     fChain->SetBranchAddress("susy_tanBeta", &susy_tanBeta, &b_susy_tanBeta);
+     fChain->SetBranchAddress("susy_A0", &susy_A0, &b_susy_A0);
+     fChain->SetBranchAddress("susy_crossSection", &susy_crossSection, &b_susy_crossSection);
+     fChain->SetBranchAddress("susy_m0", &susy_m0, &b_susy_m0);
+     fChain->SetBranchAddress("susy_m12", &susy_m12, &b_susy_m12);
+     fChain->SetBranchAddress("susy_mu", &susy_mu, &b_susy_mu);
+     fChain->SetBranchAddress("susy_run", &susy_run, &b_susy_run);
+   }
    Notify();
 }
 
@@ -1429,6 +1466,8 @@ doing it this way is a dirty hack, but it is so much easier than implementing a 
     //now the tags
     // important...this is the correct order
     cutTags_.push_back("cutInclusive");cutNames_[ cutTags_.back()] = "Inclusive";
+
+    cutTags_.push_back("cutLMB"); cutNames_[ cutTags_.back()] = "LMB";
 
     cutTags_.push_back("cut2SUSYb"); cutNames_[ cutTags_.back()] = "==2SUSYb";
     cutTags_.push_back("cut4SUSYb"); cutNames_[ cutTags_.back()] = "==4SUSYb";
@@ -1548,6 +1587,8 @@ bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to
   }
   else if (theCutScheme_==kBaseline0) {
     if      (cutTag == "cutInclusive")  cutIsRequired =  true;
+
+    else if (cutTag == "cutLMB")  cutIsRequired = false;
 
     else if (cutTag == "cut2SUSYb")  cutIsRequired = false;
     else if (cutTag == "cut4SUSYb")  cutIsRequired = false;
@@ -1923,6 +1964,7 @@ bool basicLoop::passCut(const TString cutTag) {
 
   if (cutTag == "cut2SUSYb") return (SUSY_nb == 2);
   if (cutTag == "cut4SUSYb") return (SUSY_nb == 4);
+  if (cutTag == "cutLMB") return thisSampleIsLMB();
 
   //no longer storing cut results in ntuple!
   if (cutTag!="cutInclusive") {
@@ -3797,6 +3839,22 @@ void basicLoop::InitJets() {
 
 }
 
+bool basicLoop::thisSampleIsLMB() {
+  //use mSugra variables to determine if this is the special "LMB" point
+
+  if ( !jmt::fleq(susy_tanBeta, 50)) return false;
+
+  if ( !jmt::fleq(susy_A0, 0)) return false;
+
+  if (!( jmt::fleq(susy_m0, 390) || jmt::fleq(susy_m0,400) || jmt::fleq(susy_m0,410) )) return false;
+
+  if (!( jmt::fleq(susy_m12, 190) || jmt::fleq(susy_m12,200) || jmt::fleq(susy_m12,210) )) return false;
+
+  if ( ! ( susy_mu>0)) return false;
+
+  return true;  
+
+}
 
 TString basicLoop::getSampleName(TString inname) {
   if (inname=="") inname=findInputName();
@@ -3867,6 +3925,8 @@ TString basicLoop::getSampleName(TString inname) {
   else if (inname.Contains("/QCD-Pt1800toInf-PythiaZ2-PU2010/"))  return "PythiaPUQCD1800";
 
   else if (inname.Contains("/QCD-Pt15to3000-PythiaZ2-Flat-PU2010/"))  return "PythiaPUQCDFlat";
+
+  else if (inname.Contains("/tanbeta50/"))  return "tanBeta50";
 
 
   else if (inname.Contains("/DATA/"))  {
@@ -3989,12 +4049,50 @@ double basicLoop::getCrossSection( TString inname) {
 
   else if (inname.Contains("/QCD-Pt15to3000-PythiaZ2-Flat-PU2010/"))  return 2.213e+10;
 
+  else if (inname.Contains("tanbeta"))  return susy_crossSection;
+
   else if (inname.Contains("/DATA/"))                return -2;
 
   std::cout<<"Cannot find cross section for this sample!"<<std::endl;
   assert(0); 
   return -1;
   
+}
+
+Long64_t basicLoop::getEntries() {
+
+  Long64_t n=0;
+
+  if (findInputName().Contains("tanbeta")) {
+
+    //check if LMB is activated
+    bool LMBon=false;
+    for (unsigned int i=0 ; i<cutTags_.size(); i++) {
+      if (cutTags_[i] == "cutLMB" && cutRequired(cutTags_[i]) ) {
+	LMBon=true;
+      }
+    }
+    
+    if (LMBon) {
+      cout<<"LMB requested. Need to count the number of LMB events in this sample...."<<endl;
+      //need to count the number of LMB points
+      for (Long64_t jentry=0; jentry<fChain->GetEntries();jentry++) {
+	//doing an event loop in basicLoop.h is unorthodox, but needed in this case
+	fChain->GetEntry(jentry); //bypassing the usual GetEntry mechanism
+	if (thisSampleIsLMB()) ++n;
+      }
+      cout<<"Found "<<n<<" LMB events"<<endl;
+    }
+    else {
+    //eventually add mechanism for individual mSugra points
+      cout<<"Other mSugra point not yet implemented!"<<endl;
+    }
+  }
+  else {
+    n= fChain->GetEntries(); //no Fast!
+  }
+
+  return n;
 }
 
 double basicLoop::getWeight(Long64_t nentries) {

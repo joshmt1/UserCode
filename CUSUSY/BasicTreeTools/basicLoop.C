@@ -16,6 +16,15 @@ void basicLoop::exampleLoop()
    if (fChain == 0) return;
 
    Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+   //   Long64_t nentries_weight = getEntries(); //this one is for calculating weights
+
+   /*
+Why two ways to get nentries?
+The first way is to determine the number of events to loop over (always the full number
+of events in the chain)
+The second way is for calculating weights in cases (mSugra scans) where the "sample" in fact
+contains many samples that you want to run on individually.
+   */
 
    Long64_t nbytes = 0, nb = 0;
    startTimer();  //keep track of performance
@@ -52,7 +61,8 @@ void basicLoop::cutflow(bool writeFiles)
   if (fChain == 0) return;
   
   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
-  
+  Long64_t nentries_weight = getEntries(); //this one is for calculating weights
+
   Long64_t nbytes = 0, nb = 0;
   
   LoadTree(0);
@@ -84,7 +94,7 @@ void basicLoop::cutflow(bool writeFiles)
     if (jentry%1000000==0) checkTimer(jentry,nentries);
     nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
-    const   double   weight = getWeight(nentries); //calculate weight
+    const   double   weight = getWeight(nentries_weight); //calculate weight
     //cout<<"== "<<jentry<<endl;
 
     //i hate to do this, but I'm going to put a hack here to check the run number
@@ -190,6 +200,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
 
   
   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+  Long64_t nentries_weight = getEntries(); //this one is for calculating weights
 
   TString inname=findInputName(); //uses fChain
   std::cout<<"Got an input file name as: "<<inname<<std::endl;
@@ -282,7 +293,7 @@ void basicLoop::ABCDtree(unsigned int dataindex)
 
     if (Cut(ientry) < 0) continue; //jmt use cut
 
-    weight = getWeight(nentries); //calculate weight
+    weight = getWeight(nentries_weight); //calculate weight
 
     myHT = getHT();
     myMET = getMET();
@@ -343,13 +354,14 @@ a function of eta,phi) later.
    resetIgnoredCut();
    setBCut(0);
    printState();
-
+   
    Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
-  if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
-
-  TString sampleName = getSampleName(findInputName());
-  
-  //open output file
+   if (nentries == 0) {std::cout<<"Chain has no entries!"<<std::endl; return;}
+   Long64_t nentries_weight = getEntries(); //this one is for calculating weights
+   
+   TString sampleName = getSampleName(findInputName());
+   
+   //open output file
   TString outfilename="reducedTree."; 
   outfilename+=getCutDescriptionString();
   outfilename+=".";    outfilename+=sampleName; 
@@ -535,7 +547,7 @@ a function of eta,phi) later.
     //HLT + HT //now removing PV from this
     if (passCut("cutTrigger") && passCut("cutHT") ) {
       Heventcount.SetBinContent(2, Heventcount.GetBinContent(2)+1);
-      weight = getWeight(nentries);
+      weight = getWeight(nentries_weight);
 
       cutHT = true; cutTrigger = true;      
       cutPV = passCut("cutPV");
@@ -657,6 +669,7 @@ void basicLoop::cutflowPlotter()
    printState();
 
    Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
+   Long64_t nentries_weight = getEntries(); //this one is for calculating weights
 
    std::cout<<"Got an input file name as: "<<findInputName()<<std::endl;
    
@@ -745,7 +758,7 @@ void basicLoop::cutflowPlotter()
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) {assert(0);}
       nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
-      double   weight = getWeight(nentries);
+      double   weight = getWeight(nentries_weight);
 
       //calculate some quantities
       //unlike in the old ::Loop, here be sure to plot the same quanities used
@@ -856,7 +869,8 @@ void basicLoop::Nminus1plots()
   printState();
   
   Long64_t nentries = fChain->GetEntries(); //jmt: remove Fast
-  
+  Long64_t nentries_weight = getEntries(); //this one is for calculating weights
+
   
   TString inname=findInputName(); //uses fChain
   std::cout<<"Got an input file name as: "<<inname<<std::endl;
@@ -1373,7 +1387,7 @@ void basicLoop::Nminus1plots()
       if (ientry < 0) {assert(0);}
       nb = GetEntry(jentry);   nbytes += nb; //use member function GetEntry instead of fChain->
 
-      double weight = getWeight(nentries);
+      double weight = getWeight(nentries_weight);
 
       //calculate things
       double HT = getHT();
