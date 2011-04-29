@@ -2,9 +2,7 @@
 ====== this is the nominal code for drawing RA2b data/MC comparison plots =======
 -- drawPlots() -- main plotting routine to draw pretty stacks of MC with data on top
 -- drawSimple() -- very simple function to draw exactly one sample and put it in a file
--- drawR() -- draws r(MET). not necessarily up to date.
-
-In non-stacked mode, the histograms are normalized to unit area
+-- drawR() -- draws r(MET). a bit more kludgely, but works.
 
 Various utility functions are at the top (should probably be moved elsewhere for better readability)
 Samples to plot are currently hard-coded in loadSamples().
