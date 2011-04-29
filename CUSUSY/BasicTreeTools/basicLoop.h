@@ -169,6 +169,10 @@ public :
   std::set<jmt::eventID> ecalVetoEvents_;
   bool loadedEcalTree_;
 
+  //for running over an mSugra point
+  bool isMSugra_;
+  double msugra_m0_, msugra_m12_, msugra_a0_,msugra_mu_, msugra_tanbeta_;
+
   enum TopDecayCategory {kTTbarUnknown=0,kAllLeptons=1,kAllHadronic=2,kOneElectron=3,kOneMuon=4,kOneTauE=5,kOneTauMu=6,kOneTauHadronic=7,kAllTau=8,kTauPlusLepton=9, nTopCategories=10};
 
   TDatime* starttime_;
@@ -665,8 +669,6 @@ public :
    void fillEcalVetoList(TTree* ecaltree);
    bool isV00_03_02() {return findInputName().Contains("/V00-03-02/");}
 
-   bool thisSampleIsLMB();
-
    //performance timing
    void startTimer();
    void checkTimer(const Long64_t ndone, const Long64_t ntotal);
@@ -695,6 +697,10 @@ public :
    TString getBCutDescriptionString();
 
    void setBTagEffType(BTagEffType btagefftype);
+
+   void selectMSugra(const double m0, const double m12, const double tanbeta, const double a0=0, const double mu=1);
+   bool passMSugra();
+   bool thisSampleIsLMB();
 
    //really special configuration options (for expert use)
    void specifyEvent(ULong64_t run, ULong64_t lumisection, ULong64_t event);
@@ -856,6 +862,8 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree, TTree *ecaltree)
      isData_(false),
      realDatasetNames_(false),
      loadedEcalTree_(false),
+     isMSugra_(false),
+     msugra_m0_(-1e9), msugra_m12_(-1e9), msugra_a0_(-1e9),msugra_mu_(-1e9), msugra_tanbeta_(-1e9),
      starttime_(0),
      specialCutDescription_(""),
      nbSSVM(0),
@@ -1467,6 +1475,7 @@ doing it this way is a dirty hack, but it is so much easier than implementing a 
     // important...this is the correct order
     cutTags_.push_back("cutInclusive");cutNames_[ cutTags_.back()] = "Inclusive";
 
+    cutTags_.push_back("cutmSugra"); cutNames_[ cutTags_.back()] = "mSugraPoint";
     cutTags_.push_back("cutLMB"); cutNames_[ cutTags_.back()] = "LMB";
 
     cutTags_.push_back("cut2SUSYb"); cutNames_[ cutTags_.back()] = "==2SUSYb";
@@ -1588,6 +1597,7 @@ bool basicLoop::cutRequired(const TString cutTag) { //should put an & in here to
   else if (theCutScheme_==kBaseline0) {
     if      (cutTag == "cutInclusive")  cutIsRequired =  true;
 
+    else if (cutTag == "cutmSugra")  cutIsRequired = false;
     else if (cutTag == "cutLMB")  cutIsRequired = false;
 
     else if (cutTag == "cut2SUSYb")  cutIsRequired = false;
@@ -1965,6 +1975,7 @@ bool basicLoop::passCut(const TString cutTag) {
   if (cutTag == "cut2SUSYb") return (SUSY_nb == 2);
   if (cutTag == "cut4SUSYb") return (SUSY_nb == 4);
   if (cutTag == "cutLMB") return thisSampleIsLMB();
+  if (cutTag == "cutmSugra") return passMSugra();
 
   //no longer storing cut results in ntuple!
   if (cutTag!="cutInclusive") {
@@ -3839,16 +3850,45 @@ void basicLoop::InitJets() {
 
 }
 
+void basicLoop::selectMSugra(const double m0, const double m12, const double tanbeta, const double a0, const double mu) {
+  isMSugra_ = true;
+
+  setRequiredCut("cutmSugra");
+
+  msugra_m0_=m0;
+  msugra_m12_=m12;
+  msugra_a0_=a0;
+  msugra_mu_=mu;
+  msugra_tanbeta_=tanbeta;
+}
+
+bool basicLoop::passMSugra() {
+  const double epsilon = 0.001;
+
+  assert(isMSugra_);
+
+  bool mupass = ((susy_mu >=0) && (msugra_mu_ >=0)) || ((susy_mu <0) && (msugra_mu_ <0));
+
+  bool pass = 
+    TMath::AreEqualAbs( msugra_tanbeta_, susy_tanBeta, epsilon) &&
+    TMath::AreEqualAbs( msugra_m0_, susy_m0, epsilon) &&
+    TMath::AreEqualAbs( msugra_m12_, susy_m12, epsilon) &&
+    TMath::AreEqualAbs( msugra_a0_, susy_A0, epsilon);
+
+  return mupass && pass;
+}
+
 bool basicLoop::thisSampleIsLMB() {
+  const double epsilon = 0.001;
   //use mSugra variables to determine if this is the special "LMB" point
 
-  if ( !jmt::fleq(susy_tanBeta, 50)) return false;
+  if ( !TMath::AreEqualAbs(susy_tanBeta, 50, epsilon)) return false;
 
-  if ( !jmt::fleq(susy_A0, 0)) return false;
+  if ( !TMath::AreEqualAbs(susy_A0, 0, epsilon)) return false;
 
-  if (!( jmt::fleq(susy_m0, 390) || jmt::fleq(susy_m0,400) || jmt::fleq(susy_m0,410) )) return false;
+  if (!( TMath::AreEqualAbs(susy_m0, 390, epsilon) || TMath::AreEqualAbs(susy_m0,400, epsilon) || TMath::AreEqualAbs(susy_m0,410, epsilon) )) return false;
 
-  if (!( jmt::fleq(susy_m12, 190) || jmt::fleq(susy_m12,200) || jmt::fleq(susy_m12,210) )) return false;
+  if (!( TMath::AreEqualAbs(susy_m12, 190, epsilon) || TMath::AreEqualAbs(susy_m12,200, epsilon) || TMath::AreEqualAbs(susy_m12,210, epsilon) )) return false;
 
   if ( ! ( susy_mu>0)) return false;
 
@@ -4065,7 +4105,7 @@ Long64_t basicLoop::getEntries() {
 
   if (findInputName().Contains("tanbeta")) {
 
-    //check if LMB is activated
+    //check if LMB or mSugra is activated
     bool LMBon=false;
     for (unsigned int i=0 ; i<cutTags_.size(); i++) {
       if (cutTags_[i] == "cutLMB" && cutRequired(cutTags_[i]) ) {
@@ -4081,12 +4121,18 @@ Long64_t basicLoop::getEntries() {
 	fChain->GetEntry(jentry); //bypassing the usual GetEntry mechanism
 	if (thisSampleIsLMB()) ++n;
       }
-      cout<<"Found "<<n<<" LMB events"<<endl;
+    }
+    else if (isMSugra_) {
+      cout<<"Counting points at requested mSugra point"<<endl;
+      for (Long64_t jentry=0; jentry<fChain->GetEntries();jentry++) {
+	fChain->GetEntry(jentry); //bypassing the usual GetEntry mechanism
+	if (passMSugra()) ++n;
+      }
     }
     else {
-    //eventually add mechanism for individual mSugra points
-      cout<<"Other mSugra point not yet implemented!"<<endl;
+      assert(0);
     }
+    cout<<"Found "<<n<<" events in this subsample"<<endl;
   }
   else {
     n= fChain->GetEntries(); //no Fast!
@@ -4342,6 +4388,11 @@ TString basicLoop::getCutDescriptionString() {
     //it would be more robust to use .find() instead of []
     cuts += jmt::fortranize( cutNames_[requiredCut_.at(icut)]);
   }
+  if (isMSugra_) {
+    TString msugradetails;
+    msugradetails.Form("_%.0f-%.0f-%.0f-%.0f-%.0f",msugra_tanbeta_,msugra_m0_,msugra_m12_,msugra_a0_,msugra_mu_);
+    cuts+=msugradetails;
+  }
   return cuts; 
 }
 
@@ -4374,6 +4425,14 @@ void basicLoop::printState() {
   }
   for (unsigned int i = 0; i< requiredCut_.size() ; i++) {
     cout<<"Will require cut:   "<<cutNames_[requiredCut_.at(i)]<<endl;
+  }
+  if (isMSugra_) {
+    cout<<"mSugra details (tan beta, m0, m12, a0, mu):\t"
+	<<msugra_tanbeta_<<", "
+	<<msugra_m0_<<", "
+	<<msugra_m12_<<", "
+	<<msugra_a0_<<", "
+	<<msugra_mu_<<endl;
   }
   
 }
