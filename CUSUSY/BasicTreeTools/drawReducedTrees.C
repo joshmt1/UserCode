@@ -70,7 +70,7 @@ std::map<TString, TString> sampleOwenName_;
 std::map<TString, TString> sampleLabel_;
 std::map<TString, UInt_t> sampleMarkerStyle_;
 
-TString inputPath = "/cu2/joshmt/V00-03-01_2/";
+TString inputPath = "/cu2/joshmt/V00-03-01_3/";
 //TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
 TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning";
 //TString cutdesc = "Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonEcalCleaning";
@@ -393,11 +393,11 @@ void loadSamples() {
   samples_.push_back("WJets");
   samples_.push_back("ZJets");
   samples_.push_back("Zinvisible");
-  //  samples_.push_back("LM13");
+  //samples_.push_back("LM13");
 
   //these blocks are just a "dictionary"
   //no need to ever comment these out
-  if (false) {
+  if (true) {
     sampleColor_["LM13"] = kRed-9;//kGray; //borrowed from a different sample
     sampleColor_["QCD"] = kYellow;
     sampleColor_["PythiaQCD"] = kYellow;
@@ -775,6 +775,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
     if (addOverflow_)     addOverflowBin(hdata); // manipulates the histogram!
     leg->AddEntry(hdata,"Data");
 
+    cout<<"Data underflow: " <<hdata->GetBinContent(0);//BEN
     hdata->Draw("SAME");
     if (!doCustomPlotMax_) {
       double mymax = dostack_ ? thestack->GetMaximum() : findOverallMax(totalsm); //these probably return near-identical values, in fact
@@ -1757,8 +1758,10 @@ void drawVJets() {
   float low,high;
   TString var,xtitle;
 
-  TCut baseSelection ="cutHT==1 && cutPV==1 && cutTrigger==1 && passInconsistentMuon==1 && passBadPFMuon==1 && cutDeltaPhi==1 && (nElectrons==0 && nMuons==1)" ;
+  TCut baseSelection ="cutHT==1 && cutPV==1 && cutTrigger==1 && passInconsistentMuon==1 && passBadPFMuon==1 && cutDeltaPhi==1 && (nElectrons==0 && nMuons==1)";// && bestTopMass>350" ;
+  TString extraName = ""; //"_m3jGT350";
   TCut njetCut = "njets ==2";  
+
 
   const  TCut ge1b =  "nbjets >= 1";
   const  TCut ge2b =  "nbjets >= 2";
@@ -1787,15 +1790,22 @@ void drawVJets() {
     var="njets"; xtitle="njets";
     
     selection_ = baseSelection && theBTaggingCut;
-    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+"_1muon_njets");
-  
+    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_1muon_njets");
+
+
+    selection_ = baseSelection && njetCut && theBTaggingCut;  
+
     resetPlotMinimum();
     nbins=20; low=10; high = 300;
-    var="muonpt1"; xtitle="muonpt1";
+    var="muonpt1"; xtitle="muonpt1"; 
+    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_1muon2jet_muonpt1");
  
-    selection_ = baseSelection && njetCut && theBTaggingCut;
-    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+"_1muon_muonpt1");
-  }
+    nbins=20; low=0; high=300;
+    //nbins=25; low=-5; high=10;
+    var="MT_Wlep"; xtitle="leptonic W M_{T}";
+    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_1muon2jet_MT");
+
+ }
 
 }
 
