@@ -5,6 +5,7 @@ can be easily #included into other code
 */
 
 #include "TString.h"
+#include <iostream>
 
 namespace jmt {
 
@@ -20,6 +21,64 @@ namespace jmt {
     cut.ReplaceAll("<","lt");
     
     return cut;
+  }
+
+  void weightedMean(Int_t n, Double_t *a, Double_t *e) {
+
+    Double_t numerator=0;
+    Double_t denominator=0;
+
+    for (Int_t i=0; i<n; ++i) {
+      Double_t esq = e[i]*e[i];
+      if (esq == 0) {cout<<"Error is zero!"<<endl; return;}
+      numerator   += a[i] / esq;
+      denominator += 1.0  / esq;
+    }
+
+    cout<<"mean = "<<numerator / denominator<<" +/- "<<sqrt(1/denominator)<<endl;
+
+  }
+
+  //implemented in TMath in later versions of root, so i'm using the TMath name
+  bool AreEqualAbs( const double & a, const double & b, const double epsilon=0.001) {
+
+    return ( fabs(a-b) < epsilon ) ;
+
+  }
+
+  // == error propagation ==
+
+  //because not all versions of ROOT have it built in
+  double errOnIntegral(const TH1D* h, int binlow=1, int binhigh=-1) {
+    
+    if (binhigh == -1) binhigh = h->GetNbinsX();
+    
+    double err=0;
+    for (int i = binlow; i<= binhigh; i++) {
+      err += h->GetBinError(i) * h->GetBinError(i);
+    }
+    
+    if (err<0) return err;
+    return sqrt(err);
+  }
+
+  //return error on a/b
+  double errAoverB(double a, double aerr, double b, double berr) {
+    if (b==0 || a==0) {
+      cout<<"Warning in errAoverB -- a or b is zero!"<<endl;
+      return -1;
+    }
+    return (a/b)*sqrt( pow( aerr/a, 2) + pow( berr/b, 2) );
+  }
+
+  //return error on a*b
+  double errAtimesB(double a, double aerr, double b, double berr) {
+    if (b==0 || a==0) {
+      cout<<"Warning in errAtimesB -- a or b is zero!"<<endl;
+      return -1;
+    }
+    
+    return a*b*sqrt( pow( aerr/a, 2) + pow( berr/b, 2) );
   }
 
   //======== container for run, lumisection, event number =========
