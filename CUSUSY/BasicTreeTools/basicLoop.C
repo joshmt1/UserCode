@@ -417,13 +417,25 @@ a function of eta,phi) later.
   float lambda2_topThreeJetsPlusMET;
   float determinant_topThreeJetsPlusMET;
 
+  float flavorHistoryWeight;
+
   //event count histo
   TH1D Heventcount("Heventcount","number of events processed, passed",2,0,2);
   Heventcount.SetBinContent(1,0);
   Heventcount.SetBinContent(2,0);
   // define the TTree
   TTree reducedTree("reducedTree","tree with minimal cuts");
+
+  reducedTree.SetMaxTreeSize(4900000000LL); //hopefully this cures crash at 1.9GB
+  //if more variables keep getting added, I will have to split the reduced trees into pieces
+  //hopefully that can be avoided
+
   reducedTree.Branch("weight",&weight,"weight/D");
+  
+  //unfortunately the pdf Weights are very, very big
+  reducedTree.Branch("pdfWeights",&pdfWeights); //copy directly from ntuple
+  reducedTree.Branch("flavorHistory",&flavorHistory,"flavorHistory/I"); //copy directly from ntuple
+  reducedTree.Branch("flavorHistoryWeight",&flavorHistoryWeight,"flavorHistoryWeight/F");
 
   reducedTree.Branch("runNumber",&runNumber,"runNumber/l");
   reducedTree.Branch("lumiSection",&lumiSection,"lumiSection/l");
@@ -536,7 +548,7 @@ a function of eta,phi) later.
 
   Long64_t nbytes = 0, nb = 0;
   startTimer();  //keep track of performance
-  for (Long64_t jentry=0; jentry<nentries;jentry++) {
+  for (Long64_t jentry=0; jentry< nentries;jentry++) {
     Long64_t ientry = LoadTree(jentry);
     if (ientry < 0) break;
     if (jentry%1000000==0) checkTimer(jentry,nentries);
@@ -548,6 +560,11 @@ a function of eta,phi) later.
     if (passCut("cutTrigger") && passCut("cutHT") ) {
       Heventcount.SetBinContent(2, Heventcount.GetBinContent(2)+1);
       weight = getWeight(nentries_weight);
+
+      if (isData_) {
+	pdfWeights->assign(45,1); //hard-coded that there will be 44+1 weights
+	flavorHistory=0; //just a bogus value
+      }
 
       cutHT = true; cutTrigger = true;      
       cutPV = passCut("cutPV");
@@ -578,6 +595,8 @@ a function of eta,phi) later.
       MET=getMET();
       MHT=getMHT();
       MT_Wlep = getMT_Wlep();
+
+      flavorHistoryWeight = (findInputName().Contains("WJets")) ? getFlavorHistoryWeight() : 1;
 
       //caloMET is automatically filled from the ntuple
       jetType cachedJetType = theJetType_;

@@ -1,4 +1,4 @@
-//////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
 // This class has been automatically generated on
 // Mon Mar 21 14:11:02 2011 by ROOT version 5.22/00d
 // from TTree tree/tree
@@ -105,6 +105,8 @@ const char *btagEffTypeNames_[] = {"BTagEff0","BTagEffup","BTagEffdown"};
 
 const char *tailCleaningNames_[] = {"NoCleaning","MuonCleaning","MuonEcalCleaning"};
 
+const char *flavorHistoryNames_[] = {"noFlvHist","FlvHist"};
+
 //in 1/pb
 const double lumi=36.146 * 0.993; //386 Nov4ReReco Datasets - PATIFIED WITH 387
 
@@ -116,8 +118,6 @@ const double mtop_ = 172.0;
 class basicLoop {
 public :
   // ========================================== begin
-  //TO DO (sometime when there is time to validate it): change first item of each enum to be a different integer
-  //i think this provides safety against the user passing the wrong type of enum to the wrong set method
   enum CutScheme {kRA2=0, kSync1, kBaseline0, nCutSchemes}; //cut schemes must be implemented in setCutScheme,etc and in the list above
   CutScheme theCutScheme_;
   enum METType {kMHT=0, kMET, ktcMET, kpfMET};
@@ -140,6 +140,8 @@ public :
   BTagEffType theBTagEffType_;
   enum tailCleaningType {kNoCleaning=0, kMuonCleaning, kMuonEcalCleaning};
   tailCleaningType theCleaningType_;
+  enum flavorHistoryType {kNoFlvHist=0, kFlvHist};
+  flavorHistoryType theFlavorHistoryType_;
 
   unsigned int nBcut_;
   //these are an extension of the ele/mu veto
@@ -686,6 +688,7 @@ public :
    void setJESType(JESType jestype);
    void setJERType(JERType jertype);
    void setCleaningType(tailCleaningType cleanuptype);
+   void setFlavorHistoryType(flavorHistoryType fltype);
    void setIgnoredCut(const TString cutTag);
    void resetIgnoredCut() ;
    void setRequiredCut(const TString cutTag);
@@ -711,6 +714,7 @@ public :
    //calculate useful stuff and get useful info
    TString getSampleName(TString inname="") ;
    double getWeight(Long64_t nentries);
+   float getFlavorHistoryWeight();
    double getCrossSection(TString inname="") ;
    TString findInputName() ;
 
@@ -856,6 +860,7 @@ basicLoop::basicLoop(TTree *tree, TTree *infotree, TTree *ecaltree)
      theJERType_(kJER0),
      theMETuncType_(kMETunc0),
      theCleaningType_(kNoCleaning),
+     theFlavorHistoryType_(kNoFlvHist),
      nBcut_(0),
      ne_(0),
      nmu_(0),
@@ -3215,13 +3220,23 @@ float basicLoop::getMT_Wlep() {
   float px = myP * cos(myPphi);
   float py = myP * sin(myPphi); 
   
-  if(newMT){
+  if (newMT) {
     float Et = sqrt( px*px + py*py );
-    MT2 = 2*( Et + myMET - (px*myMETx + py*myMETy) ); 
+    MT2 = 2*( Et * myMET - (px*myMETx + py*myMETy) ); 
     if(MT2>0.) {MT=sqrt(MT2);}
     else {MT = -2.;}
+
+    //    cout<<" --- "<<endl;
+    //    cout <<"Owen MT = "<<MT<<endl;
+    //    float mt_ewk  = 2*myP*myMET*(1 - cos( getDeltaPhi(myPphi,myMETphi)));
+    //    float mt_ewk2 = 2*myP*myMET*(1 - cos( myPphi-myMETphi));
+    //    if (mt_ewk>0) mt_ewk = sqrt(mt_ewk);
+    //    if (mt_ewk2>0) mt_ewk2 = sqrt(mt_ewk2);
+    //    cout<<" new MT  = "<<mt_ewk<<endl;
+    //    cout<<" new MT2 = "<<mt_ewk2<<endl;
   }
-  
+  //else cout<<" == "<<endl;
+
   return MT;
 }
 
@@ -3870,10 +3885,10 @@ bool basicLoop::passMSugra() {
   bool mupass = ((susy_mu >=0) && (msugra_mu_ >=0)) || ((susy_mu <0) && (msugra_mu_ <0));
 
   bool pass = 
-    TMath::AreEqualAbs( msugra_tanbeta_, susy_tanBeta, epsilon) &&
-    TMath::AreEqualAbs( msugra_m0_, susy_m0, epsilon) &&
-    TMath::AreEqualAbs( msugra_m12_, susy_m12, epsilon) &&
-    TMath::AreEqualAbs( msugra_a0_, susy_A0, epsilon);
+    jmt::AreEqualAbs( msugra_tanbeta_, susy_tanBeta, epsilon) &&
+    jmt::AreEqualAbs( msugra_m0_, susy_m0, epsilon) &&
+    jmt::AreEqualAbs( msugra_m12_, susy_m12, epsilon) &&
+    jmt::AreEqualAbs( msugra_a0_, susy_A0, epsilon);
 
   return mupass && pass;
 }
@@ -3882,13 +3897,13 @@ bool basicLoop::thisSampleIsLMB() {
   const double epsilon = 0.001;
   //use mSugra variables to determine if this is the special "LMB" point
 
-  if ( !TMath::AreEqualAbs(susy_tanBeta, 50, epsilon)) return false;
+  if ( !jmt::AreEqualAbs(susy_tanBeta, 50, epsilon)) return false;
 
-  if ( !TMath::AreEqualAbs(susy_A0, 0, epsilon)) return false;
+  if ( !jmt::AreEqualAbs(susy_A0, 0, epsilon)) return false;
 
-  if (!( TMath::AreEqualAbs(susy_m0, 390, epsilon) || TMath::AreEqualAbs(susy_m0,400, epsilon) || TMath::AreEqualAbs(susy_m0,410, epsilon) )) return false;
+  if (!( jmt::AreEqualAbs(susy_m0, 390, epsilon) || jmt::AreEqualAbs(susy_m0,400, epsilon) || jmt::AreEqualAbs(susy_m0,410, epsilon) )) return false;
 
-  if (!( TMath::AreEqualAbs(susy_m12, 190, epsilon) || TMath::AreEqualAbs(susy_m12,200, epsilon) || TMath::AreEqualAbs(susy_m12,210, epsilon) )) return false;
+  if (!( jmt::AreEqualAbs(susy_m12, 190, epsilon) || jmt::AreEqualAbs(susy_m12,200, epsilon) || jmt::AreEqualAbs(susy_m12,210, epsilon) )) return false;
 
   if ( ! ( susy_mu>0)) return false;
 
@@ -3927,6 +3942,7 @@ TString basicLoop::getSampleName(TString inname) {
   else if (inname.Contains("/QCD-Pt250to500-madgraph/"))   return "QCD250";
   else if (inname.Contains("/QCD-Pt500to1000-madgraph/"))  return "QCD500";
   else if (inname.Contains("/WJets/"))                     return "WJets";
+  else if (inname.Contains("/WJetsZ2/"))                   return "WJetsZ2";
   else if (inname.Contains("/ZJets/"))                     return "ZJets";
   else if (inname.Contains("/Zinvisible/"))                return "Zinvisible";
 
@@ -4045,6 +4061,7 @@ double basicLoop::getCrossSection( TString inname) {
   else if (inname.Contains("/QCD-Pt1000toInf-madgraph/"))  return 83; //!!!
 
   else if (inname.Contains("/WJets/"))                     return 31314; //!!! NNLO
+  else if (inname.Contains("/WJetsZ2/"))                   return 31314; //!!! NNLO
 
   //also known as DYJetsToLL with m_ll > 50
   else if (inname.Contains("/ZJets/"))                     return 3048; //!!! NNLO
@@ -4141,12 +4158,32 @@ Long64_t basicLoop::getEntries() {
   return n;
 }
 
+float basicLoop::getFlavorHistoryWeight() {
+
+  if      (flavorHistory == 1) return 2;
+  else if (flavorHistory == 2) return 2;
+  else if (flavorHistory == 3) return 1;
+  else if (flavorHistory == 4) return 1;
+  else if (flavorHistory == 5) return 2;
+  else if (flavorHistory == 6) return 1;
+  else if (flavorHistory == 7) return 2;
+  else if (flavorHistory == 8) return 1;
+  else if (flavorHistory == 9) return 2;
+  else if (flavorHistory == 10) return 1;
+  else if (flavorHistory == 11) return 1;
+
+  assert(0);
+  return 1;
+}
+
 double basicLoop::getWeight(Long64_t nentries) {
   if (isData_) return 1;
 
   const   double sigma = getCrossSection(findInputName());
 
   double w = lumi * sigma / double(nentries);
+
+  if (theFlavorHistoryType_==kFlvHist && findInputName().Contains("WJets") ) w *= getFlavorHistoryWeight();
 
   if (findInputName().Contains("/QCD-Pt15to3000-PythiaZ2-Flat-PU2010/"))    w *= mcWeight;
 
@@ -4217,6 +4254,10 @@ void basicLoop::setCleaningType( tailCleaningType cleanuptype) {
   if (cleanuptype == kMuonEcalCleaning) assert(loadedEcalTree_);
 
   theCleaningType_ = cleanuptype;
+}
+
+void basicLoop::setFlavorHistoryType( flavorHistoryType fltype) {
+   theFlavorHistoryType_ = fltype;
 }
 
 void basicLoop::setMETRange(METRange metrange) {
@@ -4378,6 +4419,10 @@ TString basicLoop::getCutDescriptionString() {
     cuts+="_";
     cuts+=tailCleaningNames_[theCleaningType_];
   }
+  if (theFlavorHistoryType_ != kNoFlvHist) {
+    cuts+="_";
+    cuts+=flavorHistoryNames_[theFlavorHistoryType_];
+  }
   for (unsigned int icut=0; icut<ignoredCut_.size() ; icut++) {
     cuts+="_No";
     //it would be more robust to use .find() instead of []
@@ -4420,6 +4465,7 @@ void basicLoop::printState() {
   cout<<"DeltaPhi type set to: "<<dpTypeNames_[theDPType_]<<endl;
   cout<<"Requiring at least    "<<nBcut_<<" b tags"<<endl;
   cout<<"Tail cleanup set to:  "<<tailCleaningNames_[theCleaningType_]<<endl;
+  cout<<"Flavor reweighting:   "<<flavorHistoryNames_[theFlavorHistoryType_]<<endl;
   for (unsigned int i = 0; i< ignoredCut_.size() ; i++) {
     cout<<"Will ignore cut:    "<<cutNames_[ignoredCut_.at(i)]<<endl;
   }
