@@ -8,9 +8,12 @@
 Usage:
 root -b -l -q run_reducedTree.C++
 
+output directory is defined
 */
 const TString version = "V00-03-01";
 const TString ecalDeadCellPath = "/cu1/joshmt/ECALDeadCellNtuples/"; //hard coded for dellcmscornell
+
+const TString outputdir = "/cu2/joshmt/V00-03-01_5/";
 
 void run_reducedTree()
 {
@@ -43,6 +46,16 @@ void run_reducedTree()
     cout<<"About to start on sample: "<<samplename<<endl;
 
     //    if (samplefiles.Contains("QCD") && !samplefiles.Contains("PU")) continue;
+//     if ( samplefiles.Contains("WJetsZ2")) continue;
+
+//     if ( samplefiles.Contains("LM")) continue;
+
+//     if ( samplefiles.Contains("QCD-Pt0")) continue;
+//     if ( samplefiles.Contains("QCD-Pt1")) continue;
+//     if ( samplefiles.Contains("QCD-Pt2")) continue;
+//     if ( samplefiles.Contains("QCD-Pt3")) continue;
+//     if ( samplefiles.Contains("QCD-Pt4")) continue;
+
 
     //fetch ecal dead cell info
     TFile fEcal(ecalDeadCellPath + samplename + "/deadCellFilterProfile.root"); //hadd files together into one
@@ -55,16 +68,16 @@ void run_reducedTree()
     basicLoop looper(&ch,&info,ecalTree);
     
     //important! this is where cuts are defined
-    looper.setCutScheme(basicLoop::kBaseline0); //usually this is kRA2
+    looper.setCutScheme(basicLoop::kBaseline0);
     looper.setMETType(basicLoop::kpfMET);
     looper.setMETRange(basicLoop::kHigh); //signal region
     looper.setLeptonType(basicLoop::kPFLeptonsRA2);
     looper.setJetType(basicLoop::kPF);
     looper.setCleaningType(basicLoop::kMuonCleaning);
-    looper.setJERType(basicLoop::kJERbias);
+    looper.setJERType(basicLoop::kJERbias6);
     looper.setDPType(basicLoop::kminDP);
 
-    looper.reducedTree("/cu2/joshmt/V00-03-01_2/");  //go!
+    looper.reducedTree(outputdir);  //go!
   }
 
 }
