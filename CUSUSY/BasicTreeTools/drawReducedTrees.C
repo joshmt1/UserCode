@@ -17,6 +17,9 @@ Details:
 This code replaces drawCutflowPlots.C (which had replaced drawBasicPlots.C). 
 The input files are the reducedTrees.
 
+Depending on the exact setup in loadSamples(), the QCD and Single-top samples must be added together with 'hadd' 
+in order to get one file per sample.
+
 Potential improvements:
  -- there are becoming way too many configuration options. i've stopped adding setter functions for them out of laziness
  -- the calls to renormBins() currently have a kludge that hard-codes the reference bin to 2
@@ -27,6 +30,10 @@ allow the user to switch the plotted samples on the fly.
 [any mechanism like this would also have to allow the user to control
 the order in which the samples are stack. This is currently defined
 by the order of the push_backs in loadSamples()]
+
+---- update: this is now partially fixed. samples_ can be manipulated after compile time.
+still need to add functions to allow the user to manipulate samples_
+
  -- The cuts are defined by the user settings the selection_ string
 directly. This can be error prone. A better interface would allow the user
 to set cuts more intutitively and with less change of e.g. accidentally 
@@ -58,11 +65,13 @@ functionality for TH1F and TH1D e.g. the case of addOverflowBin()
 
 #include <iostream>
 #include <map>
+#include <set>
 
 TH1D* hinteractive=0;
 
 //holds a list of the sample names (using same code as file name)
 std::vector<TString> samples_;
+std::set<TString> samplesAll_;
 std::map<TString, TFile*> files_;
 std::map<TString, TH1D*> histos_;
 std::map<TString, UInt_t> sampleColor_;
@@ -70,7 +79,7 @@ std::map<TString, TString> sampleOwenName_;
 std::map<TString, TString> sampleLabel_;
 std::map<TString, UInt_t> sampleMarkerStyle_;
 
-TString inputPath = "/cu2/joshmt/V00-03-01_4/";
+TString inputPath = "/cu2/joshmt/V00-03-01_5/";
 //TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
 TString cutdesc = "Baseline0_PF_JERbias6_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning";
 //TString cutdesc = "Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonEcalCleaning";
@@ -92,7 +101,7 @@ bool renormalizeBins_=false;//no setter function
 
 bool normalized_=false;
 
-bool useFlavorHistoryWeights_=false;
+bool useFlavorHistoryWeights_=true;
 float flavorHistoryScaling_=-1;
 
 bool savePlots_ = true; //no setter function
@@ -438,6 +447,23 @@ void loadSamples() {
   samples_.push_back("Zinvisible");
   //  samples_.push_back("LM13");
 
+  //samplesAll_ should have *every* available sample
+  samplesAll_.insert("QCD");
+  samplesAll_.insert("PythiaQCD");
+  samplesAll_.insert("PythiaPUQCD");
+  samplesAll_.insert("PythiaPUQCDFlat");
+  samplesAll_.insert("TTbarJets");
+  samplesAll_.insert("WJets");
+  samplesAll_.insert("ZJets");
+  samplesAll_.insert("WJetsZ2");
+  samplesAll_.insert("ZJetsZ2");
+  samplesAll_.insert("Zinvisible");
+  samplesAll_.insert("SingleTop");
+  samplesAll_.insert("SingleTop-sChannel");
+  samplesAll_.insert("SingleTop-tChannel");
+  samplesAll_.insert("SingleTop-tWChannel");
+  samplesAll_.insert("LM13");
+  samplesAll_.insert("LM9");
 
   //these blocks are just a "dictionary"
   //no need to ever comment these out
@@ -529,16 +555,16 @@ void loadSamples() {
   sampleOwenName_["TotalSM"] = "totalsm";
   sampleOwenName_["Total"] = "total";  
 
-  for (unsigned int isample=0; isample<samples_.size(); isample++) {
+  for (std::set<TString>::iterator isample=samplesAll_.begin(); isample!=samplesAll_.end(); ++isample) {
     TString fname="reducedTree.";
     fname+=cutdesc;
     fname+=".";
-    fname+=samples_[isample];
+    fname += *isample;
     fname+=".root";
     fname.Prepend(inputPath);
-    files_[samples_[isample]] = new TFile(fname);
-    if (files_[samples_[isample]]->IsZombie() ) cout<<"file error with "<<samples_[isample]<<endl;
-    else { if (!quiet_)    cout<<"Added sample: "<<samples_[isample]<<endl;}
+    files_[*isample] = new TFile(fname);
+    if (files_[*isample]->IsZombie() ) {cout<<"file error with "<<*isample<<endl; files_[*isample]=0;}
+    else { if (!quiet_)    cout<<"Added sample: "<<*isample<<endl;}
   }
 
   //load data file too
@@ -552,7 +578,7 @@ void loadSamples() {
   }
   if ( dodata_) {
     fdata = new TFile(dname);
-    if (fdata->IsZombie()) cout<<"Problem with data file! "<<dname<<endl;
+    if (fdata->IsZombie()) cout<<"Problem with data file! "<<dname<<endl; 
   }
 
 }
@@ -1870,13 +1896,13 @@ void drawVJets() {
   const TCut METcut = "MET>40";
   const TCut METcut2 = "MET>60";
   const TCut METcut3 = "MET>100";
-  const TCut MTcut = "MT_Wlep>15";
+  const TCut MTcut = "MT_Wlep>30";
 
   const  TCut ge1b =  "nbjets >= 1";
   const  TCut ge2b =  "nbjets >= 2";
   const  TCut eq1b =  "nbjets == 1";
   const  TCut pretagCut =  "1";
-  for (int ibtag = 3; ibtag<4; ibtag++) { //do this an ugly way for now
+  for (int ibtag = 0; ibtag<4; ibtag++) { //do this an ugly way for now
     TCut theBTaggingCut = ge1b; TString btagstring = "ge1b";
     if (ibtag==0) { //nothing to do
     }
@@ -1898,8 +1924,9 @@ void drawVJets() {
     nbins=10; low=0; high = 10;
     var="njets"; xtitle="njets";
     
+
     selection_ = baseSelection && theBTaggingCut;
-    //drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_1muon_njets");
+    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_1muon_njets");
 
 
     selection_ = baseSelection && njetCut && theBTaggingCut;  
@@ -2008,10 +2035,11 @@ void drawVJets() {
       cout<<"                = "<<(ndata-nnonW)/nW<<" +/- "<<err<<endl;
     }
 
+
     selection_ = baseSelection && njetCut && theBTaggingCut && MTcut;  
     drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_1muon2jet_muonpt1_MT15");
     { //give this its own scope
-      cout<<"MT>15"<<endl;
+      cout<<"MT>30"<<endl;
       double ndata= hdata->Integral();
       double nnonW=0,nW=0;
       double nnonW_err=0,nW_err=0;
@@ -2030,12 +2058,15 @@ void drawVJets() {
       cout<<"(data - nonW)/W = ("<<ndata<<" - "<<nnonW<<") / "<<nW<<endl;
       double err = jmt::errAoverB( ndata-nnonW, sqrt(ndata+nnonW_err), nW,nW_err);
       cout<<"                = "<<(ndata-nnonW)/nW<<" +/- "<<err<<endl;
+      cout<<"W / SM = "<<nW/(nW+nnonW)<<endl;
     }
 
+
+    selection_ = baseSelection && njetCut && theBTaggingCut;  
     nbins=20; low=0; high=300;
     //nbins=25; low=-5; high=10;
     var="MT_Wlep"; xtitle="leptonic W M_{T}";
-    //drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_1muon2jet_MT");
+    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_1muon2jet_MT");
 
  }
 
