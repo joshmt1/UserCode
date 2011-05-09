@@ -95,11 +95,13 @@ void morerstuff() {
   clearSamples();
   addSample("PythiaPUQCD");
 
-  setLogY(true);
   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000";
-  drawR("minDeltaPhi",0.3,13,70,200,"ge1b");
+  setLogY(true);
+  drawR("minDeltaPhi",0.3,13,70,230,"ge1b");
   setLogY(false);
-  drawR("minDeltaPhi",0.3,13,70,200,"ge1b");
+  drawR("minDeltaPhi",0.3,13,70,230,"ge1b");
+
+  //  TF1 *fa = new TF1("fa","[0]*exp(-1*[1]*x)",-3,3); 
 
 }
 
@@ -422,6 +424,7 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
 
   // TO DO add weight<1000 cut everywhere!
 
+
   // ==== MET plots ====
   setLogY(true);   setPlotMinimum(1e-1);
   nbins=25; low= 0; high=260;
@@ -739,6 +742,50 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
    selection_ ="cutHT==1 && cutPV==0 && cutTrigger==1 && cutDeltaPhi==1";
    drawPlots(var,nbins,low,high,xtitle,"Events", "nGoodPV_PVfail_veryloose");
 
+
+   //exploration
+   setLogY(false);
+   resetPlotMinimum();
+ 
+   nbins=20; low=-TMath::Pi(); high = TMath::Pi();
+   var="METphi-jetphi1"; xtitle="(METphi-jetphi1)";
+   selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && MET>100 && passInconsistentMuon==1 && passBadPFMuon==1";
+   drawPlots(var,nbins,low,high,xtitle,"Events", "HdeltaPhiMETjet1_nomindp");
+
+   nbins=20; low=-TMath::Pi(); high = TMath::Pi();
+   var="METphi-jetphi2"; xtitle="METphi-jetphi2";
+   selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && MET>100 && passInconsistentMuon==1 && passBadPFMuon==1 && (abs(METphi-jetphi1)>1)";
+   drawPlots(var,nbins,low,high,xtitle,"Events", "HdeltaPhiMETjet2_metphi1cut");
+
+   var="METphi-jetphi2"; xtitle="METphi-jetphi2";
+   selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && MET>150 && passInconsistentMuon==1 && passBadPFMuon==1 && (abs(METphi-jetphi1)>1)";
+   drawPlots(var,nbins,low,high,xtitle,"Events", "HdeltaPhiMETjet2_metphi1cut_sig");
+
+   var="METphi-jetphi3"; xtitle="METphi-jetphi3";
+   selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && MET>150 && passInconsistentMuon==1 && passBadPFMuon==1 && (abs(METphi-jetphi1)>1) && (abs(METphi-jetphi2)>0.3)";
+   drawPlots(var,nbins,low,high,xtitle,"Events", "HdeltaPhiMETjet3_metphi12cut_sig");
+
+  // ==== MET/HT ====
+   //addSample("LM13");
+  doRatioPlot(false);
+  setLogY(true);
+  nbins=40;
+  low=0;
+  high=1;
+  doOverflowAddition(true);
+  var="MET/HT"; xtitle="MET/HT";
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "metOverHt_ge1b_noMetCut");
+
+  setLogY(false);
+  resetPlotMinimum();
+  nbins=10;
+
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 && MET>100 &&MET<150";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "metOverHt_ge1b_SB");
+
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 &&MET>=150";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "metOverHt_ge1b_SIG");
 
 
 }

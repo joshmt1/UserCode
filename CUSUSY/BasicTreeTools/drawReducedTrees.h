@@ -677,7 +677,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
 
     gROOT->cd();
     //should each histo have a different name? maybe
-    TString hname = var; hname += "_"; hname += samples_[isample];
+    TString hname = jmt::fortranize(var); hname += "_"; hname += samples_[isample];
     histos_[samples_[isample]] = (varbins==0) ? new TH1D(hname,"",nbins,low,high) : new TH1D(hname,"",nbins,varbins);
     histos_[samples_[isample]]->Sumw2();
 
@@ -797,7 +797,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
     gROOT->cd();
     if (!quiet_)     cout<<"Drawing data!"<<endl;
     if (hdata != 0) delete hdata;
-    TString hname = var; hname += "_"; hname += "data";
+    TString hname = jmt::fortranize(var); hname += "_"; hname += "data";
     hdata = (varbins==0) ? new TH1D(hname,"",nbins,low,high) : new TH1D(hname,"",nbins,varbins);
     hdata->Sumw2();
     TTree* dtree = (TTree*) fdata->Get("reducedTree");
