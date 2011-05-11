@@ -1005,10 +1005,11 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
       totalsm_pass.Add(histos_[hnameP]);
       totalsm_fail.Add(histos_[hnameF]);
 
+      //comment out filling of these for now to save time
       TH2D this2d_SB("this2d_SB","",50,100,150,50,0,TMath::Pi());
-      tree->Project("this2d_SB","minDeltaPhi:MET",getCutString().Data());
+      //      tree->Project("this2d_SB","minDeltaPhi:MET",getCutString().Data());
       TH2D this2d_50("this2d_50","",50,50,100,50,0,TMath::Pi());
-      tree->Project("this2d_50","minDeltaPhi:MET",getCutString().Data());
+      //      tree->Project("this2d_50","minDeltaPhi:MET",getCutString().Data());
 
       totalsm2d_SB.Add(&this2d_SB);
       totalsm2d_50.Add(&this2d_50);
@@ -1129,9 +1130,9 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
 //   data2d_50.DrawCopy("colz");
 //   c2d->cd(4);
 //   data2d_SB.DrawCopy("colz");
-  cout<<"Total SM MC correlation [50<MET<100]  = "<<totalsm2d_50.GetCorrelationFactor()<<endl;
-  cout<<"Total SM MC correlation [100<MET<150] = "<<totalsm2d_SB.GetCorrelationFactor()<<endl;
-  cout<<"Data correlation [50<MET<100]         = "<<data2d_50.GetCorrelationFactor()<<endl;
-  cout<<"Data correlation [100<MET<150]        = "<<data2d_SB.GetCorrelationFactor()<<endl;
+//   cout<<"Total SM MC correlation [50<MET<100]  = "<<totalsm2d_50.GetCorrelationFactor()<<endl;
+//   cout<<"Total SM MC correlation [100<MET<150] = "<<totalsm2d_SB.GetCorrelationFactor()<<endl;
+//   cout<<"Data correlation [50<MET<100]         = "<<data2d_50.GetCorrelationFactor()<<endl;
+//   cout<<"Data correlation [100<MET<150]        = "<<data2d_SB.GetCorrelationFactor()<<endl;
 
 }

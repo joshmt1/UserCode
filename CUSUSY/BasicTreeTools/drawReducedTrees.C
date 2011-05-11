@@ -73,7 +73,7 @@ functionality for TH1F and TH1D e.g. the case of addOverflowBin()
 #include <set>
 
 
-TString inputPath = "/cu2/joshmt/V00-03-01_6/";
+TString inputPath = "/cu2/joshmt/V00-03-01_5/";
 //TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
 TString cutdesc = "Baseline0_PF_JERbias6_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning";
 //TString cutdesc = "Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonEcalCleaning";
@@ -104,6 +104,47 @@ void morerstuff() {
 
 }
 
+
+void biasStudy() {
+  /*
+.L drawReducedTrees.C++
+  */
+  useFlavorHistoryWeights_=false;
+
+  setStackMode(false);
+  doData(true);
+
+  //no met, no mindeltaphi
+  setPlotMinimum(1e-2); //setPlotMaximum(1);
+
+ drawTotalSM_=true;
+ leg_y1=0.6;
+ setLogY(true);
+ 
+ setQuiet(true);
+
+ double cbias,err;
+
+ selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000";
+ drawR("minDeltaPhi",0.3,4,0,200,"ge1b-4bins");
+ cbias= hinteractive->GetBinContent(4)/hinteractive->GetBinContent(3);
+ err = jmt::errAoverB(hinteractive->GetBinContent(4),hinteractive->GetBinError(4),hinteractive->GetBinContent(3),hinteractive->GetBinError(3));
+ cout<<"no extra cut cbias = "<<cbias <<" +/- "<<err<<endl;
+
+ selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000 && (MET/HT<0.2)";
+ drawR("minDeltaPhi",0.3,4,0,200,"ge1b-METoverHTcut-4bins");
+ cbias= hinteractive->GetBinContent(4)/hinteractive->GetBinContent(3);
+ err = jmt::errAoverB(hinteractive->GetBinContent(4),hinteractive->GetBinError(4),hinteractive->GetBinContent(3),hinteractive->GetBinError(3));
+ cout<<"MET/HT<0.2   cbias = "<<cbias <<" +/- "<<err<<endl;
+
+ selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000 && (MET/HT>=0.2)";
+ drawR("minDeltaPhi",0.3,4,0,200,"ge1b-METoverHTcut-4bins");
+ cbias= hinteractive->GetBinContent(4)/hinteractive->GetBinContent(3);
+ err = jmt::errAoverB(hinteractive->GetBinContent(4),hinteractive->GetBinError(4),hinteractive->GetBinContent(3),hinteractive->GetBinError(3));
+ cout<<"MET/HT>=0.2  cbias = "<<cbias <<" +/- "<<err<<endl;
+
+
+}
 
 void drawrplots() {
   /*
@@ -850,6 +891,12 @@ void studySignificance() {
   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 &&cutMET==1";
   nbins=31;  low=0;  high=TMath::Pi();
   var="minDeltaPhi"; xtitle="minDeltaPhi";
+  drawSignificance(var,nbins,low,high,"sigfile");
+
+  //remove 3Jet cut
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 &&cutMET==1";
+  nbins=7; low=0; high=7;
+  var="njets"; xtitle="jet multiplicity";
   drawSignificance(var,nbins,low,high,"sigfile");
 
 }
