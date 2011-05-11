@@ -19,7 +19,17 @@ namespace jmt {
     
     cut.ReplaceAll(">","gt");
     cut.ReplaceAll("<","lt");
+
+    cut.ReplaceAll("/","Over");
+    cut.ReplaceAll("+","Plus");
+    cut.ReplaceAll("*","Times");
+
+    cut.ReplaceAll("*","Times");
     
+    //this is pretty ugly
+    cut.ReplaceAll("(","L");
+    cut.ReplaceAll(")","R");
+
     return cut;
   }
 
