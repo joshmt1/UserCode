@@ -363,7 +363,17 @@ void drawVerticalLine() {
 
 //add a sample to be plotted to the *end* of the list
 void addSample(const TString & newsample) {
-  if (  samplesAll_.find(newsample) != samplesAll_.end() ) {
+
+  //see if it is already there
+  for (std::vector<TString>::iterator it = samples_.begin(); it!=samples_.end(); ++it) {
+    if ( *it == newsample) {
+      cout<<newsample<<" is already on the list!"<<endl;
+      return;
+    }
+  }
+  //if it isn't there, go ahead and add it
+
+  if ( samplesAll_.find(newsample) != samplesAll_.end() ) {
     samples_.push_back(newsample);
   }
   else {
@@ -416,7 +426,7 @@ void loadSamples() {
 
   samples_.push_back("ZJets");
   samples_.push_back("Zinvisible");
-  //  samples_.push_back("LM13");
+  samples_.push_back("LM13");
 
   //samplesAll_ should have *every* available sample
   samplesAll_.insert("QCD");
@@ -439,7 +449,7 @@ void loadSamples() {
   //these blocks are just a "dictionary"
   //no need to ever comment these out
   if (true) {
-    sampleColor_["LM13"] = kRed-9;//kGray; //borrowed from a different sample
+    sampleColor_["LM13"] = kRed-9;//kGray;
     sampleColor_["QCD"] = kYellow;
     sampleColor_["PythiaQCD"] = kYellow;
     sampleColor_["PythiaPUQCD"] = kYellow;
@@ -868,6 +878,33 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
 void drawPlots(const TString var, const int nbins, const float* varbins, const TString xtitle, const TString ytitle, TString filename="") {
   //provide a more natural modification to the argument list....
   drawPlots( var, nbins, 0, 1, xtitle,ytitle, filename,  varbins);
+}
+
+void drawSignificance(const TString & var, const int nbins, const float low, const float high, const TString & savename) {
+
+  bool oldSaveSetting = savePlots_;
+  savePlots_=false;
+  drawPlots(var,nbins,low,high,var,"",savename);
+
+  TH1D* hsusy=0;
+  for (std::vector<TString>::iterator it = samples_.begin(); it!=samples_.end(); ++it) {
+    if ( (*it).Contains("LM") ) hsusy = histos_[ *it];
+  }
+  if (hsusy==0) {
+    cout<<"Didn't find a signal sample"<<endl;
+    return;
+  }
+
+  for (int ibin= 1; ibin<=nbins; ibin++) {
+    double B = totalsm->Integral(ibin,nbins);
+    double S = hsusy->Integral(ibin,nbins);
+    if (B>0)    cout<<totalsm->GetBinLowEdge(ibin)<<"\t"<<S/sqrt(B)<<endl;//"\t"<<totalsm->GetBinContent(ibin)<<endl;
+    else     cout<<ibin<<" B is zero"<<endl;
+  }
+
+
+
+  savePlots_=oldSaveSetting;
 }
 
 //could add xtitle and ytitle

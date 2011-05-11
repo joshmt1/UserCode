@@ -3,6 +3,7 @@
 -- drawPlots() -- main plotting routine to draw pretty stacks of MC with data on top
 -- drawSimple() -- very simple function to draw exactly one sample and put it in a file
 -- drawR() -- draws r(MET). a bit more kludgely, but works.
+-- drawSignificance -- draws S/sqrt(B) as a function of the variable
 
 The functions that do the heavy lifting, along with various utility functions,
 are in drawReducedTrees.h.
@@ -62,9 +63,9 @@ functionality for TH1F and TH1D e.g. the case of addOverflowBin()
 #include "TLine.h"
 #include "TCut.h"
 
+// can be checked out of UserCode/joshmt
 #include "MiscUtil.cxx"
 
-//not clear yet whether I want to use HistHolder.h or not
 #include <fstream>
 
 #include <iostream>
@@ -72,15 +73,13 @@ functionality for TH1F and TH1D e.g. the case of addOverflowBin()
 #include <set>
 
 
-TString inputPath = "/cu2/joshmt/V00-03-01_5/";
+TString inputPath = "/cu2/joshmt/V00-03-01_6/";
 //TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
 TString cutdesc = "Baseline0_PF_JERbias6_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning";
 //TString cutdesc = "Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonEcalCleaning";
 //TString cutdesc = "Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
 
 #include "drawReducedTrees.h"
-
-//TH1D* hdataSubtracted=0;
 
 void morerstuff() {
   /*
@@ -110,6 +109,8 @@ void drawrplots() {
   /*
 .L drawReducedTrees.C++
   */
+
+  useFlavorHistoryWeights_=false;
 
   setStackMode(false);
   doData(true);
@@ -787,6 +788,69 @@ selection_ ="nbjets>=0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 &
   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 &&MET>=150";
   drawPlots(var,nbins,low,high,xtitle,"Events", "metOverHt_ge1b_SIG");
 
+  // ==== MET/sqrt(HT) ====
+   //addSample("LM13");
+  doRatioPlot(false);
+  nbins=20;  low=0;  high=20;
+  doOverflowAddition(true);
+  var="MET/sqrt(HT)"; xtitle="MET/#sqrt{HT}";
+
+   setLogY(false);
+  resetPlotMinimum();
+
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 && MET>100 &&MET<150";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "metOverRootHt_ge1b_SB");
+
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 &&MET>=150";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "metOverRootHt_ge1b_SIG");
+
+
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 &&MET>=100";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "metOverRootHt_ge1b_metOver100");
+
+}
+
+void studySignificance() {
+/*
+.L drawReducedTrees.C++
+  */
+
+  setStackMode(true);
+  doData(true);
+
+  int nbins;
+  float low,high;
+  TString var,xtitle;
+  doOverflowAddition(true);
+  doRatioPlot(false);
+
+
+  setLogY(false);
+  resetPlotMinimum();
+
+  //this compares the effectiveness of MET and MET/sqrt(HT); MET is better
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+
+  nbins=20;  low=0;  high=20;
+  var="MET/sqrt(HT)"; xtitle="MET/#sqrt{HT}";
+  drawSignificance(var,nbins,low,high,"sigfile");
+
+  nbins=20;  low=0;  high=200;
+  var="MET"; xtitle="MET";
+  drawSignificance(var,nbins,low,high,"sigfile");
+
+
+  //after MET cut, what can we do?
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 &&cutMET==1";
+  nbins=20;  low=0;  high=20;
+  var="MET/sqrt(HT)"; xtitle="MET/#sqrt{HT}";
+  drawSignificance(var,nbins,low,high,"sigfile"); //nothing good here
+
+  //reoptimize minDeltaPhi
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 &&cutMET==1";
+  nbins=31;  low=0;  high=TMath::Pi();
+  var="minDeltaPhi"; xtitle="minDeltaPhi";
+  drawSignificance(var,nbins,low,high,"sigfile");
 
 }
 
