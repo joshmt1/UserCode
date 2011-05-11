@@ -775,7 +775,7 @@ public :
    float getLooseJetPy(unsigned int ijet);
    float getLooseJetPtUncorr(unsigned int ijet); //includes JER
    bool isGoodJet_Sync1(unsigned int ijet);
-   bool isGoodJet(unsigned int ijet); //index here is on the loose jet list
+   bool isGoodJet(const unsigned int ijet, const float pTthreshold=50, const float etaMax=2.4, const float pTmax=-1);
    bool isGoodJet10(unsigned int ijet); //index here is on the loose jet list
    bool isGoodJet30(unsigned int ijet); //index here is on the loose jet list
    bool isGoodJetMHT(unsigned int ijet); //index here is on the loose jet list
@@ -2907,10 +2907,13 @@ float basicLoop::getLooseJetPtUncorr( unsigned int ijet) {
 //doJetID_ is a major kludge introduced in order to disable jetid for some tests
 //in reality there should be a jetID enum (that also goes into the filename)
 const bool doJetID_=true; //this should be *true* unless you're doing something special!
-bool basicLoop::isGoodJet(unsigned int ijet) {
+bool basicLoop::isGoodJet(const unsigned int ijet, const float pTthreshold, const float etaMax, const float pTmax) {
+  //the pTmax variable is optional. if set negative it will be ignored
 
-  if ( getLooseJetPt(ijet) <50) return false;
-  if ( fabs(loosejetEta->at(ijet)) > 2.4) return false;
+  if ( pTmax >0 && getLooseJetPt(ijet) >=pTmax) return false;
+
+  if ( getLooseJetPt(ijet) <pTthreshold) return false;
+  if ( fabs(loosejetEta->at(ijet)) > etaMax) return false;
   if (doJetID_ && !(loosejetPassLooseID->at(ijet)) ) return false;
 
   return true;

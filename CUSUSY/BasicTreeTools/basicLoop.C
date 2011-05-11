@@ -403,6 +403,7 @@ a function of eta,phi) later.
   //etc...
 
   int njets, nElectrons, nMuons, nbjets, nbjetsSSV0;
+  int nLooseJets0_10,nLooseJets10_20,nLooseJets20_30,nLooseJets30_40,nLooseJets40_50,nLooseJets50;
   //new variables from Luke
   float lambda1_allJets;
   float lambda2_allJets;
@@ -472,6 +473,13 @@ a function of eta,phi) later.
   reducedTree.Branch("nbjetsSSV0",&nbjetsSSV0,"nbjetsSSV0/I");
   reducedTree.Branch("nElectrons",&nElectrons,"nElectrons/I");
   reducedTree.Branch("nMuons",&nMuons,"nMuons/I");
+
+  reducedTree.Branch("nLooseJets0_10",&nLooseJets0_10,"nLooseJets0_10/I");
+  reducedTree.Branch("nLooseJets10_20",&nLooseJets10_20,"nLooseJets10_20/I");
+  reducedTree.Branch("nLooseJets20_30",&nLooseJets20_30,"nLooseJets20_30/I");
+  reducedTree.Branch("nLooseJets30_40",&nLooseJets30_40,"nLooseJets30_40/I");
+  reducedTree.Branch("nLooseJets40_50",&nLooseJets40_50,"nLooseJets40_50/I");
+  reducedTree.Branch("nLooseJets50",&nLooseJets50,"nLooseJets50/I");
 
   reducedTree.Branch("HT",&HT,"HT/F");
   reducedTree.Branch("MET",&MET,"MET/F");
@@ -595,6 +603,17 @@ a function of eta,phi) later.
       MET=getMET();
       MHT=getMHT();
       MT_Wlep = getMT_Wlep();
+
+      //loop over jets
+      nLooseJets0_10=0; nLooseJets10_20=0; nLooseJets20_30=0; nLooseJets30_40=0; nLooseJets40_50=0;
+      for (unsigned int i=0; i<loosejetPt->size(); i++) {
+	if      (isGoodJet(i,0,5,10) )   ++nLooseJets0_10;
+	else if (isGoodJet(i,10,5,20) )  ++nLooseJets10_20;
+	else if (isGoodJet(i,20,5,30) )  ++nLooseJets20_30;
+	else if (isGoodJet(i,30,5,40) )  ++nLooseJets30_40;
+	else if (isGoodJet(i,40,5,50) )  ++nLooseJets40_50;
+	else if (isGoodJet(i,50,5) )  ++nLooseJets50;
+      }
 
       flavorHistoryWeight = (findInputName().Contains("WJets")) ? getFlavorHistoryWeight() : 1;
 
