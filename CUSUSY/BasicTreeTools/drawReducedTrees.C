@@ -73,7 +73,7 @@ functionality for TH1F and TH1D e.g. the case of addOverflowBin()
 #include <set>
 
 
-TString inputPath = "/cu2/joshmt/V00-03-01_5/";
+TString inputPath = "/cu2/joshmt/V00-03-01_6/";
 //TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
 TString cutdesc = "Baseline0_PF_JERbias6_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning";
 //TString cutdesc = "Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonEcalCleaning";
@@ -125,19 +125,19 @@ void biasStudy() {
 
  double cbias,err;
 
- selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000";
+ selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000 &&njets==3";
  drawR("minDeltaPhi",0.3,4,0,200,"ge1b-4bins");
  cbias= hinteractive->GetBinContent(4)/hinteractive->GetBinContent(3);
  err = jmt::errAoverB(hinteractive->GetBinContent(4),hinteractive->GetBinError(4),hinteractive->GetBinContent(3),hinteractive->GetBinError(3));
  cout<<"no extra cut cbias = "<<cbias <<" +/- "<<err<<endl;
 
- selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000 && (MET/HT<0.2)";
+ selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000 && (MET/HT<0.2) &&njets==3";
  drawR("minDeltaPhi",0.3,4,0,200,"ge1b-METoverHTcut-4bins");
  cbias= hinteractive->GetBinContent(4)/hinteractive->GetBinContent(3);
  err = jmt::errAoverB(hinteractive->GetBinContent(4),hinteractive->GetBinError(4),hinteractive->GetBinContent(3),hinteractive->GetBinError(3));
  cout<<"MET/HT<0.2   cbias = "<<cbias <<" +/- "<<err<<endl;
 
- selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000 && (MET/HT>=0.2)";
+ selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1  && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000 && (MET/HT>=0.2) &&njets==3";
  drawR("minDeltaPhi",0.3,4,0,200,"ge1b-METoverHTcut-4bins");
  cbias= hinteractive->GetBinContent(4)/hinteractive->GetBinContent(3);
  err = jmt::errAoverB(hinteractive->GetBinContent(4),hinteractive->GetBinError(4),hinteractive->GetBinContent(3),hinteractive->GetBinError(3));
@@ -435,6 +435,30 @@ void drawForANandPAS () {
 
 }
 
+
+void drawSoftJets() {
+/*
+.L drawReducedTrees.C++
+*/
+
+//this seems completely uninteresting!
+
+  setStackMode(true);
+  doData(true);
+  int nbins;
+  float low,high;
+  TString var,xtitle;
+  doRatioPlot(false);
+  setLogY(false);
+
+  nbins=10; low=0; high=10;
+  var="nLooseJets20_30"; xtitle="Soft Jet multiplicity";
+  //ratioMin = 0; ratioMax = 2;
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 &&cutMET==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "nsoftjets_ge1b");
+  
+
+}
 
 void drawSomething() {
   /* for reference, here is all cuts (>=0 b)
@@ -876,7 +900,7 @@ void studySignificance() {
   var="MET/sqrt(HT)"; xtitle="MET/#sqrt{HT}";
   drawSignificance(var,nbins,low,high,"sigfile");
 
-  nbins=20;  low=0;  high=200;
+  nbins=30;  low=0;  high=300;
   var="MET"; xtitle="MET";
   drawSignificance(var,nbins,low,high,"sigfile");
 
@@ -893,10 +917,34 @@ void studySignificance() {
   var="minDeltaPhi"; xtitle="minDeltaPhi";
   drawSignificance(var,nbins,low,high,"sigfile");
 
+  var="minDeltaPhiAll30"; xtitle="minDeltaPhi All 30"; //not as good!
+  drawSignificance(var,nbins,low,high,"sigfile");
+
+
   //remove 3Jet cut
   selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 &&cutMET==1";
   nbins=7; low=0; high=7;
   var="njets"; xtitle="jet multiplicity";
+  drawSignificance(var,nbins,low,high,"sigfile");
+
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 &&cutMET==1";
+  nbins=40; low=200; high=1000;
+  var="HT"; xtitle="HT";
+  drawSignificance(var,nbins,low,high,"sigfile");
+
+  selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 &&cutMET==1";
+  nbins=4; low=0; high=4;
+  var="nbjets"; xtitle="n b tags";
+  drawSignificance(var,nbins,low,high,"sigfile");
+
+  //nominal cuts
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 &&weight<1000 &&cutMET==1";
+  nbins=40;  low=0;  high=400;
+  var="jetpt1"; xtitle="lead jet pt";
+  drawSignificance(var,nbins,low,high,"sigfile");
+
+  nbins=40;  low=0;  high=400;
+  var="bjetpt1"; xtitle="lead b jet pt";
   drawSignificance(var,nbins,low,high,"sigfile");
 
 }
@@ -1458,12 +1506,20 @@ void countILV() {
   savePlots_=oldSaveSetting;
 }
 
-void drawOwen() {
+void drawOwen(TCut extracut="") {
 
   /*
 .L drawReducedTrees.C++
   */
   
+  //can't handle a tighter MET cut this way, because it affects the method differently than, say, a tighter HT cut
+  assert( !TString(extracut.GetTitle()).Contains("MET"));
+
+  savePlots_=false; //don't save eps,png,pdf files
+
+  loadSamples(false); //make sure to load single top as 3 pieces
+  //this only works if loadSamples() hasn't been called yet in this root session!
+
   doOverflowAddition(false);
 
   const  int nbins = 35;
@@ -1486,7 +1542,8 @@ void drawOwen() {
   const  TCut eq1b =  "nbjets == 1";
 
   //
-  TString histfilename=  "bestM3j-bins.root";
+  TString histfilename;
+  histfilename.Form("bestM3j-%s.%s.root", vb ? "vb" : "bins", TString(extracut.GetTitle())=="" ? "baseline" : jmt::fortranize(extracut.GetTitle()).Data());
   TString textfilename=  "drawOwen.output";
 
   ofstream ofile(textfilename.Data());
@@ -1508,7 +1565,7 @@ void drawOwen() {
  
    //these regions define the PDFs (templates)
     const TCut LSBMET = "MET>=0 && MET<50";
-    TCut theLSBSelection = baseSelection && passCleaning && passMinDeltaPhi && theBTaggingCut && LSBMET;
+    TCut theLSBSelection = baseSelection && passCleaning && passMinDeltaPhi && theBTaggingCut && LSBMET && extracut;
     selection_ = theLSBSelection.GetTitle();
     if(vb){
      drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_0_50_"+btagstring+"tag_data","data");
@@ -1525,7 +1582,7 @@ void drawOwen() {
         
     TCut T2MET = "MET>=50 && MET<5000";
     const  TCut baseT2Selection = "cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && ((nElectrons==0 && nMuons==1) || (nElectrons==1 && nMuons==0))"; //no MET, no minDeltaPhi, no cleaning, no b tag
-    TCut theT2Selection = baseT2Selection && passCleaning && passMinDeltaPhi && theBTaggingCut && T2MET;
+    TCut theT2Selection = baseT2Selection && passCleaning && passMinDeltaPhi && theBTaggingCut && T2MET && extracut;
     selection_ = theT2Selection.GetTitle();
     if (vb) {
       drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_50_5000_t2_"+btagstring+"tag_data","data");
@@ -1542,7 +1599,7 @@ void drawOwen() {
 
     //need T2 in data,ttbar in the SR
     const TCut SRMET = "MET>=150 && MET<5000";
-    theT2Selection = baseT2Selection && passCleaning && passMinDeltaPhi && theBTaggingCut && SRMET;
+    theT2Selection = baseT2Selection && passCleaning && passMinDeltaPhi && theBTaggingCut && SRMET && extracut;
     selection_ = theT2Selection.GetTitle();
     if (vb) {
       drawSimple("bestTopMass",nvarbins,varbins,histfilename, "bestM3j_met_150_5000_t2_"+btagstring+"tag_ttbar","TTbarJets");
@@ -1562,7 +1619,7 @@ void drawOwen() {
     fh22.Close(); 
     
     // == signal region ==
-    TCut theSRSelection = baseSelection && passCleaning && passMinDeltaPhi && theBTaggingCut && SRMET;
+    TCut theSRSelection = baseSelection && passCleaning && passMinDeltaPhi && theBTaggingCut && SRMET && extracut;
     selection_ = theSRSelection.GetTitle();
     if (vb) {
       //plot all samples
@@ -1580,7 +1637,7 @@ void drawOwen() {
     }
 
     //need invdphi in data in the SR
-    TCut invdpSelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && SRMET;
+    TCut invdpSelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && SRMET && extracut;
     TString nameOfIDPhist = "bestM3j_met_150_5000_invdphi_";
     nameOfIDPhist+=btagstring; nameOfIDPhist+="tag_";
     selection_ = invdpSelection.GetTitle();
@@ -1606,11 +1663,11 @@ void drawOwen() {
 	ofile<<metCutString<<endl;
 	TCut METselection(metCutString.Data());
 
-	theT2Selection = baseT2Selection && passCleaning && passMinDeltaPhi && theBTaggingCut && METselection;
+	theT2Selection = baseT2Selection && passCleaning && passMinDeltaPhi && theBTaggingCut && METselection && extracut;
 	TString nameOfT2Hist;
 	nameOfT2Hist.Form( "bestM3j_met_%d_%d_t2_%stag_",metCutLow,metCutHigh,btagstring.Data());
 
-	TCut theSelection = baseSelection && passCleaning && passMinDeltaPhi && theBTaggingCut && METselection;
+	TCut theSelection = baseSelection && passCleaning && passMinDeltaPhi && theBTaggingCut && METselection && extracut;
 	selection_ = theSelection.GetTitle();
 	TString nameOfHist;
 	nameOfHist.Form( "bestM3j_met_%d_%d_%stag_",metCutLow,metCutHigh,btagstring.Data());
@@ -1669,7 +1726,7 @@ void drawOwen() {
 	fh44.Close(); 
 
 	//*** fail mdp selection ***//
-      	theSelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && METselection;
+      	theSelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && METselection && extracut;
 	selection_ = theSelection.GetTitle();
 	nameOfHist.Form( "bestM3j_met_%d_%d_invdphi_%stag_",metCutLow,metCutHigh,btagstring.Data());
 	if(vb){

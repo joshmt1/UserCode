@@ -399,7 +399,7 @@ void removeSample(const TString & sample) {
   cout<<sample<<" could not be found on the plotting list, so I did not remove it!"<<endl;
 }
 
-void loadSamples() {
+void loadSamples(bool joinSingleTop=true) {
   if (loaded_) return;
   loaded_=true;
 
@@ -416,7 +416,7 @@ void loadSamples() {
   samples_.push_back("TTbarJets");
 
   //flip this bool to control whether SingleTop is loaded as one piece or 3
-  if (true) samples_.push_back("SingleTop");
+  if (joinSingleTop) samples_.push_back("SingleTop");
   else {
     samples_.push_back("SingleTop-sChannel");
     samples_.push_back("SingleTop-tChannel");
