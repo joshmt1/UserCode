@@ -43,7 +43,6 @@ need to be written
 directly. This can be error prone. A better interface would allow the user
 to set cuts more intutitively and with less change of e.g. accidentally 
 forgotten cuts (while still preserving the current flexibility).
-
  -- someday I should test whether I can get rid of duplicate
 functionality for TH1F and TH1D e.g. the case of addOverflowBin()
 */
@@ -73,9 +72,9 @@ functionality for TH1F and TH1D e.g. the case of addOverflowBin()
 #include <set>
 
 
-TString inputPath = "/cu2/joshmt/V00-03-01_6/";
+TString inputPath = "/cu2/kreis/reducedTrees/V00-01-02/";
 //TString cutdesc = "Baseline0_PF_JERbias_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
-TString cutdesc = "Baseline0_PF_JERbias6_pfMEThigh_PFLepRA20e0mu_minDP_MuonCleaning";
+TString cutdesc = "TCHET";
 //TString cutdesc = "Baseline0_PF_pfMEThigh_PFLepRA20e0mu_minDP_MuonEcalCleaning";
 //TString cutdesc = "Baseline0_PF_pfMEThigh_PFLep0e0mu_minDP_MuonEcalCleaning";
 
@@ -950,32 +949,37 @@ void studySignificance() {
 }
 
 void drawMinDeltaPhiMETslices(){
-
+  useFlavorHistoryWeights_=false;
   doOverflowAddition(true);
-  setStackMode(true);
   doData(true);
   doRatioPlot(true);
-
-
+  ratioMin=0; ratioMax=3;
+  
+  bool doSlices = false;
+  if(!doSlices){
+    leg_y1=0.6; //and also remember to use correct color scheme
+    owenColor_=true;
+  }  
 
   int nbins;
   float low,high;
   TString var,xtitle;
-  
-  setLogY(false);
-  resetPlotMinimum();
+
   nbins=10; low=0; high = TMath::Pi() + 0.001;
   var="minDeltaPhi"; xtitle="min(#Delta#phi[ jets 1..3, E_{T}^{miss} ] )";
+  const int nvarbins=2;
+  const float varbins[]={0.,0.3,high};
   
-  TCut baseSelection ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && passInconsistentMuon==1 && passBadPFMuon==1 && weight<1000";
+  TCut baseSelection =""; 
   TCut theseCuts = ""; 
-
-  const  TString histfilename = "minDeltaPhiInMETSlices.root"; //jmt
+  TString extraName = "";
 
   const  TCut ge1b =  "nbjets >= 1";
   const  TCut ge2b =  "nbjets >= 2";
   const  TCut eq1b =  "nbjets == 1";
-  for (int ibtag = 0; ibtag<3; ibtag++) { //do this an ugly way for now
+  const  TCut pretag =  "1";
+  const  TCut antitag = "nbjets == 0";
+  for (int ibtag = 0; ibtag<5; ibtag++) { //do this an ugly way for now
     TCut theBTaggingCut = ge1b; TString btagstring = "ge1b";
     if (ibtag==0) { //nothing to do
     }
@@ -987,58 +991,163 @@ void drawMinDeltaPhiMETslices(){
       theBTaggingCut = ge2b; 
       btagstring = "ge2b";
     }
+    else if (ibtag==3) {
+      theBTaggingCut = pretag;
+      btagstring = "pre";
+    }
+    else if (ibtag==4) {
+      theBTaggingCut = antitag;
+      btagstring = "antib";
+    }
     else assert(0);
     
-    //MET < 50
-    theseCuts = "MET<50.";
-    selection_ = baseSelection && theBTaggingCut && theseCuts;
-    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+"_MinDeltaPhi_MET_0_50");
 
-    TFile fh(histfilename,"UPDATE");   //can we just leave the file open?
-    totalsm->SetName("mindp_met_0_50_"+btagstring+"tag_allsm");
-    totalsm->Write();        
-    hdata->SetName("mindp_met_0_50_"+btagstring+"tag_data");
-    hdata->Write();            
-    fh.Close();   
-
-    //50 < MET < 100 
-    theseCuts = "MET<100. && MET>=50.";
-    selection_ = baseSelection && theBTaggingCut && theseCuts;
-    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+"_MinDeltaPhi_MET_50_100");
-
-    TFile fh2(histfilename,"UPDATE");   //can we just leave the file open?
-    totalsm->SetName("mindp_met_50_100_"+btagstring+"tag_allsm");
-    totalsm->Write();          
-    hdata->SetName("mindp_met_50_100_"+btagstring+"tag_data");
-    hdata->Write();          
-    fh2.Close();   
-
-    //100 < MET < 150
-    theseCuts = "MET<150. && MET>=100.";
-    selection_ = baseSelection && theBTaggingCut && theseCuts;
-    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+"_MinDeltaPhi_MET_100_150");
-
-    TFile fh3(histfilename,"UPDATE");   //can we just leave the file open?
-    totalsm->SetName("mindp_met_100_150_"+btagstring+"tag_allsm");
-    totalsm->Write();          
-    hdata->SetName("mindp_met_100_150_"+btagstring+"tag_data");
-    hdata->Write();            
-    fh3.Close();   
-
-    //MET < 150
-    theseCuts = "MET>=150.";
-    selection_ = baseSelection && theBTaggingCut && theseCuts;
-    drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+"_MinDeltaPhi_MET_150_inf");
+    //+++++++++++NOMINAL SELECTION+++++++++++//
+    baseSelection = "cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && passInconsistentMuon==1 && passBadPFMuon==1";//nominal
+    extraName = "_nominal";
+     
+    if(doSlices){
+      //MinDeltaPhi in MET slices
+      setStackMode(true); setLogY(false); resetPlotMinimum();
+      //MET < 50
+      theseCuts = "MET<50.";
+      selection_ = baseSelection && theBTaggingCut && theseCuts;
+      drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50");
+      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50_vb");
+      //50 < MET < 100 
+      theseCuts = "MET<100. && MET>=50.";
+      selection_ = baseSelection && theBTaggingCut && theseCuts;
+      drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100");
+      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100_vb");
+      //100 < MET < 150
+      theseCuts = "MET<150. && MET>=100.";
+      selection_ = baseSelection && theBTaggingCut && theseCuts;
+      drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150");
+      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150_vb");
+      //MET < 150
+      theseCuts = "MET>=150.";
+      selection_ = baseSelection && theBTaggingCut && theseCuts;
+      drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf"); 
+      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf_vb");
+    }
+    else{
+      //Ratio plot
+      selection_ = baseSelection && theBTaggingCut;
+      setStackMode(false); setPlotMinimum(1e-2); drawTotalSM_=true; setLogY(true); 
+      drawR("minDeltaPhi",0.3,20,0,200,btagstring+extraName);
+      drawR("minDeltaPhi",0.3,4,0,200,btagstring+extraName+"_4bins");
+    }
     
-    TFile fh4(histfilename,"UPDATE");   //can we just leave the file open?
-    totalsm->SetName("mindp_met_150_inf_"+btagstring+"tag_allsm");
-    totalsm->Write();
-    hdata->SetName("mindp_met_150_inf_"+btagstring+"tag_data");
-    hdata->Write();            
-    fh4.Close();   
+    /*
+    //[+++++++++++++njets==2++++++++]//
+    baseSelection = "cutHT==1 && cutPV==1 && cutTrigger==1 && cutEleVeto==1 && cutMuVeto==1 && passInconsistentMuon==1 && passBadPFMuon==1 && njets==2"; //remove cut3Jets and add njets
+    extraName = "_njetsEQ2";
 
-  }
- 
+    if(doSlices){
+      //MinDeltaPhi in MET slices
+      setStackMode(true); setLogY(false); resetPlotMinimum();
+      //MET < 50
+      theseCuts = "MET<50.";
+      selection_ = baseSelection && theBTaggingCut && theseCuts;
+      drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50");
+      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50_vb");
+      //50 < MET < 100 
+      theseCuts = "MET<100. && MET>=50.";
+      selection_ = baseSelection && theBTaggingCut && theseCuts;
+      drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100");
+      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100_vb");
+      //100 < MET < 150
+      theseCuts = "MET<150. && MET>=100.";
+      selection_ = baseSelection && theBTaggingCut && theseCuts;
+      drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150");
+      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150_vb");
+      //MET < 150
+      theseCuts = "MET>=150.";
+      selection_ = baseSelection && theBTaggingCut && theseCuts;
+      drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf");
+      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf_vb");
+    }
+    else{
+      //Ratio plot
+      selection_ = baseSelection && theBTaggingCut;
+      setStackMode(false); setPlotMinimum(1e-2); drawTotalSM_=true; setLogY(true); 
+      drawR("minDeltaPhi",0.3,20,0,200,btagstring+extraName);
+      drawR("minDeltaPhi",0.3,4,0,200,btagstring+extraName+"_4bins");
+    }
+    */
+    
+    /*
+    //[+++++++++++m3j>350++++++++++++]//
+    baseSelection = "cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && passInconsistentMuon==1 && passBadPFMuon==1 && bestTopMass>350";//nominal plus m3j cut
+    extraName = "_m3jGT350";
+    
+    if(doSlices){
+      //MinDeltaPhi in MET slices
+      setStackMode(true); setLogY(false); resetPlotMinimum();
+      //MET < 50
+      theseCuts = "MET<50.";
+      selection_ = baseSelection && theBTaggingCut && theseCuts;
+      drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50");
+      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50_vb");
+      //50 < MET < 100 
+      theseCuts = "MET<100. && MET>=50.";
+      selection_ = baseSelection && theBTaggingCut && theseCuts;
+      drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100");
+      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100_vb");
+      //100 < MET < 150
+      theseCuts = "MET<150. && MET>=100.";
+      selection_ = baseSelection && theBTaggingCut && theseCuts;
+      drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150");
+      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150_vb");
+      //MET < 150
+      theseCuts = "MET>=150.";
+      selection_ = baseSelection && theBTaggingCut && theseCuts;
+      drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf");
+      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf_vb");
+    }
+    else{
+      //Ratio plot
+      selection_ = baseSelection && theBTaggingCut;
+      setStackMode(false); setPlotMinimum(1e-2); drawTotalSM_=true; setLogY(true); 
+      drawR("minDeltaPhi",0.3,20,0,200,btagstring+extraName);
+      drawR("minDeltaPhi",0.3,4,0,200,btagstring+extraName+"_4bins");
+    }
+    */
+
+  }//b-tag cut loop 
+}
+
+
+void drawMETPlots() {
+
+  setStackMode(true);
+  doData(true);
+  doRatioPlot(true);
+
+  int nbins;
+  float low,high;
+  TString var,xtitle;
+
+  // ==== MET plots ====
+  setLogY(true);   setPlotMinimum(1e-1);
+  nbins=25; low= 0; high=500;
+  var="MET"; xtitle="E_{T}^{miss} [GeV]";
+  ratioMin = 0; ratioMax = 3;
+
+  selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET");
+
+  selection_ ="nbjets>=1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET_ge1b");
+
+  selection_ ="nbjets==1 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET_eq1b");
+
+  selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET_ge2b");
+  
+  selection_ ="nbjets==0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
+  drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET_antib");
 }
 
 

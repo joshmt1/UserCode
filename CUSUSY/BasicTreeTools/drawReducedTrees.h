@@ -32,6 +32,7 @@ bool addOverflow_=true;
 //bool doSubtraction_=false;
 bool drawQCDErrors_=false;
 bool renormalizeBins_=false;//no setter function
+bool owenColor_ = false;
 
 bool normalized_=false;
 
@@ -422,22 +423,22 @@ void loadSamples(bool joinSingleTop=true) {
     samples_.push_back("SingleTop-tChannel");
     samples_.push_back("SingleTop-tWChannel");
   }
-  samples_.push_back("WJetsZ2");
+  samples_.push_back("WJets");
 
   samples_.push_back("ZJets");
   samples_.push_back("Zinvisible");
   samples_.push_back("LM13");
 
   //samplesAll_ should have *every* available sample
-  samplesAll_.insert("QCD");
-  samplesAll_.insert("PythiaQCD");
+  //samplesAll_.insert("QCD");
+  //samplesAll_.insert("PythiaQCD");
   samplesAll_.insert("PythiaPUQCD");
-  samplesAll_.insert("PythiaPUQCDFlat");
+  //samplesAll_.insert("PythiaPUQCDFlat");
   samplesAll_.insert("TTbarJets");
   samplesAll_.insert("WJets");
   samplesAll_.insert("ZJets");
-  samplesAll_.insert("WJetsZ2");
-  samplesAll_.insert("ZJetsZ2");
+  //samplesAll_.insert("WJetsZ2");
+  //samplesAll_.insert("ZJetsZ2");
   samplesAll_.insert("Zinvisible");
   samplesAll_.insert("SingleTop");
   samplesAll_.insert("SingleTop-sChannel");
@@ -448,7 +449,7 @@ void loadSamples(bool joinSingleTop=true) {
 
   //these blocks are just a "dictionary"
   //no need to ever comment these out
-  if (true) {
+  if (!owenColor_) {
     sampleColor_["LM13"] = kRed-9;//kGray;
     sampleColor_["QCD"] = kYellow;
     sampleColor_["PythiaQCD"] = kYellow;
@@ -918,6 +919,12 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
   cstring1 += cutVal;
   cstring2 += cutVal;
 
+  //terrible hack to decide if bias correction should be calculated
+  bool calcBiasCorr = false;
+  if(nbins==4 && low>-0.01 && low<0.01 && high>199.99 && high<200.01) calcBiasCorr=true;
+  float cb_qcd=0, cb_qcd_err=0, cb_sm=0, cb_sm_err=0, cb_data=0, cb_data_err=0;
+  float cp_qcd=0, cp_qcd_err=0, cp_sm=0, cp_sm_err=0, cp_data=0, cp_data_err=0;
+
   loadSamples();
 
   gROOT->SetStyle("CMS");
@@ -1036,8 +1043,15 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
       if (firsthist="") firsthist = hnameR;
       if (histos_[hnameR]->GetMaximum() > max) max = histos_[hnameR]->GetMaximum();
       leg->AddEntry(histos_[hnameR], sampleLabel_[samples_[isample]]);
+      
+      if(calcBiasCorr){
+	cp_qcd = histos_[hnameR]->GetBinContent(3)/ histos_[hnameR]->GetBinContent(2);
+	cp_qcd_err = jmt::errAoverB( histos_[hnameR]->GetBinContent(3), histos_[hnameR]->GetBinError(3), histos_[hnameR]->GetBinContent(2), histos_[hnameR]->GetBinError(2)); 
+	cb_qcd = histos_[hnameR]->GetBinContent(4)/ histos_[hnameR]->GetBinContent(3);
+	cb_qcd_err = jmt::errAoverB( histos_[hnameR]->GetBinContent(4), histos_[hnameR]->GetBinError(4), histos_[hnameR]->GetBinContent(3), histos_[hnameR]->GetBinError(3)); 
+      }
     }
-
+    
   }
 
   histos_[firsthist]->SetMaximum( max*maxScaleFactor_);
@@ -1049,6 +1063,13 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
     //    leg->Clear();
     leg->AddEntry(totalsm,sampleLabel_["TotalSM"]);
   }
+  if(calcBiasCorr){
+    cp_sm = totalsm->GetBinContent(3)/totalsm->GetBinContent(2);
+    cp_sm_err = jmt::errAoverB(totalsm->GetBinContent(3),totalsm->GetBinError(3),totalsm->GetBinContent(2),totalsm->GetBinError(2));
+    cb_sm = totalsm->GetBinContent(4)/totalsm->GetBinContent(3);
+    cb_sm_err = jmt::errAoverB(totalsm->GetBinContent(4),totalsm->GetBinError(4),totalsm->GetBinContent(3),totalsm->GetBinError(3));
+  }
+
 
   if (dodata_) {
     gROOT->cd();
@@ -1112,6 +1133,13 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
     ratio->SetMaximum(ratioMax);
     ratio->Draw();
     cout<<"KS Test results (shape only): "<<hdata->KolmogorovTest(totalsm)<<endl;;
+
+    if(calcBiasCorr){
+      cp_data = hdata->GetBinContent(3)/hdata->GetBinContent(2);
+      cp_data_err = jmt::errAoverB(hdata->GetBinContent(3),hdata->GetBinError(3),hdata->GetBinContent(2),hdata->GetBinError(2)); 
+      cb_data = hdata->GetBinContent(4)/hdata->GetBinContent(3);
+      cb_data_err = jmt::errAoverB(hdata->GetBinContent(4),hdata->GetBinError(4),hdata->GetBinContent(3),hdata->GetBinError(3)); 
+    }
   }
   thecanvas->cd(1);
   leg->Draw();
@@ -1130,9 +1158,21 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
 //   data2d_50.DrawCopy("colz");
 //   c2d->cd(4);
 //   data2d_SB.DrawCopy("colz");
-//   cout<<"Total SM MC correlation [50<MET<100]  = "<<totalsm2d_50.GetCorrelationFactor()<<endl;
-//   cout<<"Total SM MC correlation [100<MET<150] = "<<totalsm2d_SB.GetCorrelationFactor()<<endl;
-//   cout<<"Data correlation [50<MET<100]         = "<<data2d_50.GetCorrelationFactor()<<endl;
-//   cout<<"Data correlation [100<MET<150]        = "<<data2d_SB.GetCorrelationFactor()<<endl;
-
+  cout<<"Total SM MC correlation [50<MET<100]  = "<<totalsm2d_50.GetCorrelationFactor()<<endl;
+  cout<<"Total SM MC correlation [100<MET<150] = "<<totalsm2d_SB.GetCorrelationFactor()<<endl;
+  cout<<"Data correlation [50<MET<100]         = "<<data2d_50.GetCorrelationFactor()<<endl;
+  cout<<"Data correlation [100<MET<150]        = "<<data2d_SB.GetCorrelationFactor()<<endl;
+  if(calcBiasCorr){
+    cout<<endl;
+    cout<<"Pseudo bias correction (using 50<MET<100 and 100<MET<150):" << endl;
+    cout<<"QCD MC: "<<cp_qcd<<" +/- "<<cp_qcd_err<<endl;
+    cout<<"SM MC: "<<cp_sm<<" +/- "<<cp_sm_err<<endl;
+    cout<<"Data: "<<cp_data<<" +/- "<<cp_data_err<<endl;
+    cout<<endl;
+    cout<<"True bias correction (using 100<MET<150 and 150<MET):" << endl;
+    cout<<"QCD MC: "<<cb_qcd<<" \\pm "<<cb_qcd_err<<endl;
+    cout<<"SM MC: "<<cb_sm<<" \\pm "<<cb_sm_err<<endl;
+    cout<<"Data: "<<cb_data<<" \\pm "<<cb_data_err<<endl;
+  }
+  cout<<"End of drawR()"<<endl;
 }
