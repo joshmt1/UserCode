@@ -36,7 +36,7 @@ bool owenColor_ = false;
 
 bool normalized_=false;
 
-bool useFlavorHistoryWeights_=true;//no setter function
+bool useFlavorHistoryWeights_=false;//no setter function
 float flavorHistoryScaling_=-1;
 
 bool savePlots_ = true; //no setter function
