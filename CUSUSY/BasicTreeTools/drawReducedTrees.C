@@ -953,9 +953,11 @@ void drawMinDeltaPhiMETslices(){
   doOverflowAddition(true);
   doData(true);
   doRatioPlot(true);
+  setQuiet(false);
   ratioMin=0; ratioMax=3;
   
-  bool doSlices = false;
+  bool doVB = false;
+  bool doSlices = true;
   if(!doSlices){
     leg_y1=0.6; //and also remember to use correct color scheme
     owenColor_=true;
@@ -979,7 +981,7 @@ void drawMinDeltaPhiMETslices(){
   const  TCut eq1b =  "nbjets == 1";
   const  TCut pretag =  "1";
   const  TCut antitag = "nbjets == 0";
-  for (int ibtag = 0; ibtag<5; ibtag++) { //do this an ugly way for now
+  for (int ibtag = 0; ibtag<5; ibtag++) { 
     TCut theBTaggingCut = ge1b; TString btagstring = "ge1b";
     if (ibtag==0) { //nothing to do
     }
@@ -1013,22 +1015,22 @@ void drawMinDeltaPhiMETslices(){
       theseCuts = "MET<50.";
       selection_ = baseSelection && theBTaggingCut && theseCuts;
       drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50");
-      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50_vb");
+      if(doVB) drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50_vb");
       //50 < MET < 100 
       theseCuts = "MET<100. && MET>=50.";
       selection_ = baseSelection && theBTaggingCut && theseCuts;
       drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100");
-      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100_vb");
+      if(doVB) drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100_vb");
       //100 < MET < 150
       theseCuts = "MET<150. && MET>=100.";
       selection_ = baseSelection && theBTaggingCut && theseCuts;
       drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150");
-      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150_vb");
+      if(doVB) drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150_vb");
       //MET < 150
       theseCuts = "MET>=150.";
       selection_ = baseSelection && theBTaggingCut && theseCuts;
       drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf"); 
-      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf_vb");
+      if(doVB) drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf_vb");
     }
     else{
       //Ratio plot
@@ -1050,22 +1052,22 @@ void drawMinDeltaPhiMETslices(){
       theseCuts = "MET<50.";
       selection_ = baseSelection && theBTaggingCut && theseCuts;
       drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50");
-      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50_vb");
+      if(doVB) drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50_vb");
       //50 < MET < 100 
       theseCuts = "MET<100. && MET>=50.";
       selection_ = baseSelection && theBTaggingCut && theseCuts;
       drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100");
-      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100_vb");
+      if(doVB) drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100_vb");
       //100 < MET < 150
       theseCuts = "MET<150. && MET>=100.";
       selection_ = baseSelection && theBTaggingCut && theseCuts;
       drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150");
-      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150_vb");
+      if(doVB) drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150_vb");
       //MET < 150
       theseCuts = "MET>=150.";
       selection_ = baseSelection && theBTaggingCut && theseCuts;
       drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf");
-      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf_vb");
+      if(doVB) drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf_vb");
     }
     else{
       //Ratio plot
@@ -1088,22 +1090,22 @@ void drawMinDeltaPhiMETslices(){
       theseCuts = "MET<50.";
       selection_ = baseSelection && theBTaggingCut && theseCuts;
       drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50");
-      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50_vb");
+      if(doVB) drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_0_50_vb");
       //50 < MET < 100 
       theseCuts = "MET<100. && MET>=50.";
       selection_ = baseSelection && theBTaggingCut && theseCuts;
       drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100");
-      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100_vb");
+      if(doVB) drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_50_100_vb");
       //100 < MET < 150
       theseCuts = "MET<150. && MET>=100.";
       selection_ = baseSelection && theBTaggingCut && theseCuts;
       drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150");
-      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150_vb");
+      if(doVB) drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_100_150_vb");
       //MET < 150
       theseCuts = "MET>=150.";
       selection_ = baseSelection && theBTaggingCut && theseCuts;
       drawPlots(var,nbins,low,high,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf");
-      drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf_vb");
+      if(doVB) drawPlots(var,nvarbins,varbins,xtitle,"Events", btagstring+extraName+"_MinDeltaPhi_MET_150_inf_vb");
     }
     else{
       //Ratio plot
@@ -1119,10 +1121,11 @@ void drawMinDeltaPhiMETslices(){
 
 
 void drawMETPlots() {
-
+  useFlavorHistoryWeights_=false;
   setStackMode(true);
   doData(true);
   doRatioPlot(true);
+  setQuiet(false);
 
   int nbins;
   float low,high;
@@ -1134,6 +1137,7 @@ void drawMETPlots() {
   var="MET"; xtitle="E_{T}^{miss} [GeV]";
   ratioMin = 0; ratioMax = 3;
 
+  
   selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET");
 
@@ -1145,9 +1149,13 @@ void drawMETPlots() {
 
   selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET_ge2b");
-  
+ 
+
   selection_ ="nbjets==0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET_antib");
+
+  //selection_ ="nbjets==0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>=150.";
+  //drawPlots(var,1,150,high,xtitle,"Events", "H_MET_antib");
 }
 
 
