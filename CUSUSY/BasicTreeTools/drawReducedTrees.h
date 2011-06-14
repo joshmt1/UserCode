@@ -837,6 +837,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
       }
     }
 
+
     if (!quiet_ && !renormalizeBins_) {
       cout<<"Integral of data, EW, total SM: "<<hdata->Integral()<<" ; "<<totalewk->Integral()<<" ; "<<totalsm->Integral()<<endl;
       cout<<"Chi^2 Test results: "<<hdata->Chi2Test(totalsm,"UW P")<<endl;
@@ -853,6 +854,13 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
       thecanvas->GetPad(2)->SetTopMargin(0.1);
     }
   }
+
+    if(!quiet_ && dostack_ && nbins<11){//BEN - 11 is an arbitrary number that isn't too big so we don't print out too much stuff.
+      for(int i=1; i<=nbins; i++){
+	cout << "data: " << hdata->GetBinContent(i) << " +- " << hdata->GetBinError(i) << ", totalsm: " << totalsm->GetBinContent(i) << " +- " << totalsm->GetBinError(i) << ", ratio: " << ratio->GetBinContent(i) << " +- " << ratio->GetBinError(i) << endl;
+      }
+    }
+
 
   thecanvas->cd(mainPadIndex);
   if (doleg_)  leg->Draw();
@@ -924,6 +932,8 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
   if(nbins==4 && low>-0.01 && low<0.01 && high>199.99 && high<200.01) calcBiasCorr=true;
   float cb_qcd=0, cb_qcd_err=0, cb_sm=0, cb_sm_err=0, cb_data=0, cb_data_err=0;
   float cp_qcd=0, cp_qcd_err=0, cp_sm=0, cp_sm_err=0, cp_data=0, cp_data_err=0;
+  float n_qcd_sb = 0, n_qcd_sb_err = 0, n_qcd_sig = 0, n_qcd_sig_err = 0;
+  float n_qcd_a = 0, n_qcd_a_err = 0, n_qcd_d = 0, n_qcd_d_err = 0;
 
   loadSamples();
 
@@ -1049,6 +1059,14 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
 	cp_qcd_err = jmt::errAoverB( histos_[hnameR]->GetBinContent(3), histos_[hnameR]->GetBinError(3), histos_[hnameR]->GetBinContent(2), histos_[hnameR]->GetBinError(2)); 
 	cb_qcd = histos_[hnameR]->GetBinContent(4)/ histos_[hnameR]->GetBinContent(3);
 	cb_qcd_err = jmt::errAoverB( histos_[hnameR]->GetBinContent(4), histos_[hnameR]->GetBinError(4), histos_[hnameR]->GetBinContent(3), histos_[hnameR]->GetBinError(3)); 
+	n_qcd_sb = histos_[hnameP]->GetBinContent(3);
+	n_qcd_sb_err = histos_[hnameP]->GetBinError(3);
+	n_qcd_sig = histos_[hnameP]->GetBinContent(4);
+	n_qcd_sig_err = histos_[hnameP]->GetBinError(4);
+     	n_qcd_a = histos_[hnameF]->GetBinContent(3);
+	n_qcd_a_err = histos_[hnameF]->GetBinError(3);
+	n_qcd_d = histos_[hnameF]->GetBinContent(4);
+	n_qcd_d_err = histos_[hnameF]->GetBinError(4);
       }
     }
     
@@ -1173,6 +1191,13 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
     cout<<"QCD MC: "<<cb_qcd<<" \\pm "<<cb_qcd_err<<endl;
     cout<<"SM MC: "<<cb_sm<<" \\pm "<<cb_sm_err<<endl;
     cout<<"Data: "<<cb_data<<" \\pm "<<cb_data_err<<endl;
+    cout << endl;
+    cout << "QCD Event Counts" << endl;
+    cout << "SB: " << n_qcd_sb << " +- " << n_qcd_sb_err << endl;
+    cout << "SIG: " << n_qcd_sig << " +- " << n_qcd_sig_err << endl;
+    cout << "A: " << n_qcd_a << " +- " << n_qcd_a_err << endl;
+    cout << "D: " << n_qcd_d << " +- " << n_qcd_d_err << endl;
+    cout << endl;
   }
   cout<<"End of drawR()"<<endl;
 }
