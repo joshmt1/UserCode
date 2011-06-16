@@ -21,6 +21,7 @@ TH1D* hdata=0;
 TString selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutMET==1 && cutDeltaPhi==1 && cutCleaning==1";
 
 float leg_x1 = 0.696, leg_x2=0.94, leg_y1=0.5, leg_y2=0.92;
+double lumiScale_ = 1.;
 
 bool quiet_=false;
 bool doRatio_=false;
@@ -137,6 +138,11 @@ void drawLegend(bool doleg) {
   doleg_=doleg;
 }
 
+void setLumiScale(double lumiscale){
+  lumiScale_ = lumiscale;
+}
+
+
 int mainpadWidth; int mainpadHeight;
 int ratiopadHeight = 250;
 // TPad* mainPad=0;
@@ -247,6 +253,7 @@ void fillFlavorHistoryScaling() {
   gROOT->cd();
   TH1D dummyU("dummyU","",1,0,1e9);
   TH1D dummyk("dummyk","",1,0,1e9);
+  assert(0);//please check that the following cuts have the weights and cuts handled correctly
   tree->Draw("HT>>dummyU","1","goff");
   tree->Draw("HT>>dummyk","flavorHistoryWeight","goff");
   flavorHistoryScaling_ = dummyU.Integral() / dummyk.Integral();
@@ -254,9 +261,13 @@ void fillFlavorHistoryScaling() {
 
 }
 
-TString getCutString(TString extraSelection="",TString extraWeight="",int pdfWeightIndex=0) {
+TString getCutString(double lumiscale= 1., TString extraWeight="", TString thisSelection="", TString extraSelection="", int pdfWeightIndex=0) {
   TString weightedcut="weight"; 
-
+  
+  weightedcut += "*(";
+  weightedcut +=lumiscale;
+  weightedcut+=")";
+  
   if (extraWeight=="flavorHistoryWeight") {
     if (flavorHistoryScaling_ <0) {
       fillFlavorHistoryScaling();
@@ -273,9 +284,9 @@ TString getCutString(TString extraSelection="",TString extraWeight="",int pdfWei
     pdfString.Form("*pdfWeights[%d]",pdfWeightIndex);
     weightedcut += pdfString;
   }
-  if (selection_!="") {
+  if (thisSelection!="") {
     weightedcut += "*(";
-    weightedcut+=selection_;
+    weightedcut+=thisSelection;
     if (extraSelection != "") {
       weightedcut += " && ";
       weightedcut +=extraSelection;
@@ -601,7 +612,7 @@ float drawSimple(const TString var, const int nbins, const float low, const floa
   hh->Sumw2();
    
   TString optfh= useFlavorHistoryWeights_ && samplename.Contains("WJets") ? "flavorHistoryWeight" : "";
-  tree->Project(histname,var,getCutString("",optfh).Data());
+  tree->Project(histname,var,getCutString(lumiScale_,optfh,selection_,"",0).Data());
   float theIntegral = hh->Integral(0,nbins+1);
 
   if (addOverflow_)  addOverflowBin( hh ); //manipulates the TH1F
@@ -697,7 +708,7 @@ void drawPlots(const TString var, const int nbins, const float low, const float 
     TTree* tree = (TTree*) files_[samples_[isample]]->Get("reducedTree");
     gROOT->cd();
     TString weightopt= useFlavorHistoryWeights_ && samples_[isample].Contains("WJets") ? "flavorHistoryWeight" : "";
-    tree->Project(hname,var,getCutString("",weightopt).Data());
+    tree->Project(hname,var,getCutString(lumiScale_,weightopt,selection_,"",0).Data());
     //now the histo is filled
     
     if (renormalizeBins_) ytitle=renormBins(histos_[samples_[isample]],2 ); //manipulates the TH1D //FIXME hard-coded "2"
@@ -1009,9 +1020,9 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
 
     //Fill histos
     if (useFlavorHistoryWeights_) assert(0); // this needs to be implemented
-    tree->Project(hnameP,var,getCutString(cstring1).Data());
-    tree->Project(hnameF,var,getCutString(cstring2).Data());
-
+    tree->Project(hnameP,var,getCutString(lumiScale_,"",selection_,cstring1,0).Data());
+    tree->Project(hnameF,var,getCutString(lumiScale_,"",selection_,cstring2,0).Data());
+    
     if (addOverflow_)  addOverflowBin( histos_[hnameP] );
     if (addOverflow_)  addOverflowBin( histos_[hnameF] );
 
@@ -1108,15 +1119,15 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
 
     TTree* dtree = (TTree*) fdata->Get("reducedTree");
     gROOT->cd();
-    dtree->Project(hnameP,var,getCutString(cstring1).Data());
-    dtree->Project(hnameF,var,getCutString(cstring2).Data());
+    dtree->Project(hnameP,var,getCutString(1.,"",selection_,cstring1,0).Data());
+    dtree->Project(hnameF,var,getCutString(1.,"",selection_,cstring2,0).Data());
     if (addOverflow_)  addOverflowBin( histos_[hnameP] );
     if (addOverflow_)  addOverflowBin( histos_[hnameF] );
     //compute ratio
     hdata->Divide(histos_[hnameP], histos_[hnameF]);
 
-    dtree->Project("data2d_SB","minDeltaPhi:MET",getCutString().Data());
-    dtree->Project("data2d_50","minDeltaPhi:MET",getCutString().Data());
+    dtree->Project("data2d_SB","minDeltaPhi:MET",getCutString(1.,"",selection_,"",0).Data());
+    dtree->Project("data2d_50","minDeltaPhi:MET",getCutString(1.,"",selection_,"",0).Data());
 
     //    hdata->UseCurrentStyle(); //maybe not needed anymore
     hdata->SetMarkerColor(kBlack);

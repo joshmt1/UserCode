@@ -1137,7 +1137,7 @@ void drawMETPlots() {
   var="MET"; xtitle="E_{T}^{miss} [GeV]";
   ratioMin = 0; ratioMax = 3;
 
-  
+  /*
   selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET");
 
@@ -1149,13 +1149,16 @@ void drawMETPlots() {
 
   selection_ ="nbjets>=2 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET_ge2b");
- 
 
   selection_ ="nbjets==0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1";
   drawPlots(var,nbins,low,high,xtitle,"Events", "H_MET_antib");
+  */
 
-  //selection_ ="nbjets==0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>=150.";
-  //drawPlots(var,1,150,high,xtitle,"Events", "H_MET_antib");
+  setLogY(false);
+  setPlotMaximum(100);
+  selection_ ="nbjets==0 && cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cutEleVeto==1 && cutMuVeto==1 && cutDeltaPhi==1 && passInconsistentMuon==1 && passBadPFMuon==1 && MET>=150.";
+  resetPlotMaximum();
+  drawPlots(var,10,150,high,xtitle,"Events", "H_MET_antib");
 }
 
 
@@ -1396,7 +1399,7 @@ void countABCD() {
     TCut METC = "MET>=150 && MET<5000";
     TCut theSIGSelection = baseSelection && passCleaning && passMinDeltaPhi && theBTaggingCut && METC;
     selection_ = theSIGSelection.GetTitle();
-    tree->Project("dummyhist","HT",getCutString().Data());
+    tree->Project("dummyhist","HT",getCutString(1.,"",selection_, "",0).Data());
     cout<<"N_SIG = "<<dummyhist.Integral()<<endl;
 
     dummyhist.Reset();
@@ -1405,14 +1408,14 @@ void countABCD() {
     TCut METD = "MET>=150 && MET<5000";
     TCut theDSelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && METD;
     selection_ = theDSelection.GetTitle();
-    tree->Project("dummyhist","HT",getCutString().Data());
+    tree->Project("dummyhist","HT",getCutString(1.,"",selection_,"",0).Data());
     double nd = dummyhist.Integral();
     cout<<"N_D = "<<nd<<endl;
 
     TCut META = "MET>=100 && MET<150";
     TCut theASelection = baseSelection && passCleaning && failMinDeltaPhi && theBTaggingCut && META;
     selection_ = theASelection.GetTitle();
-    tree->Project("dummyhist","HT",getCutString().Data());
+    tree->Project("dummyhist","HT",getCutString(1.,"",selection_,"",0).Data());
     double na = dummyhist.Integral();
     cout<<"N_A = "<<na<<endl;
 
@@ -1434,7 +1437,7 @@ void flvHistReweighting() {
   //can use the extraSelection part of the getCutString()
 
   dodata_=false;
-  const TString samplename = "WJets";
+  const TString samplename = "WJets"; //if this is changed to data, lumiScale_ should not be applied
   setQuiet(true);
   loadSamples();
   
@@ -1459,14 +1462,14 @@ void flvHistReweighting() {
   dummyhist.Sumw2();
 
   //nominal case
-  tree->Project("dummyhist","HT",getCutString().Data());
+  tree->Project("dummyhist","HT",getCutString(lumiScale_,"",selection_,"",0).Data());
   float n_nom = dummyhist.GetBinContent(1);
   float nerr_nom = dummyhist.GetBinError(1);
   cout<<" nominal     = "<<n_nom<<" +/- "<<nerr_nom<<endl;
   dummyhist.Reset();
 
   //with flv hist
-  tree->Project("dummyhist","HT",getCutString("","flavorHistoryWeight").Data());
+  tree->Project("dummyhist","HT",getCutString(lumiScale_,"flavorHistoryWeight",selection_,"",0).Data());
   float  n_fh = dummyhist.GetBinContent(1);
   float  nerr_fh = dummyhist.GetBinError(1);
   cout<<" full reweight    = "<<n_fh<<" +/- "<<nerr_fh<<endl;
@@ -1496,10 +1499,11 @@ void flvHistReweighting() {
 	manualreweight += thisterm;
 	if (ii+1 != ncat) manualreweight += " + ";
       }
-      tree->Project("dummyhist","HT",getCutString("",manualreweight).Data()); //this will be normalized *wrong* because it doesn't have the N/sum(k_i) factor
+      tree->Project("dummyhist","HT",getCutString(lumiScale_,manualreweight,selection_,"",0).Data()); //this will be normalized *wrong* because it doesn't have the N/sum(k_i) factor
       float  n = dummyhist.GetBinContent(1);
       float  nerr = dummyhist.GetBinError(1);
       dummyhist.Reset();
+      assert(0);//please double check that the following few lines of code have the weights and cuts handled correctly
       tree->Project("dummyhist","HT","1"); //weight of 1
       double unweighted = dummyhist.GetBinContent(1);
       dummyhist.Reset();
@@ -1523,7 +1527,7 @@ void flvHistReweighting() {
 
 void pdfUncertainties() {
   dodata_=false;
-  const TString samplename = "WJetsZ2";
+  const TString samplename = "WJetsZ2"; //if this is changed to data, lumiScale_ should not be applied
   setQuiet(true);
   loadSamples();
 
@@ -1548,14 +1552,14 @@ void pdfUncertainties() {
   TH1D dummyhist("dummyhist","",1,0,1e9); //the typical kludge to count events; 1 bin histogram with large range
   dummyhist.Sumw2();
   //nominal case
-  tree->Project("dummyhist","HT",getCutString("",optfh,0).Data());
+  tree->Project("dummyhist","HT",getCutString(lumiScale_,optfh,selection_,"",0).Data());
   float n = dummyhist.GetBinContent(1);
   float nerr = dummyhist.GetBinError(1);
 
   TH1D HpdfUnc("HpdfUnc","",100,n - 3*nerr, n+3*nerr);
   for (int i=1; i<=44; i++) { //hard code that there are 44+1 pdf weights
     dummyhist.Reset(); //maybe not needed
-    tree->Project("dummyhist","HT",getCutString("",optfh,i).Data());
+    tree->Project("dummyhist","HT",getCutString(lumiScale_,optfh,selection_,"",i).Data());
     HpdfUnc.Fill(dummyhist.GetBinContent(1));
   }
 
