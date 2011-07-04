@@ -9,7 +9,7 @@
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Thu Jul  8 16:33:08 CEST 2010
-// $Id: BasicTreeMaker.h,v 1.21 2011/03/18 16:17:35 joshmt Exp $
+// $Id: BasicTreeMaker.h,v 1.22 2011/04/07 15:35:58 joshmt Exp $
 //
 //
 
@@ -262,9 +262,9 @@ string is the jetAlgorithmTag
   std::map< std::string,  std::vector<float> > loosejetJECUncMinus;
 
   std::map< std::string,  std::vector<int> > loosejetFlavor;
-  std::map< std::string,  std::vector<int> > loosejetGenPt;
-  std::map< std::string,  std::vector<int> > loosejetGenPhi;
-  std::map< std::string,  std::vector<int> > loosejetGenEta;
+  std::map< std::string,  std::vector<float> > loosejetGenPt;
+  std::map< std::string,  std::vector<float> > loosejetGenPhi;
+  std::map< std::string,  std::vector<float> > loosejetGenEta;
   std::map< std::string,  std::vector<int> > loosejetGenParticlePDGId;
   std::map< std::string,  std::vector<float> > loosejetInvisibleEnergy;
   std::map< std::string,  std::map < std::string, std::vector<float> > > loosejetBTagDisc;
