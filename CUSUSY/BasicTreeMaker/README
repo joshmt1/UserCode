@@ -1,6 +1,8 @@
 Release notes
 --
 
+V00-03-03 - fix gen jet info. pT, eta, phi were stored as int; should have been float
+
 V00-03-02 - add ntuple variables for mSugra scan. No other changes.
 
 V00-03-01 - critical bug fix in muon cleaning. Also add some additional variables to facilitate studying other tail cleaning.
