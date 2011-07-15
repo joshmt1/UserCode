@@ -1,0 +1,4 @@
+<lcgdict>
+  <class name="SimpleEt" />
+  <class pattern="edm::Wrapper<SimpleEt>"/>
+</lcgdict>
