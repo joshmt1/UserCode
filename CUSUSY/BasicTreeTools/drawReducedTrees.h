@@ -1,4 +1,5 @@
 // -*- C++ -*-
+using namespace std;
 
 //useful for playing around with plots in interactive ROOT
 TH1D* hinteractive=0;
@@ -23,7 +24,8 @@ TString selection_ ="cutHT==1 && cutPV==1 && cutTrigger==1 && cut3Jets==1 && cut
 float leg_x1 = 0.696, leg_x2=0.94, leg_y1=0.5, leg_y2=0.92;
 double lumiScale_ = 1.;
 
-bool quiet_=false;
+//bool quiet_=false;
+bool quiet_=true;
 bool doRatio_=false;
 bool logy_=false;
 bool dostack_=true;
@@ -56,6 +58,10 @@ bool doCustomPlotMin_=false;
 double customPlotMin_=0;
 
 float maxScaleFactor_ = 1.05;
+
+bool latexMode_=false;
+//bool latexMode_=true;
+const TString pm = latexMode_ ? " \\pm " : " +/- ";
 
 TCanvas* thecanvas=0;
 //TCanvas* cratio=0;
@@ -438,7 +444,10 @@ void loadSamples(bool joinSingleTop=true) {
 
   samples_.push_back("ZJets");
   samples_.push_back("Zinvisible");
-  samples_.push_back("LM13");
+  samples_.push_back("VV");
+
+//  samples_.push_back("LM13");
+  samples_.push_back("LM9");
 
   //samplesAll_ should have *every* available sample
   //samplesAll_.insert("QCD");
@@ -451,6 +460,7 @@ void loadSamples(bool joinSingleTop=true) {
   //samplesAll_.insert("WJetsZ2");
   //samplesAll_.insert("ZJetsZ2");
   samplesAll_.insert("Zinvisible");
+  samplesAll_.insert("VV");
   samplesAll_.insert("SingleTop");
   samplesAll_.insert("SingleTop-sChannel");
   samplesAll_.insert("SingleTop-tChannel");
@@ -461,7 +471,8 @@ void loadSamples(bool joinSingleTop=true) {
   //these blocks are just a "dictionary"
   //no need to ever comment these out
   if (!owenColor_) {
-    sampleColor_["LM13"] = kRed-9;//kGray;
+//    sampleColor_["LM13"] = kRed-9;//kGray;
+    sampleColor_["LM9"] = kRed-9;//kGray;
     sampleColor_["QCD"] = kYellow;
     sampleColor_["PythiaQCD"] = kYellow;
     sampleColor_["PythiaPUQCD"] = kYellow;
@@ -479,7 +490,8 @@ void loadSamples(bool joinSingleTop=true) {
     sampleColor_["Total"] = kGreen+3;
   }
   else { //alternate color scheme requested by Owen
-    sampleColor_["LM13"] = kBlue+2;
+//    sampleColor_["LM13"] = kBlue+2;
+    sampleColor_["LM9"] = kBlue+2;
     sampleColor_["QCD"] = 2;
     sampleColor_["PythiaQCD"] = 2;
     sampleColor_["PythiaPUQCD"] =2;
@@ -497,7 +509,8 @@ void loadSamples(bool joinSingleTop=true) {
     sampleColor_["Total"] = 6;
   }
 
-  sampleLabel_["LM13"] = "LM13";
+//  sampleLabel_["LM13"] = "LM13";
+  sampleLabel_["LM9"] = "LM9";
   sampleLabel_["QCD"] = "QCD";
   sampleLabel_["PythiaQCD"] = "QCD (Z2)";
   sampleLabel_["PythiaPUQCDFlat"] = "QCD (Z2+PU)"; 
@@ -508,13 +521,16 @@ void loadSamples(bool joinSingleTop=true) {
   sampleLabel_["WJetsZ2"] = "W#rightarrowl#nu (Z2)";
   sampleLabel_["ZJets"] = "Z/#gamma*#rightarrowl^{+}l^{-}";
   sampleLabel_["Zinvisible"] = "Z#rightarrow#nu#nu";
+  sampleLabel_["VV"] = "WW,WZ,ZZ";
   sampleLabel_["SingleTop-sChannel"] = "Single-Top (s)";
   sampleLabel_["SingleTop-tChannel"] = "Single-Top (t)";
   sampleLabel_["SingleTop-tWChannel"] = "Single-Top (tW)";
   sampleLabel_["TotalSM"] = "SM";
-  sampleLabel_["Total"] = "SM + LM13"; //again, this is a hack
+//  sampleLabel_["Total"] = "SM + LM13"; //again, this is a hack
+  sampleLabel_["Total"] = "SM + LM9"; //again, this is a hack
 
-  sampleMarkerStyle_["LM13"] = kFullStar;
+//  sampleMarkerStyle_["LM13"] = kFullStar;
+  sampleMarkerStyle_["LM9"] = kFullStar;
   sampleMarkerStyle_["QCD"] = kFullCircle;
   sampleMarkerStyle_["PythiaQCD"] = kOpenCircle;
   sampleMarkerStyle_["PythiaPUQCDFlat"] = kOpenCircle;  
@@ -531,7 +547,8 @@ void loadSamples(bool joinSingleTop=true) {
   sampleMarkerStyle_["TotalSM"] = kOpenCross; //FIXME?
   sampleMarkerStyle_["Total"] = kDot; //FIXME?
 
-  sampleOwenName_["LM13"] = "lm13";
+//  sampleOwenName_["LM13"] = "lm13";
+  sampleOwenName_["LM9"] = "lm9";
   sampleOwenName_["QCD"] = "qcd";
   sampleOwenName_["PythiaQCD"] = "qcd";
   sampleOwenName_["PythiaPUQCDFlat"] = "qcd"; 
@@ -563,7 +580,8 @@ void loadSamples(bool joinSingleTop=true) {
   //load data file too
   TString dname="reducedTree.";
   dname+=cutdesc;
-  dname+=".data.root";
+//  dname+=".data.root";
+  dname+=".ht_run2011a_uptojul6.root";
   dname.Prepend(inputPath);
   if (dname.Contains("JERbias")) {
     dname.ReplaceAll("JERbias_",""); //JERbias not relevant for data
@@ -1212,3 +1230,250 @@ void drawR(const TString vary, const float cutVal, const int nbins, const float 
   }
   cout<<"End of drawR()"<<endl;
 }
+
+//utility function for making output more readable
+TString format_nevents(double n,double e) {
+
+//  const bool moreDigits = false;
+  const bool moreDigits = true;
+  const int eCutoff = moreDigits ? 10 : 1;
+  const int extraDigits = moreDigits ? 1:0;
+
+  TString mathmode = latexMode_ ? "$" : "";
+  
+  char out[100];
+  if (e >= eCutoff || e < 0.00001) { //show whole numbers only
+    sprintf(out,"%s%.0f%s%.0f%s",mathmode.Data(),n,pm.Data(),e,mathmode.Data());
+  }
+  else {
+    int nfig = ceil(fabs(log10(e))) + extraDigits;
+    TString form="%s%.";
+    form+=nfig; form+="f%s%.";
+    form+=nfig; form+="f%s";
+    sprintf(out,form.Data(),mathmode.Data(),n,pm.Data(),e,mathmode.Data());
+  }
+  return TString(out);
+}
+
+void getCutStringForCutflow(vector<TString> &vectorOfCuts, vector<TString> &stageCut, bool isTightSelection){
+
+  vectorOfCuts.clear(); stageCut.clear();
+
+  //define the HT and MET thresholds
+  TString minHT; TString minMET;
+  if (!isTightSelection) {minHT = "350"; minMET = "200";}
+  else {minHT = "500"; minMET = "300";}
+
+  TString cut;
+  TString thisSelection;
+  TString selectionPreB;
+  TString selectionEq1b;
+  TString selectionGe1b;
+  TString selectionGe2b;
+  TString selectionGe3b;
+
+  /*
+  //inclusive
+  thisSelection="";
+  cut=getCutString(lumiScale_,thisSelection);
+  vectorOfCuts.push_back(cut);
+  stageCut.push_back("Inclusive");
+
+  //trigger
+  if (thisSelection=="") thisSelection += "cutTrigger==1";
+  else thisSelection += " && cutTrigger";
+  cut=getCutString(lumiScale_,thisSelection);
+  vectorOfCuts.push_back(cut);
+  stageCut.push_back("Trigger");
+
+  //PV
+  if (thisSelection=="") thisSelection += "cutPV==1";
+  else thisSelection += " && cutPV==1";
+  cut=getCutString(lumiScale_,thisSelection);
+  vectorOfCuts.push_back(cut);
+  stageCut.push_back("PV");
+  */
+
+  //HT
+  if (thisSelection=="") {thisSelection += "HT>="; thisSelection += minHT;}
+  else { thisSelection += " && HT>="; thisSelection += minHT;}
+  cut=getCutString(lumiScale_,thisSelection);
+  vectorOfCuts.push_back(cut);
+  stageCut.push_back("HT");
+
+  //3 or more jets
+  if (thisSelection=="") thisSelection += "cut3Jets==1";
+  else thisSelection += " && cut3Jets==1";
+  cut=getCutString(lumiScale_,thisSelection);
+  vectorOfCuts.push_back(cut);
+  if (latexMode_) stageCut.push_back("$\\ge 3$ jets");
+  else stageCut.push_back(">= 3 jets");
+
+  //Ele veto
+  if (thisSelection=="") thisSelection += "cutEleVeto==1";
+  else thisSelection += " && cutEleVeto==1";
+  cut=getCutString(lumiScale_,thisSelection);
+  vectorOfCuts.push_back(cut);
+  stageCut.push_back("Ele veto");
+
+  //Mu veto
+  if (thisSelection=="") thisSelection += "cutMuVeto==1";
+  else thisSelection += " && cutMuVeto==1";
+  cut=getCutString(lumiScale_,thisSelection);
+  vectorOfCuts.push_back(cut);
+  stageCut.push_back("Mu veto");
+
+  //MET
+  if (thisSelection=="") {thisSelection += "MET>="; thisSelection += minMET; }
+  else {thisSelection += " && MET>="; thisSelection += minMET;}
+  cut=getCutString(lumiScale_,thisSelection);
+  vectorOfCuts.push_back(cut);
+  stageCut.push_back("MET");
+
+  //Delta Phi
+//  //deltaPhi
+//  if (thisSelection=="") thisSelection += "cutDeltaPhi==1";
+//  else thisSelection += " && cutDeltaPhi==1";
+  //deltaPhiN
+  if (thisSelection=="") thisSelection += "minDeltaPhiN>4";
+  else thisSelection += " && minDeltaPhiN>4";
+  //  
+  cut=getCutString(lumiScale_,thisSelection);
+  vectorOfCuts.push_back(cut);
+  //  stageCut.push_back("DeltaPhi");
+  stageCut.push_back("DeltaPhiN");
+
+  //Cleaning
+  if (thisSelection=="") thisSelection += "cutCleaning==1";
+  else thisSelection +=" && cutCleaning==1";
+  cut=getCutString(lumiScale_,thisSelection);
+  vectorOfCuts.push_back(cut);
+  stageCut.push_back("Cleaning");
+
+  //store selection string pre b cut
+  selectionPreB=thisSelection;
+
+  //>= 1 b
+  selectionGe1b=selectionPreB; selectionGe1b += " && nbjets>=1";
+  cut=getCutString(lumiScale_,selectionGe1b);
+  vectorOfCuts.push_back(cut);
+  if (latexMode_) stageCut.push_back("$\\ge 1$ b");
+  else stageCut.push_back(">= 1 b");
+
+  //==1b
+  selectionEq1b=selectionPreB; selectionEq1b +=" && nbjets==1";
+  cut=getCutString(lumiScale_,selectionEq1b);
+  vectorOfCuts.push_back(cut);
+  if (latexMode_) stageCut.push_back("$== 1$ b");
+  else stageCut.push_back("== 1 b");
+
+  //>= 2 b
+  selectionGe2b=selectionPreB; selectionGe2b +=" && nbjets>=2";
+  cut=getCutString(lumiScale_,selectionGe2b);
+  vectorOfCuts.push_back(cut);
+  if (latexMode_) stageCut.push_back("$\\ge 2$ b");
+  else stageCut.push_back(">= 2 b");
+
+  //>= 3 b
+  selectionGe3b=selectionPreB; selectionGe3b +=" && nbjets>=3";
+  cut=getCutString(lumiScale_,selectionGe3b);
+  vectorOfCuts.push_back(cut);
+  if (latexMode_) stageCut.push_back("$\\ge 3$ b");
+  else stageCut.push_back(">= 3 b");
+
+//  //check output
+//  for (unsigned int istage=0; istage<vectorOfCuts.size(); istage++){
+//    cout<<stageCut[istage]<<endl;
+//    cout<<vectorOfCuts[istage]<<endl;
+//  }
+  
+}
+
+void cutflow(bool isTightSelection){
+
+  loadSamples();
+  resetHistos();
+
+  vector<TString> vectorOfCuts; //each element is a successive cut string for the cutflow table
+  vector<TString> stageCut; //name of cut at each stage
+  getCutStringForCutflow(vectorOfCuts, stageCut, isTightSelection); //fills vectorOfCuts
+
+  vector< vector<float> > cutflowEntries; //stores events by stage and sample
+  vector< vector<float> > cutflowEntriesE; //stores error
+
+  TString var = "HT";
+  const float* varbins=0;
+  const int nbins=1; const float low=0; const float high=100000000000;
+
+  //loop over cuts
+  for (unsigned int istage=0; istage<vectorOfCuts.size(); istage++){
+    TString thisStageCut = vectorOfCuts[istage];
+    resetHistos();
+
+    vector<float> nPass; //number of events passing current cut in each sample
+    vector<float> nPassE; //error on events passing cuts
+
+    //loop over samples, copied from drawPlots()
+    for (unsigned int isample=0; isample<samples_.size(); isample++) {
+      if (!quiet_)   cout <<samples_[isample]<<endl;
+
+      gROOT->cd();
+      //should each histo have a different name? maybe
+      TString hname = jmt::fortranize(var); hname += "_"; hname += samples_[isample];
+      histos_[samples_[isample]] = (varbins==0) ? new TH1D(hname,"",nbins,low,high) : new TH1D(hname,"",nbins,varbins);
+      histos_[samples_[isample]]->Sumw2();
+
+      //qcd reweighting not implemented yet
+
+      TTree* tree = (TTree*) files_[samples_[isample]]->Get("reducedTree");
+      gROOT->cd();
+      TString weightopt= useFlavorHistoryWeights_ && samples_[isample].Contains("WJets") ? "flavorHistoryWeight" : "";
+      tree->Project(hname,var,thisStageCut);
+      //now the histo is filled
+
+      nPass.push_back(histos_[samples_[isample]]->GetBinContent(1)); //to get total entries with weighting applied
+      nPassE.push_back(histos_[samples_[isample]]->GetBinError(1)); //error
+    }//end loop over samples
+
+    cutflowEntries.push_back(nPass);
+    cutflowEntriesE.push_back(nPassE);
+
+  }//end current cut 
+
+  //now print out the cutflow table
+  
+  if (isTightSelection) cout<<"tight selection (HT>=500, MET>=300)"<<endl;
+  else cout<<"baseline selection (HT>=350, MET>=200)"<<endl; 
+
+  TString col_start; TString col; TString col_end; 
+
+  if (latexMode_){
+    col_start=""; col=" & "; col_end=" \\\\ "; 
+  }
+  else{
+    col_start=" | "; col=" | "; col_end=" | "; 
+  }
+
+  //list sample names
+  cout<<col_start<<"Cut "<<col;
+  for (unsigned int isample=0; isample<samples_.size(); isample++) {
+    cout<<samples_[isample];
+    if (isample==samples_.size()-1) cout<<col_end;
+    else cout<<col;
+  }
+  cout<<endl;
+  
+  //fill table
+  for (unsigned int istage=0; istage<vectorOfCuts.size(); istage++){
+    cout<<col_start<<stageCut[istage]<<col;
+    for (unsigned int isample=0; isample<samples_.size(); isample++){
+      cout<<format_nevents(cutflowEntries[istage][isample],cutflowEntriesE[istage][isample]);
+      if (isample==samples_.size()-1) cout<<col_end;
+      else cout<<col;
+    }
+    cout<<endl;
+  }
+  
+}
+
+
