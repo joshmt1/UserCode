@@ -4,6 +4,7 @@ a place for very simple functions that don't depend on anything else
 can be easily #included into other code
 */
 
+#include "TH1D.h"
 #include "TString.h"
 #include <iostream>
 
