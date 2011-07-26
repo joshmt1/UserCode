@@ -34,6 +34,31 @@ namespace jmt {
     return cut;
   }
 
+  //utility function for making output more readable
+  TString format_nevents(double n,double e, const bool moreDigits=false) {
+    const TString latexMode_=true; //hard code for now
+    const TString pm = latexMode_ ?  "\\pm ": " +/- ";
+
+    const int eCutoff = moreDigits ? 10 : 1;
+    const int extraDigits = moreDigits ? 1:0;
+
+    TString mathmode = latexMode_ ? "$" : "";
+  
+    char out[100];
+    if (e >= eCutoff || e < 0.00001) { //show whole numbers only
+      sprintf(out,"%s%.0f%s%.0f%s",mathmode.Data(),n,pm.Data(),e,mathmode.Data());
+    }
+    else {
+      int nfig = ceil(fabs(log10(e))) + extraDigits;
+      TString form="%s%.";
+      form+=nfig; form+="f%s%.";
+      form+=nfig; form+="f%s";
+      sprintf(out,form.Data(),mathmode.Data(),n,pm.Data(),e,mathmode.Data());
+    }
+    return TString(out);
+  }
+
+
   void weightedMean(Int_t n, Double_t *a, Double_t *e) {
 
     Double_t numerator=0;
