@@ -59,20 +59,20 @@ namespace jmt {
   }
 
 
-  void weightedMean(Int_t n, Double_t *a, Double_t *e) {
+  Double_t weightedMean(Int_t n, Double_t *a, Double_t *e, const bool returnError=false) {
 
     Double_t numerator=0;
     Double_t denominator=0;
 
     for (Int_t i=0; i<n; ++i) {
       Double_t esq = e[i]*e[i];
-      if (esq == 0) {cout<<"Error is zero!"<<endl; return;}
+      if (esq == 0) {cout<<"Error is zero!"<<endl; return -1e9;}
       numerator   += a[i] / esq;
       denominator += 1.0  / esq;
     }
 
     cout<<"mean = "<<numerator / denominator<<" +/- "<<sqrt(1/denominator)<<endl;
-
+    return returnError ? sqrt(1/denominator) : numerator / denominator;
   }
 
   //implemented in TMath in later versions of root, so i'm using the TMath name
