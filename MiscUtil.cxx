@@ -14,6 +14,8 @@ namespace jmt {
   //gets rid of = > < from cuts in order to be better included in file names
   TString fortranize(TString cut) {
 
+    cut.ReplaceAll(" ",""); //remove all spaces
+
     cut.ReplaceAll("==","eq");
     cut.ReplaceAll(">=","gte");
     cut.ReplaceAll("<=","lte");
@@ -21,12 +23,13 @@ namespace jmt {
     cut.ReplaceAll(">","gt");
     cut.ReplaceAll("<","lt");
 
+    cut.ReplaceAll("&&","and");
+    cut.ReplaceAll("||","or");
+
     cut.ReplaceAll("/","Over");
     cut.ReplaceAll("+","Plus");
     cut.ReplaceAll("*","Times");
 
-    cut.ReplaceAll("*","Times");
-    
     //this is pretty ugly
     cut.ReplaceAll("(","L");
     cut.ReplaceAll(")","R");
