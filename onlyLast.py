@@ -9,6 +9,12 @@ import os, sys, re
 #file names like this:
 #                      myfilename_1_1_aBC.root
 
+# 02/09/11 - Don
+# updated to handle files on the T3
+# this script now automatically checks if the input dir is pointing
+# to the T3 and adapts accordingly
+# e.g. python onlyLast.py "$CUSE/blah" 
+
 ###############################################################
 
 #handle input arguments
@@ -21,9 +27,24 @@ tmpfile = '.onlyLast_py_'
 mypid = os.getpid()
 tmpfile += `mypid`
 
+
 inputdir = sys.argv[1]
 if inputdir[len(inputdir)-1] != '/':
     inputdir+='/'
+
+#check if the input directory is located on the T3
+isT3 = False
+checkT3 = 'echo '
+checkT3 += inputdir
+checkT3 += ' | awk -F "/" \'{print $1}\' '
+p = os.popen(checkT3)
+location = p.readline()
+p.close()
+#print location
+if "srm" in location:
+        print "T3 directory specified.  Using grid commands."
+        isT3 = True
+
 
 outputdir = inputdir
 outputdir += 'EXTRAS'
@@ -31,16 +52,35 @@ outputdir += 'EXTRAS'
 mkdircommand = "nsmkdir "
 mkdircommand += outputdir
 
+#if isT3 == 'T3':
+#    mkdircommand = "srmmkdir "
+#    mkdircommand += outputdir
+
+
 #get a file listing into tmpfile
 cmd = 'nsls -l '
 cmd += inputdir
 cmd += ' | awk \'// {print $5,$9;}\' > '
-cmd += tmpfile
+
+
+if isT3 == True:
+    cmd = 'srmls "'
+    cmd += inputdir
+    cmd += '" | awk -F "/" \'{print $1,$NF}\' | awk \'NF>0\'  > '
+
+
+cmd+= tmpfile
 #print cmd
 os.system(cmd)
 
 #keep track of whether we made the directory or not
 alreadymadedir = 0
+#do not manually make the directory for the T3, lcg-cp will take care of it
+if isT3 == True:
+    alreadymadedir = 1
+
+
+
 
 f = open(tmpfile,'r')
 
@@ -104,12 +144,24 @@ for ii in indexdict:
             s+=jj
             print "moving ", s
             cpcmd = 'rfcp '
+            if isT3 == True:
+                cpcmd = 'lcg-cp --verbose -b -D srmv2 "'
             cpcmd += s
-            cpcmd += ' '
+
+            if isT3 == True:
+                cpcmd += '" "'
+            else: cpcmd += ' '
+
             cpcmd += outputdir
+            if isT3 == True:
+                cpcmd +='/'
+                cpcmd +=jj
+                cpcmd += '"'
             print cpcmd
             os.system(cpcmd)
             rmcmd = 'rfrm '
+            if isT3 == True:
+                rmcmd = 'srmrm '
             rmcmd += s
             print rmcmd
             os.system(rmcmd)
@@ -121,3 +173,6 @@ os.remove(tmpfile)
 print "----------------------------"
 print "I moved this many files: ",nmoved
 print "----------------------------"
+
+
+
