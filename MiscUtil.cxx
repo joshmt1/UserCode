@@ -7,6 +7,9 @@ can be easily #included into other code
 #include "TH1D.h"
 #include "TString.h"
 #include <iostream>
+#include "TMath.h"
+
+#include <cassert>
 
 namespace jmt {
 
@@ -63,6 +66,7 @@ namespace jmt {
 
 
   Double_t weightedMean(Int_t n, Double_t *a, Double_t *e, const bool returnError=false) {
+    using namespace std;
 
     Double_t numerator=0;
     Double_t denominator=0;
@@ -85,6 +89,37 @@ namespace jmt {
 
   }
 
+  //deal with the annoyance of logical booleans that are stored in an ntuple as double
+  bool doubleToBool( double a) {
+    using namespace std;
+
+    int i = TMath::Nint(a);
+    if (i==0) return false;
+    else if (i==1) return true;
+    
+    cout<<"[doubleToBool] Something weird going on! "<<a<<"\t"<<i<<endl;
+    if (i>1) return true;
+    return false;
+  }
+
+  //delta phi calculations are pretty commonplace, so put it here
+  double deltaPhi(double phi1, double phi2) { 
+    double result = phi1 - phi2;
+    while (result > TMath::Pi()) result -= 2*TMath::Pi();
+    while (result <= -TMath::Pi()) result += 2*TMath::Pi();
+    return fabs(result);
+  }
+
+  double deltaR2(double eta1, double phi1, double eta2, double phi2) {
+    double deta = eta1 - eta2;
+    double dphi = deltaPhi(phi1, phi2);
+    return deta*deta + dphi*dphi;
+  }
+
+  double deltaR(double eta1, double phi1, double eta2, double phi2) {
+    return TMath::Sqrt(deltaR2 (eta1, phi1, eta2, phi2));
+  }
+
   // == error propagation ==
 
   //because not all versions of ROOT have it built in
@@ -103,6 +138,7 @@ namespace jmt {
 
   //return error on a/b
   double errAoverB(double a, double aerr, double b, double berr) {
+    using namespace std;
     if (b==0 || a==0) {
       cout<<"Warning in errAoverB -- a or b is zero!"<<endl;
       return -1;
@@ -112,6 +148,7 @@ namespace jmt {
 
   //return error on a*b
   double errAtimesB(double a, double aerr, double b, double berr) {
+    using namespace std;
     if (b==0 || a==0) {
       cout<<"Warning in errAtimesB -- a or b is zero!"<<endl;
       return -1;
