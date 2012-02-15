@@ -139,22 +139,16 @@ namespace jmt {
   //return error on a/b
   double errAoverB(double a, double aerr, double b, double berr) {
     using namespace std;
-    if (b==0 || a==0) {
-      cout<<"Warning in errAoverB -- a or b is zero!"<<endl;
+    if (b==0) {
+      cout<<"Warning in errAoverB -- b is zero!"<<endl;
       return -1;
     }
-    return (a/b)*sqrt( pow( aerr/a, 2) + pow( berr/b, 2) );
+    return (1/b)*sqrt( aerr*aerr + a*a*berr*berr/(b*b) );
   }
 
   //return error on a*b
   double errAtimesB(double a, double aerr, double b, double berr) {
-    using namespace std;
-    if (b==0 || a==0) {
-      cout<<"Warning in errAtimesB -- a or b is zero!"<<endl;
-      return -1;
-    }
-    
-    return a*b*sqrt( pow( aerr/a, 2) + pow( berr/b, 2) );
+    return sqrt( b*b*aerr*aerr + a*a*berr*berr);
   }
 
   //======== container for run, lumisection, event number =========
