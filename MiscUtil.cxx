@@ -151,6 +151,11 @@ namespace jmt {
     return sqrt( b*b*aerr*aerr + a*a*berr*berr);
   }
 
+  //simple routines for addition in quadrature
+  double addInQuad(double a, double b) {return sqrt(a*a + b*b);  }
+  double addInQuad(double a, double b, double c) {return sqrt(a*a + b*b + c*c);  }
+  double addInQuad(double a, double b, double c, double d) {return sqrt(a*a + b*b + c*c +d*d);  }
+
   //======== container for run, lumisection, event number =========
   class eventID {
   public:
