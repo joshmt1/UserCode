@@ -218,16 +218,17 @@ namespace jmt {
   
   
   void printHist(const TH1D* h, int binlow=1, int binhigh=-1, bool withErrors=true) {
+    cout << "print debug" << endl;
     if (binhigh == -1) binhigh = h->GetNbinsX();
-    
-    std::cout << h->GetName();
+
+    std::cout << h->GetName() << ": " ;
     for (int i = binlow; i<= binhigh; i++) {
-      if(withErrors) std::cout << " " << h->GetBinContent(i) <<"+-"<<h->GetBinError(i);
-      else std::cout << " " << h->GetBinContent(i); 
+      if(withErrors) std::cout << format_nevents(h->GetBinContent(i), h->GetBinError(i)) << ", ";
+      else std::cout << " " << h->GetBinContent(i);
     }
     std::cout << std::endl;
   }
-  
+
   
 } //end of namespace
 
