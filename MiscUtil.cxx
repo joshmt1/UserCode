@@ -218,7 +218,6 @@ namespace jmt {
   
   
   void printHist(const TH1D* h, int binlow=1, int binhigh=-1, bool withErrors=true) {
-    cout << "print debug" << endl;
     if (binhigh == -1) binhigh = h->GetNbinsX();
 
     std::cout << h->GetName() << ": " ;
