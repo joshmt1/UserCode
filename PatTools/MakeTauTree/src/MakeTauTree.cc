@@ -16,7 +16,7 @@ Goal is to study the decays of ttbar, in particular the tau rejection possibilit
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Wed Jul 25 15:22:44 CEST 2012
-// $Id$
+// $Id: MakeTauTree.cc,v 1.1 2012/08/21 08:14:44 joshmt Exp $
 //
 //
 
@@ -47,7 +47,7 @@ Goal is to study the decays of ttbar, in particular the tau rejection possibilit
 #include "DataFormats/Math/interface/deltaR.h"
 
 //tau veto is precomputed but we want access to some of the pieces
-#include "SandBox/Skims/interface/IndirectTauVeto.h"
+#include "SandBox/Skims/src/IndirectTauVeto.cc"
 
 
 //ROOT includes
