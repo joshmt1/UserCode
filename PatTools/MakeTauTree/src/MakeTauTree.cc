@@ -16,7 +16,7 @@ Goal is to study the decays of ttbar, in particular the tau rejection possibilit
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Wed Jul 25 15:22:44 CEST 2012
-// $Id: MakeTauTree.cc,v 1.1 2012/08/21 08:14:44 joshmt Exp $
+// $Id: MakeTauTree.cc,v 1.2 2012/08/21 09:48:00 joshmt Exp $
 //
 //
 
@@ -42,6 +42,7 @@ Goal is to study the decays of ttbar, in particular the tau rejection possibilit
 
 #include "DataFormats/PatCandidates/interface/MET.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
+#include "DataFormats/PatCandidates/interface/Tau.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
@@ -81,12 +82,15 @@ class MakeTauTree : public edm::EDAnalyzer {
   int findTopDecayMode( const reco::Candidate & cand, float& taupt, float& tauvisiblept, float &taueta, float &tauphi, int & nChargedTauDaughters);
   int getTopDecayCategory(int code1, int code2);
 
+  void isolatedTrackVeto(const edm::Event& iEvent, const edm::EventSetup& iSetup);
+  void POGtaus(const edm::Event& iEvent, const edm::EventSetup& iSetup);
+
   void clearVariables() ;
 
   // ----------member data ---------------------------
 
   // -- config info
-  edm::InputTag jetSrc_, metSrc_,electronSrc_,muonSrc_,tauSrc_,genParticleSrc_;
+  edm::InputTag pogtauSrc_,jetSrc_, metSrc_,electronSrc_,muonSrc_,tauSrc_,genParticleSrc_;
 
   double matchradius_;
 
@@ -117,6 +121,14 @@ class MakeTauTree : public edm::EDAnalyzer {
   int nVetoMuons;
   int nVetoElectrons;
   int nVetoTaus;
+  int nIsolatedTracks;
+
+  int nLooseTaus15;
+  int nVLooseTaus15;
+  int nMediumTaus15;
+  int nLooseTaus20;
+  int nVLooseTaus20;
+  int nMediumTaus20;
   //TODO
   //  float DeltaPhiMetJet1;
   //  float DeltaPhiMetJet2;
@@ -159,11 +171,12 @@ class MakeTauTree : public edm::EDAnalyzer {
 // constructors and destructor
 //
 MakeTauTree::MakeTauTree(const edm::ParameterSet& iConfig) :
+  pogtauSrc_(iConfig.getParameter<edm::InputTag>("TauSource")), //these are the pat::Taus
   jetSrc_(iConfig.getParameter<edm::InputTag>("JetSource")),
   metSrc_(iConfig.getParameter<edm::InputTag>("MetSource")),
   electronSrc_(iConfig.getParameter<edm::InputTag>("ElectronVetoSource")),
   muonSrc_(iConfig.getParameter<edm::InputTag>("MuonVetoSource")),
-  tauSrc_(iConfig.getParameter<edm::InputTag>("TauVetoSource")),
+  tauSrc_(iConfig.getParameter<edm::InputTag>("TauVetoSource")), //these are jets to be used in the indirect tau veto
   genParticleSrc_(iConfig.getParameter<edm::InputTag>("GenParticleSource")),
   matchradius_(0.3),
   tree_(0)
@@ -292,6 +305,9 @@ MakeTauTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       }
     }
   }
+
+  isolatedTrackVeto(iEvent,iSetup);
+  POGtaus(iEvent,iSetup);
 
   edm::Handle<edm::View<reco::GsfElectron> > electrons;
   iEvent.getByLabel(electronSrc_, electrons);
@@ -606,6 +622,62 @@ void MakeTauTree::doTauJetMatching(const edm::Event& iEvent, const edm::EventSet
 
 }
 
+void MakeTauTree::isolatedTrackVeto(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+
+  edm::Handle<std::vector<float> > cand_dzpv;
+  iEvent.getByLabel("trackIsolationMaker","pfcandsdzpv",cand_dzpv);
+
+  edm::Handle<std::vector<float> > cand_pt;
+  iEvent.getByLabel("trackIsolationMaker","pfcandspt",cand_pt);
+
+  edm::Handle<std::vector<float> > cand_trkiso;
+  iEvent.getByLabel("trackIsolationMaker","pfcandstrkiso",cand_trkiso);
+
+  edm::Handle<std::vector<int> > cand_chg;
+  iEvent.getByLabel("trackIsolationMaker","pfcandschg",cand_chg);
+
+  nIsolatedTracks = 0; // essential to reset to 0 for each event!
+
+  size_t n = cand_dzpv->size();
+  for ( size_t ii = 0; ii<n; ii++) {
+
+    //    std::cout<<ii<<"\t"<<cand_dzpv->at(ii)<<" "<<cand_pt->at(ii)<<" "<<cand_trkiso->at(ii)<<" "<<cand_chg->at(ii)<<std::endl;
+    if ( cand_chg->at(ii) != 0 ) { //charged
+      if ( (cand_pt->at(ii) > 10) && (fabs(cand_dzpv->at(ii)) < 0.05) && (cand_trkiso->at(ii)/cand_pt->at(ii) <0.1) ) nIsolatedTracks++;
+    }
+  }
+
+}
+
+void MakeTauTree::POGtaus(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+  nLooseTaus15=0;
+  nVLooseTaus15=0;
+  nMediumTaus15=0;
+  nLooseTaus20=0;
+  nVLooseTaus20=0;
+  nMediumTaus20=0;
+
+  edm::Handle<edm::View<pat::Tau> > taus;
+  iEvent.getByLabel(pogtauSrc_,taus);
+  //  std::cout<<" == pog taus =="<<std::endl;
+  for (edm::View<pat::Tau>::const_iterator tau = taus->begin(); tau != taus->end(); ++tau) {
+    //    std::cout<<"\t"<<tau->pt()<<"\t"<<tau->tauID("byLooseCombinedIsolationDeltaBetaCorr")<<" "<<tau->tauID("byVLooseCombinedIsolationDeltaBetaCorr") <<std::endl;
+    if ( tau->pt() > 15 ) {
+      if ( tau->tauID("byLooseCombinedIsolationDeltaBetaCorr") > 0) nLooseTaus15++;
+      if ( tau->tauID("byVLooseCombinedIsolationDeltaBetaCorr") > 0) nVLooseTaus15++;
+      if ( tau->tauID("byMediumCombinedIsolationDeltaBetaCorr") > 0) nMediumTaus15++;
+      
+      if ( tau->pt() > 20 ) {
+	if ( tau->tauID("byLooseCombinedIsolationDeltaBetaCorr") > 0) nLooseTaus20++;
+	if ( tau->tauID("byVLooseCombinedIsolationDeltaBetaCorr") > 0) nVLooseTaus20++;
+	if ( tau->tauID("byMediumCombinedIsolationDeltaBetaCorr") > 0) nMediumTaus20++;
+	
+      }
+    }
+  }
+
+}
+
 
 // ------------ method called once each job just before starting event loop  ------------
 void 
@@ -623,6 +695,16 @@ MakeTauTree::beginJob()
   tree_->Branch("nVetoElectrons",&nVetoElectrons,"nVetoElectrons/I");
   tree_->Branch("nVetoMuons",&nVetoMuons,"nVetoMuons/I");
   tree_->Branch("nVetoTaus",&nVetoTaus,"nVetoTaus/I");
+
+  tree_->Branch("nLooseTaus15",&nLooseTaus15,"nLooseTaus15/I");
+  tree_->Branch("nVLooseTaus15",&nVLooseTaus15,"nVLooseTaus15/I");
+  tree_->Branch("nMediumTaus15",&nMediumTaus15,"nMediumTaus15/I");
+
+  tree_->Branch("nLooseTaus20",&nLooseTaus20,"nLooseTaus20/I");
+  tree_->Branch("nVLooseTaus20",&nVLooseTaus20,"nVLooseTaus20/I");
+  tree_->Branch("nMediumTaus20",&nMediumTaus20,"nMediumTaus20/I");
+
+  tree_->Branch("nIsolatedTracks",&nIsolatedTracks,"nIsolatedTracks/I");
 
   tree_->Branch("topDecayCode",&topDecayCode,"topDecayCode[2]/I");
   tree_->Branch("ttbarDecayCode",&ttbarDecayCode,"ttbarDecayCode/I");
