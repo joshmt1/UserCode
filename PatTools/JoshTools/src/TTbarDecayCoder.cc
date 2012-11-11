@@ -13,7 +13,7 @@ Should work for ttbar and T2tt. Not implemented for single top.
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Wed Nov  7 14:21:41 CET 2012
-// $Id$
+// $Id: TTbarDecayCoder.cc,v 1.1 2012/11/08 17:21:58 joshmt Exp $
 //
 //
 
@@ -57,6 +57,7 @@ class TTbarDecayCoder : public edm::EDProducer {
   
   int getTopDecayCategory(int code1, int code2);
   int findTopDecayMode( const reco::Candidate & cand);// float& taupt, float& tauvisiblept, float &taueta, float &tauphi, int &nChargedTauDaughters) {
+  void analyzeTauDecays(const reco::Candidate *mytau,bool &found_tau_elec,bool & found_tau_muon,bool & found_tau_had, int & nChargedTauDaughters, float &tauvisiblept);
 
       // ----------member data ---------------------------
   edm::InputTag genParticleSrc_;
@@ -114,6 +115,7 @@ TTbarDecayCoder::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
     const reco::Candidate & TCand = (*genParticles)[ k ];
     if (abs(TCand.pdgId())== 6 && TCand.status()==3) { //find t quark
       int topcode = findTopDecayMode(TCand);//,taupt,tauptvis,taueta,tauphi,nprong);
+      //      std::cout<<"[main] "<<topcode<<std::endl;
       if (ntops<=1) {
 	topDecayCode[ntops] = topcode;
 	ntops++;
@@ -235,6 +237,59 @@ int TTbarDecayCoder::getTopDecayCategory(int code1, int code2) {
   return code;
 }
 
+void TTbarDecayCoder::analyzeTauDecays(const reco::Candidate *mytau,bool &found_tau_elec,bool & found_tau_muon,bool & found_tau_had, int & nChargedTauDaughters, float &tauvisiblept) {
+
+  //    std::cout<<"[analyzeTauDecays] "<<mytau->pdgId()<<std::endl; //debug info
+
+  int nrecursivecalls=0;
+
+  for (size_t m=0; m<mytau->numberOfDaughters(); m++) {
+    //         std::cout<<"\t"<<mytau->daughter(m)->pdgId()<<"\t"<<mytau->daughter(m)->status()<<std::endl;
+    int newtaudau = abs(mytau->daughter(m)->pdgId());
+    
+    if (newtaudau == 11) { found_tau_elec=true; nChargedTauDaughters++; tauvisiblept += mytau->daughter(m)->pt();}
+    else if (newtaudau == 13) {found_tau_muon=true; nChargedTauDaughters++; tauvisiblept += mytau->daughter(m)->pt();}
+    else if (newtaudau ==213 || newtaudau==111 || newtaudau==113 ||newtaudau==211||newtaudau==130
+	     || newtaudau==223 ||newtaudau==321 ||newtaudau ==323 ||newtaudau ==310||newtaudau==221 ||newtaudau==20213) {
+      found_tau_had=true;
+      // nChargedTauDaughters code
+      unsigned int ntaud = mytau->daughter(m)->numberOfDaughters();
+      if (ntaud == 0) {
+	//this catches cases of tau -> pi nu
+	if ( mytau->daughter(m)->charge() != 0)  nChargedTauDaughters++;
+	if ( abs(mytau->daughter(m)->pdgId()) != 14 && abs(mytau->daughter(m)->pdgId()) != 12 && abs(mytau->daughter(m)->pdgId()) != 16)  tauvisiblept += mytau->daughter(m)->pt();
+      }
+      else { //this catches cases where the tau does something fancier
+	for (size_t mm=0;	mm< ntaud ; mm++) {
+	  //			std::cout<<"\t\t"<<mytau2->daughter(l)->daughter(m)->pdgId()<<"\t"<<mytau2->daughter(l)->daughter(m)->status()<<std::endl;
+	  if (mytau->daughter(m)->daughter(mm)->charge() != 0) nChargedTauDaughters++;
+
+	  unsigned int apdgid = abs(mytau->daughter(m)->daughter(mm)->pdgId());
+	  if ( apdgid != 14 &&  apdgid!= 12 &&  apdgid!= 16)  tauvisiblept += mytau->daughter(m)->daughter(mm)->pt();
+
+	}
+      }
+
+    }
+    else if (newtaudau == 14 || newtaudau==16 || newtaudau==12) { } //do nothing for neutrinos
+    else if (newtaudau == 15  ) {  //the tau's daughter is a tau, so analyze the decays of *that* tau
+      //            std::cout<<"[analyzeTauDecays] tau's daughter is tau"<<std::endl; //debug info
+      nrecursivecalls++;
+      analyzeTauDecays( mytau->daughter(m),found_tau_elec,found_tau_muon,found_tau_had, nChargedTauDaughters,tauvisiblept);
+    }
+    else if (newtaudau == 22  ) {  tauvisiblept += mytau->daughter(m)->pt();} //do nothing for photons, except sum up the visible pt
+    else if (newtaudau == 24  ) { //weird case where the tau decays into a W
+      //analyze the decays of the W
+      //      std::cout<<"[analyzeTauDecays] tau's daughter is W"<<std::endl; //debug info
+      nrecursivecalls++;
+     analyzeTauDecays( mytau->daughter(m),found_tau_elec,found_tau_muon,found_tau_had, nChargedTauDaughters,tauvisiblept);
+    }
+    else std::cout<<"WARNING -- Unknown tau daughter found = "<<newtaudau<<std::endl; //debug info
+  }
+
+  if (nrecursivecalls>1) std::cout<<"WARNING -- nrecursions = "<<nrecursivecalls<<std::endl;
+
+}
 
 int TTbarDecayCoder::findTopDecayMode( const reco::Candidate & cand) {//, float& taupt, float& tauvisiblept, float &taueta, float &tauphi, int &nChargedTauDaughters) {
 
@@ -274,101 +329,17 @@ int TTbarDecayCoder::findTopDecayMode( const reco::Candidate & cand) {//, float&
 	    taupt = mytau->pt();
 	    taueta = mytau->eta();
 	    tauphi = mytau->phi();
-	    //   	    std::cout<<" -- found a tau"<<std::endl;
-	    for (size_t k=0; k<mytau->numberOfDaughters(); k++) {
-	      //	      std::cout<<mytau->daughter(k)->pdgId()<<"\t"<<mytau->daughter(k)->status()<<std::endl;
-	      const reco::Candidate *mytau2 = mytau->daughter(k);
-	      if (abs(mytau2->pdgId()) == 15) { 
-		
-		for (size_t l=0; l<mytau2->numberOfDaughters(); l++) {
-		  //	  		  std::cout<<"\t"<<mytau2->daughter(l)->pdgId()<<"\t"<<mytau2->daughter(l)->status()<<std::endl;
-
-		  int taudau = abs(mytau2->daughter(l)->pdgId());
-		  if (taudau == 11) { found_tau_elec=true; nChargedTauDaughters++;}
-		  else if (taudau == 13) {found_tau_muon=true; nChargedTauDaughters++;}
-		  else if (taudau ==213 || taudau==111 || taudau==113 ||taudau==211||taudau==130
-			   || taudau==223 ||taudau==321 ||taudau ==323 ||taudau ==310||taudau==221 ||taudau==20213) {
-		    found_tau_had=true;
-		    unsigned int ntaud = mytau2->daughter(l)->numberOfDaughters();
-		    if (ntaud == 0) {
-		      //this catches cases of tau -> pi nu
-		      if ( mytau2->daughter(l)->charge() != 0) nChargedTauDaughters++;
-		    }
-		    else { //this catches cases where the tau does something fancier
-		      for (size_t m=0;	m< ntaud ; m++) {
-			//			std::cout<<"\t\t"<<mytau2->daughter(l)->daughter(m)->pdgId()<<"\t"<<mytau2->daughter(l)->daughter(m)->status()<<std::endl;
-			if (mytau2->daughter(l)->daughter(m)->charge() != 0) nChargedTauDaughters++;
-		      }
-		    }
-		  }
-		  else if (taudau == 14 || taudau==16 || taudau==12) { } //do nothing for neutrinos
-		  else if (taudau == 22  ) { } //do nothing for photons 
-		  else if (taudau == 24) { //weird case ... seems to always correspond to a tau->h decay; anyway put in the full machinery, more or less
-		    unsigned int ntaud = mytau2->daughter(l)->numberOfDaughters();
-		    for (size_t m=0;	m< ntaud ; m++) {
-		      //		      std::cout<<"\t\t"<<mytau2->daughter(l)->daughter(m)->pdgId()<<"\t"<<mytau2->daughter(l)->daughter(m)->status()<<std::endl;
-		      int Wdau = abs(mytau2->daughter(l)->daughter(m)->pdgId());
-		      if (Wdau==11) found_tau_elec=true;
-		      else if (Wdau==13) found_tau_muon=true;
-		      else if (Wdau ==213 || Wdau==111 || Wdau==113 ||Wdau==211||Wdau==130
-			   || Wdau==223 ||Wdau==321 ||Wdau ==323 ||Wdau ==310||Wdau==221 ||Wdau==20213) found_tau_had=true;
-
-		      if (mytau2->daughter(l)->daughter(m)->charge() != 0) nChargedTauDaughters++;
-		    }
-		    
-		  }
-		  else if (taudau==15) { //did not see this in TTbar, but did see it in T2tt (madgraph v pythia?)
-		    // std::cout<<"found tau as daughter of tau"<<std::endl; //debug info
-		    //seems to be tau -> tau+photon
-		    //again, copy and paste the code from above for classifying tau daughters
-		    const reco::Candidate *newtau = mytau2->daughter(l);
-
-		    for (size_t m=0; m<newtau->numberOfDaughters(); m++) {
-		      //  std::cout<<"\t"<<newtau->daughter(m)->pdgId()<<"\t"<<newtau->daughter(m)->status()<<std::endl;
-		      int newtaudau = abs(newtau->daughter(m)->pdgId());
-
-		      //copy and paste of the code above...would be better to do this more elegantly!
-		      if (newtaudau == 11) { found_tau_elec=true; nChargedTauDaughters++;}
-		      else if (newtaudau == 13) {found_tau_muon=true; nChargedTauDaughters++;}
-		      else if (newtaudau ==213 || newtaudau==111 || newtaudau==113 ||newtaudau==211||newtaudau==130
-			       || newtaudau==223 ||newtaudau==321 ||newtaudau ==323 ||newtaudau ==310||newtaudau==221 ||newtaudau==20213) {
-			found_tau_had=true;
-			//did not put the nChargedTauDaughters code in here....hence that value will be wrong in this case
-		      }
-		      else if (newtaudau == 14 || newtaudau==16 || newtaudau==12) { } //do nothing for neutrinos
-		      else if (newtaudau == 22  ) { } //do nothing for photons 
-		      else std::cout<<"WARNING -- Unknown [new] tau daughter found = "<<newtaudau<<std::endl; //debug info
-
-		    }
-		    // std::cout<<"\t~~done~~"<<std::endl; //debug info
-
-		  }
-		  else {
-		    std::cout<<"WARNING -- Unknown tau daughter found = "<<taudau<<std::endl; //debug info
-		  }
-		  
-
-		  //now we want to sum the 'visible' pT of the tau.
-		  //for now that means anything other than neutrinos.
-		  if ( !(taudau == 14 || taudau==16 || taudau==12) ) { // NOT neutrinos
-		    tauvisiblept += mytau2->daughter(l)->pt();
-		  }
-
-		}
-		//		std::cout<<" nChargedTauDaughters = "<<nChargedTauDaughters<<std::endl;
-	      }
-	      else if (abs(mytau2->pdgId()) ==22) { //photon
-		//do nothing except add to tau vis pt (should i do that?)
-		tauvisiblept += mytau2->pt();
-	      }
-	      else std::cout<<"WARNING -- tau daughter is not as expected! "<<mytau2->pdgId()<<"\t"<<mytau2->status()<<std::endl;
-	    }
+	    analyzeTauDecays( mytau,found_tau_elec, found_tau_muon, found_tau_had, nChargedTauDaughters,tauvisiblept);
 	  }
-	  //skip neutrinos completely....
+	  else if (wdau == 14 || wdau==16 || wdau==12) { } //do nothing for neutrinos
+	  else std::cout<<"WARNING -- W daughter is not as expected! "<<wdau<<std::endl;
+	  
 	}
+	//skip neutrinos completely....
       }
     }
   }
+  
   
 
   if ( !foundb ) return 0; //this shouldn't happen
@@ -380,7 +351,7 @@ int TTbarDecayCoder::findTopDecayMode( const reco::Candidate & cand) {//, float&
   if ( foundm ) return 3; //W->mu
   if ( foundt ) { //W->tau
     if ((found_tau_had && found_tau_elec) || (found_tau_had && found_tau_muon) ||(found_tau_elec&&found_tau_muon))
-      std::cout<<"WARNING -- something weird happened in tau decay detection!"<<std::endl;
+      std::cout<<"WARNING -- something weird happened in tau decay detection!"<<std::endl; //i have seen this before in the case of a 'decay' to pi+ e+e-
     if (found_tau_had) return 4;   
     if (found_tau_elec) return 5;   
     if (found_tau_muon) return 6;
