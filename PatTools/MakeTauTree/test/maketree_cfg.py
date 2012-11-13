@@ -11,7 +11,8 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
 process.source = cms.Source("PoolSource",
                             fileNames = cms.untracked.vstring(
 #    'file:/eos/uscms/store/user/rossin/PAT/Summer12_DR53X-PU_S10_START53_V7A-v1/TTJets_MassiveBinDECAY_TuneZ2star_8TeV-madgraph-tauola/v0/patuple_455_1_btE.root'
-    'file:/uscms/home/joshmt/nobackup/ttbar-8TeV-Skim_Mu.root'
+    'root://cmseos:1094//eos/uscms/store/user/nmccoll/PAT/Summer12_DR53X-PU_S10_START53_V7A-v2/TT_CT10_TuneZ2star_8TeV-powheg-tauola/lite_v0/patuple_648_1_0XS.root'  
+#    'file:/uscms/home/joshmt/nobackup/ttbar-8TeV-Skim_Mu.root'
 #    'file:/afs/cern.ch/work/j/joshmt/private/stop7TeV/CMSSW_4_2_5/src/SandBox/Skims/test/TTJets_Fall11_PAT.root'
 #    'file:/afs/cern.ch/user/j/joshmt/work/public/stop7TeV/CMSSW_4_2_5/src//SandBox/Skims/test/PAToutput.root'
 #    'file:/afs/cern.ch/user/j/joshmt/work/public/stop7TeV-v1/CMSSW_4_2_5/src/SandBox/Skims/test/PAToutput.root'
@@ -73,6 +74,11 @@ process.trackIsolationMaker =  cms.EDProducer("TrackIsolationMaker",
                                             minPt_PFCandidate   = cms.double(1)
                                             )
 
+process.ttbarDecayProducer = cms.EDProducer('TTbarDecayCoder',
+                                            GenParticleSource = cms.InputTag('genParticles')
+)
+
+
 process.MakeTauTree = cms.EDAnalyzer('MakeTauTree',
                                      TauSource = cms.InputTag("patTausPFchs"), #selectedTaus (these are POG taus)
                                      JetSource = cms.InputTag("patJetsAK5PFchs"),
@@ -80,7 +86,7 @@ process.MakeTauTree = cms.EDAnalyzer('MakeTauTree',
                                      ElectronVetoSource = cms.InputTag("VetoElectrons"),
                                      MuonVetoSource = cms.InputTag("VetoMuons"),
                                      TauVetoSource = cms.InputTag("VetoTaus"),
-                                     GenParticleSource = cms.InputTag("genParticles"), #prunedGenParticles
+#                                     GenParticleSource = cms.InputTag("genParticles"), #prunedGenParticles
                                      VertexSource = cms.InputTag("goodVertices"),
                                      StoreAllJetInfo = cms.bool(False)
                                      )
@@ -89,5 +95,5 @@ process.MakeTauTree = cms.EDAnalyzer('MakeTauTree',
 process.TFileService = cms.Service("TFileService", fileName = cms.string('reducedTree.root') )
 
 #stupid that i'm basically running the track isolation code twice. but let's leave well enough alone
-process.p = cms.Path(process.VetoElectrons*process.VetoMuons*process.tauJetCands*process.VetoTaus*process.trackIsolationSelector*process.trackIsolationMaker
+process.p = cms.Path(process.VetoElectrons*process.VetoMuons*process.tauJetCands*process.VetoTaus*process.trackIsolationSelector*process.trackIsolationMaker*process.ttbarDecayProducer
                      *process.MakeTauTree)
