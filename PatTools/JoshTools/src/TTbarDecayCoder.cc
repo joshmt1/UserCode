@@ -13,7 +13,7 @@ Should work for ttbar and T2tt. Not implemented for single top.
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Wed Nov  7 14:21:41 CET 2012
-// $Id: TTbarDecayCoder.cc,v 1.1 2012/11/08 17:21:58 joshmt Exp $
+// $Id: TTbarDecayCoder.cc,v 1.2 2012/11/11 18:08:50 joshmt Exp $
 //
 //
 
@@ -56,7 +56,7 @@ class TTbarDecayCoder : public edm::EDProducer {
   virtual void endLuminosityBlock(edm::LuminosityBlock&, edm::EventSetup const&);
   
   int getTopDecayCategory(int code1, int code2);
-  int findTopDecayMode( const reco::Candidate & cand);// float& taupt, float& tauvisiblept, float &taueta, float &tauphi, int &nChargedTauDaughters) {
+  int findTopDecayMode( const reco::Candidate & cand,float& taupt, float& tauvisiblept, float &taueta, float &tauphi, int &nChargedTauDaughters) ;
   void analyzeTauDecays(const reco::Candidate *mytau,bool &found_tau_elec,bool & found_tau_muon,bool & found_tau_had, int & nChargedTauDaughters, float &tauvisiblept);
 
       // ----------member data ---------------------------
@@ -82,6 +82,12 @@ TTbarDecayCoder::TTbarDecayCoder(const edm::ParameterSet& iConfig) :
   //register your products
   // Examples
   produces<int >("ttbarDecayCode");//.setBranchAlias("pfcands_trkiso"); //last part needed?
+  produces< std::vector<int> >("topDecayCode");
+  produces< std::vector<float> >("tauGenPt");
+  produces< std::vector<float> >("tauGenVisPt");
+  produces< std::vector<int> >("tauGenNProng");
+  produces< std::vector<float> >("tauGenEta");
+  produces< std::vector<float> >("tauGenPhi");
   
 }
 
@@ -109,15 +115,34 @@ TTbarDecayCoder::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   iEvent.getByLabel(genParticleSrc_,genParticles);
 
   int ntops=0;
-  int topDecayCode[2]={0,0};
+  //  int topDecayCode[2]={0,0};
+
+  std::auto_ptr< std::vector<int> >  topDecayCode(new std::vector<int>);
+  std::auto_ptr< std::vector<float> > tauGenPt(new std::vector<float>);
+  std::auto_ptr< std::vector<float> > tauGenVisPt(new std::vector<float>);
+  std::auto_ptr< std::vector<int> > tauGenNProng(new std::vector<int>);
+  std::auto_ptr< std::vector<float> > tauGenEta(new std::vector<float>);
+  std::auto_ptr< std::vector<float> > tauGenPhi(new std::vector<float>);
 
   for (size_t k = 0 ; k<genParticles->size(); k++) {
     const reco::Candidate & TCand = (*genParticles)[ k ];
     if (abs(TCand.pdgId())== 6 && TCand.status()==3) { //find t quark
-      int topcode = findTopDecayMode(TCand);//,taupt,tauptvis,taueta,tauphi,nprong);
+
+      float taupt=-1;
+      float tauptvis=-1;
+      float taueta=-99;
+      float tauphi=-99;
+      int nprong=-1;
+
+      int topcode = findTopDecayMode(TCand,taupt,tauptvis,taueta,tauphi,nprong);
       //      std::cout<<"[main] "<<topcode<<std::endl;
       if (ntops<=1) {
-	topDecayCode[ntops] = topcode;
+	topDecayCode->push_back(topcode);
+	tauGenPt->push_back(taupt);
+	tauGenNProng->push_back(nprong);
+	tauGenVisPt->push_back(tauptvis);
+	tauGenEta->push_back(taueta);
+	tauGenPhi->push_back(tauphi);
 	ntops++;
       }
       else { //should not happen
@@ -128,9 +153,15 @@ TTbarDecayCoder::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   std::auto_ptr< int >  ttbarDecayCode(new int);
 
-  *ttbarDecayCode =   getTopDecayCategory(topDecayCode[0], topDecayCode[1]);
+  *ttbarDecayCode =   getTopDecayCategory(topDecayCode->at(0), topDecayCode->at(1));
 
   iEvent.put(ttbarDecayCode,"ttbarDecayCode");
+  iEvent.put(topDecayCode,"topDecayCode");
+  iEvent.put(tauGenPt,"tauGenPt");
+  iEvent.put(tauGenVisPt,"tauGenVisPt");
+  iEvent.put(tauGenNProng,"tauGenNProng");
+  iEvent.put(tauGenEta,"tauGenEta");
+  iEvent.put(tauGenPhi,"tauGenPhi");
 
 /* this is an EventSetup example
    //Read SetupData from the SetupRecord in the EventSetup
@@ -291,13 +322,13 @@ void TTbarDecayCoder::analyzeTauDecays(const reco::Candidate *mytau,bool &found_
 
 }
 
-int TTbarDecayCoder::findTopDecayMode( const reco::Candidate & cand) {//, float& taupt, float& tauvisiblept, float &taueta, float &tauphi, int &nChargedTauDaughters) {
+int TTbarDecayCoder::findTopDecayMode( const reco::Candidate & cand, float& taupt, float& tauvisiblept, float &taueta, float &tauphi, int &nChargedTauDaughters) {
 
   //the tau stuff was a specific hack for a specific set of code.
   //i'm going to leave it in,
   //the results won't go anywhere for now but they might be useful later
-  float taupt,taueta,tauphi,tauvisiblept;
-  int nChargedTauDaughters;
+//   float taupt,taueta,tauphi,tauvisiblept;
+//   int nChargedTauDaughters;
 
   taupt = -1;
   tauvisiblept = 0;
