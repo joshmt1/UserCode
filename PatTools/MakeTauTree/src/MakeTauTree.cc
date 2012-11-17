@@ -18,7 +18,7 @@ Update -- I will now expand this code to try to put all sorts of useful quantiti
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Wed Jul 25 15:22:44 CEST 2012
-// $Id: MakeTauTree.cc,v 1.3 2012/08/27 14:06:50 joshmt Exp $
+// $Id: MakeTauTree.cc,v 1.5 2012/11/13 23:26:38 joshmt Exp $
 //
 //
 
@@ -279,7 +279,7 @@ MakeTauTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   //MET must come first, because other calculations depend on it
   edm::Handle<edm::View<reco::MET> > mets;
   iEvent.getByLabel(metSrc_, mets);
-  MET = mets->front().et();
+  MET = mets->front().pt();
   METphi = mets->front().phi();
 
   //MC info is needed by some other stuff (gen tau info)...so it should come after MET
