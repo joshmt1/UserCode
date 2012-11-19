@@ -18,7 +18,7 @@ Update -- I will now expand this code to try to put all sorts of useful quantiti
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Wed Jul 25 15:22:44 CEST 2012
-// $Id: MakeTauTree.cc,v 1.5 2012/11/13 23:26:38 joshmt Exp $
+// $Id: MakeTauTree.cc,v 1.6 2012/11/17 16:48:02 joshmt Exp $
 //
 //
 
@@ -430,9 +430,9 @@ void MakeTauTree::fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iS
   iEvent.getByLabel("ttbarDecayProducer","topDecayCode",h_topDecayCode);
   iEvent.getByLabel("ttbarDecayProducer","tauGenNProng",h_tauGenNProng);
   iEvent.getByLabel("ttbarDecayProducer","tauGenVisPt",h_tauGenVisPt);
-  iEvent.getByLabel("ttbarDecayProducer","tauGenPt",h_tauGenPt);
-  iEvent.getByLabel("ttbarDecayProducer","tauGenPhi",h_tauGenPhi);
-  iEvent.getByLabel("ttbarDecayProducer","tauGenEta",h_tauGenEta);
+  iEvent.getByLabel("ttbarDecayProducer","lepGenPt",h_tauGenPt);
+  iEvent.getByLabel("ttbarDecayProducer","lepGenPhi",h_tauGenPhi);
+  iEvent.getByLabel("ttbarDecayProducer","lepGenEta",h_tauGenEta);
 
   //all we have to do here now it transfer the values from
   //the event content to the ntuple variables
@@ -457,10 +457,11 @@ void MakeTauTree::fillMCInfo(const edm::Event& iEvent, const edm::EventSetup& iS
     if (k<=1) {
       topDecayCode[k] = (*h_topDecayCode)[k];
       tauGenNProng[k]= (*h_tauGenNProng)[k];
-      tauGenPt[k]=(*h_tauGenPt)[k];
+      //hacking this so that we only save the info about taus (not e or mu)
+      tauGenPt[k]= (topDecayCode[k] >=4 ) ? (*h_tauGenPt)[k] : -1;
       tauGenVisPt[k]=(*h_tauGenVisPt)[k];
-      tauGenEta[k]=(*h_tauGenEta)[k];
-      tauGenPhi[k]=(*h_tauGenPhi)[k];
+      tauGenEta[k]=(topDecayCode[k] >=4 ) ?(*h_tauGenEta)[k] : -99;
+      tauGenPhi[k]=(topDecayCode[k] >=4 ) ?(*h_tauGenPhi)[k] : -99;
     }
     else { //should not happen
       std::cout<<"ntops = "<<k<<std::endl;

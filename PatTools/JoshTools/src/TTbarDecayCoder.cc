@@ -13,7 +13,7 @@ Should work for ttbar and T2tt. Not implemented for single top.
 //
 // Original Author:  Joshua Thompson,6 R-029,+41227678914,
 //         Created:  Wed Nov  7 14:21:41 CET 2012
-// $Id: TTbarDecayCoder.cc,v 1.2 2012/11/11 18:08:50 joshmt Exp $
+// $Id: TTbarDecayCoder.cc,v 1.3 2012/11/13 22:54:08 joshmt Exp $
 //
 //
 
@@ -56,7 +56,7 @@ class TTbarDecayCoder : public edm::EDProducer {
   virtual void endLuminosityBlock(edm::LuminosityBlock&, edm::EventSetup const&);
   
   int getTopDecayCategory(int code1, int code2);
-  int findTopDecayMode( const reco::Candidate & cand,float& taupt, float& tauvisiblept, float &taueta, float &tauphi, int &nChargedTauDaughters) ;
+  int findTopDecayMode( const reco::Candidate & cand, float& leppt, float& tauvisiblept, float &lepeta, float &lepphi, int &nChargedTauDaughters) ;
   void analyzeTauDecays(const reco::Candidate *mytau,bool &found_tau_elec,bool & found_tau_muon,bool & found_tau_had, int & nChargedTauDaughters, float &tauvisiblept);
 
       // ----------member data ---------------------------
@@ -81,13 +81,13 @@ TTbarDecayCoder::TTbarDecayCoder(const edm::ParameterSet& iConfig) :
 {
   //register your products
   // Examples
-  produces<int >("ttbarDecayCode");//.setBranchAlias("pfcands_trkiso"); //last part needed?
+  produces<int >("ttbarDecayCode");
   produces< std::vector<int> >("topDecayCode");
-  produces< std::vector<float> >("tauGenPt");
+  produces< std::vector<float> >("lepGenPt");
   produces< std::vector<float> >("tauGenVisPt");
   produces< std::vector<int> >("tauGenNProng");
-  produces< std::vector<float> >("tauGenEta");
-  produces< std::vector<float> >("tauGenPhi");
+  produces< std::vector<float> >("lepGenEta");
+  produces< std::vector<float> >("lepGenPhi");
   
 }
 
@@ -118,31 +118,31 @@ TTbarDecayCoder::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   //  int topDecayCode[2]={0,0};
 
   std::auto_ptr< std::vector<int> >  topDecayCode(new std::vector<int>);
-  std::auto_ptr< std::vector<float> > tauGenPt(new std::vector<float>);
+  std::auto_ptr< std::vector<float> > lepGenPt(new std::vector<float>);
   std::auto_ptr< std::vector<float> > tauGenVisPt(new std::vector<float>);
   std::auto_ptr< std::vector<int> > tauGenNProng(new std::vector<int>);
-  std::auto_ptr< std::vector<float> > tauGenEta(new std::vector<float>);
-  std::auto_ptr< std::vector<float> > tauGenPhi(new std::vector<float>);
+  std::auto_ptr< std::vector<float> > lepGenEta(new std::vector<float>);
+  std::auto_ptr< std::vector<float> > lepGenPhi(new std::vector<float>);
 
   for (size_t k = 0 ; k<genParticles->size(); k++) {
     const reco::Candidate & TCand = (*genParticles)[ k ];
     if (abs(TCand.pdgId())== 6 && TCand.status()==3) { //find t quark
 
-      float taupt=-1;
+      float leppt=-1;
       float tauptvis=-1;
-      float taueta=-99;
-      float tauphi=-99;
+      float lepeta=-99;
+      float lepphi=-99;
       int nprong=-1;
 
-      int topcode = findTopDecayMode(TCand,taupt,tauptvis,taueta,tauphi,nprong);
+      int topcode = findTopDecayMode(TCand,leppt,tauptvis,lepeta,lepphi,nprong);
       //      std::cout<<"[main] "<<topcode<<std::endl;
       if (ntops<=1) {
 	topDecayCode->push_back(topcode);
-	tauGenPt->push_back(taupt);
+	lepGenPt->push_back(leppt);
 	tauGenNProng->push_back(nprong);
 	tauGenVisPt->push_back(tauptvis);
-	tauGenEta->push_back(taueta);
-	tauGenPhi->push_back(tauphi);
+	lepGenEta->push_back(lepeta);
+	lepGenPhi->push_back(lepphi);
 	ntops++;
       }
       else { //should not happen
@@ -157,11 +157,11 @@ TTbarDecayCoder::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   iEvent.put(ttbarDecayCode,"ttbarDecayCode");
   iEvent.put(topDecayCode,"topDecayCode");
-  iEvent.put(tauGenPt,"tauGenPt");
+  iEvent.put(lepGenPt,"lepGenPt");
   iEvent.put(tauGenVisPt,"tauGenVisPt");
   iEvent.put(tauGenNProng,"tauGenNProng");
-  iEvent.put(tauGenEta,"tauGenEta");
-  iEvent.put(tauGenPhi,"tauGenPhi");
+  iEvent.put(lepGenEta,"lepGenEta");
+  iEvent.put(lepGenPhi,"lepGenPhi");
 
 /* this is an EventSetup example
    //Read SetupData from the SetupRecord in the EventSetup
@@ -322,19 +322,15 @@ void TTbarDecayCoder::analyzeTauDecays(const reco::Candidate *mytau,bool &found_
 
 }
 
-int TTbarDecayCoder::findTopDecayMode( const reco::Candidate & cand, float& taupt, float& tauvisiblept, float &taueta, float &tauphi, int &nChargedTauDaughters) {
+int TTbarDecayCoder::findTopDecayMode( const reco::Candidate & cand,  float& leppt, float& tauvisiblept, float &lepeta, float &lepphi, int &nChargedTauDaughters) {
 
-  //the tau stuff was a specific hack for a specific set of code.
-  //i'm going to leave it in,
-  //the results won't go anywhere for now but they might be useful later
-//   float taupt,taueta,tauphi,tauvisiblept;
-//   int nChargedTauDaughters;
+  //the 'tau' names are historical and are partially misnomers. some of them we fill for other leptons as well
 
-  taupt = -1;
+  leppt = -1;
   tauvisiblept = 0;
 
-  taueta=-99;
-  tauphi=-99;
+  lepeta=-99;
+  lepphi=-99;
   nChargedTauDaughters = 0;
 
   //tested using a TTbarJets madgraph sample
@@ -350,17 +346,27 @@ int TTbarDecayCoder::findTopDecayMode( const reco::Candidate & cand, float& taup
       for (size_t j=0; j < daughter->numberOfDaughters(); ++j) {
 	//seems that the daughters of the W will be status 3 decay products and a status 2 copy of the W
 	if (daughter->daughter(j)->status() == 3) {
-	  int wdau = abs(daughter->daughter(j)->pdgId());
+	  const reco::Candidate *mylep = daughter->daughter(j);
+	  int wdau = abs(mylep->pdgId());
 	  if (wdau <= 4) foundq = true;
-	  else if (wdau == 11) founde = true;
-	  else if (wdau == 13) foundm = true;
+	  else if (wdau == 11) {
+	    founde = true;
+	    leppt = mylep->pt();
+	    lepeta = mylep->eta();
+	    lepphi = mylep->phi();
+	  }
+	  else if (wdau == 13) {
+	    foundm = true;
+	    leppt = mylep->pt();
+	    lepeta = mylep->eta();
+	    lepphi = mylep->phi();
+	  }
 	  else if (wdau == 15) {
 	    foundt = true;
-	    const reco::Candidate *mytau = daughter->daughter(j);
-	    taupt = mytau->pt();
-	    taueta = mytau->eta();
-	    tauphi = mytau->phi();
-	    analyzeTauDecays( mytau,found_tau_elec, found_tau_muon, found_tau_had, nChargedTauDaughters,tauvisiblept);
+	    leppt = mylep->pt();
+	    lepeta = mylep->eta();
+	    lepphi = mylep->phi();
+	    analyzeTauDecays( mylep,found_tau_elec, found_tau_muon, found_tau_had, nChargedTauDaughters,tauvisiblept);
 	  }
 	  else if (wdau == 14 || wdau==16 || wdau==12) { } //do nothing for neutrinos
 	  else std::cout<<"WARNING -- W daughter is not as expected! "<<wdau<<std::endl;
