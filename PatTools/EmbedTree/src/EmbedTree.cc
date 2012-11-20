@@ -13,7 +13,7 @@
 //
 // Original Author:  Joshua Thompson
 //         Created:  Tue Nov  6 10:04:04 CST 2012
-// $Id$
+// $Id: EmbedTree.cc,v 1.1 2012/11/19 19:12:52 joshmt Exp $
 //
 //
 
@@ -111,6 +111,9 @@ class EmbedTree : public edm::EDAnalyzer {
   float DeltaPhiMetJet2;
   float DeltaPhiMetJet3;
 
+  //jet info
+  float jetpt1,jetphi1,jeteta1;
+
   //  float DeltaPhiMetIsotrack1; //can't do this until I have phi of isotrack
   float DeltaPhiMetMuon1,DeltaPhiMetElectron1;
 
@@ -140,6 +143,8 @@ void EmbedTree::clearTreeVariables() {
   njets70=0;
   njets50=0;
   njets30=0;
+
+  jetpt1=-1; jetphi1=-99; jeteta1=-99;
 
   //generic bogus values
   ttbarDecayCode=-1;
@@ -239,6 +244,12 @@ EmbedTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       }
       if (pt>=50) 	  ++njets50;
       if (pt>=70) 	  ++njets70;
+
+      if (pt>jetpt1) { //lead jet info
+	jetpt1 = pt;
+	jeteta1 = jet->eta();
+	jetphi1 = jet->phi();
+      }
     }
   }
 
@@ -270,8 +281,14 @@ void EmbedTree::fillPreembedInfo(const edm::Event& iEvent, const edm::EventSetup
     edm::Handle<edm::View<reco::PFCandidate> > mulist;
     iEvent.getByLabel(originalMuonSrc_.label(),"pfMu",mulist);
 
-    assert( mulist->size() == 1);
+    int nm=0;
     for (edm::View<reco::PFCandidate>::const_iterator themu = mulist->begin(); themu != mulist->end(); ++themu) {
+      ++nm;
+      if(nm>1) {
+	std::cout<<"warning -- "<<originalMuonSrc_.label()<<":pfMu is "<<mulist->size()<<" elements. Storing info for the first on the list."<<std::endl;
+	break;
+      }
+
       seedmuonpt = themu->pt();
       seedmuoneta = themu->eta();
       seedmuonphi = themu->phi();
@@ -420,6 +437,10 @@ EmbedTree::beginJob()
 
   tree_->Branch("DeltaPhiMetMuon1",&DeltaPhiMetMuon1,"DeltaPhiMetMuon1/F");
   tree_->Branch("DeltaPhiMetElectron1",&DeltaPhiMetElectron1,"DeltaPhiMetElectron1/F");
+
+  tree_->Branch("jetpt1",&jetpt1,"jetpt1/F");
+  tree_->Branch("jetphi1",&jetphi1,"jetphi1/F");
+  tree_->Branch("jeteta1",&jeteta1,"jeteta1/F");
 
   tree_->Branch("isotrackpt1",&isotrackpt1,"isotrackpt1/F");
 
