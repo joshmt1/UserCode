@@ -13,7 +13,7 @@
 //
 // Original Author:  Joshua Thompson
 //         Created:  Tue Nov  6 10:04:04 CST 2012
-// $Id: EmbedTree.cc,v 1.1 2012/11/19 19:12:52 joshmt Exp $
+// $Id: EmbedTree.cc,v 1.2 2012/11/20 14:49:14 joshmt Exp $
 //
 //
 
@@ -279,13 +279,13 @@ void EmbedTree::fillPreembedInfo(const edm::Event& iEvent, const edm::EventSetup
   }
   else {
     edm::Handle<edm::View<reco::PFCandidate> > mulist;
-    iEvent.getByLabel(originalMuonSrc_.label(),"pfMu",mulist);
+    iEvent.getByLabel(originalMuonSrc_,mulist);
 
     int nm=0;
     for (edm::View<reco::PFCandidate>::const_iterator themu = mulist->begin(); themu != mulist->end(); ++themu) {
       ++nm;
       if(nm>1) {
-	std::cout<<"warning -- "<<originalMuonSrc_.label()<<":pfMu is "<<mulist->size()<<" elements. Storing info for the first on the list."<<std::endl;
+	std::cout<<"warning -- "<<originalMuonSrc_.label()<<":pfLep is "<<mulist->size()<<" elements. Storing info for the first on the list."<<std::endl;
 	break;
       }
 
