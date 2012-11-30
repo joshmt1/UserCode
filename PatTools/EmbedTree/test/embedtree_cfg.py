@@ -1,33 +1,31 @@
 import FWCore.ParameterSet.Config as cms
 
-#what = "embedded"
-what = "MC"
+what = "embedded"
+#what = "MC"
 
 if what=="MC":
 #    inputfile = 'file:/uscms_data/d2/joshmt/ttbar-8TeV-Skim_Mu.root'
 #    inputfile = 'ttbar-mu-skim.txt'
 #    inputfile = 'ttbar-powheg.txt'
-    inputfile = 'localttbar.txt'
     jetcollection = "patJetsAK5PFchs"
     metcollection = "pfMet"
     pfcandcollection = "pfNoPileUpPFchs"
-    ttbardecsrc = "ttbarCoder"
     mdrsrc = ""
     originalmuon = ""
     outfile = "embedTree_MC.root"
 elif what=="embedded":
 #    inputfile = 'file:/uscms/home/joshmt/nobackup/smallSkims/embedTests/embedFlipReco.justright.root'
-    inputfile = 'ttbar-embedFlipReco.txt'
+    inputfile = 'ttbar-embed-TauGenTauHad-2012-11-28.txt'
     jetcollection = "ak5PFJetsPFchsMerged"
     metcollection = "pfMetMerged"
-    pfcandcollection = "embedmerger"
-    ttbardecsrc = ""
+    pfcandcollection = "embedmerger:pf"
     mdrsrc = "minDRmuonjet"
-    originalmuon = "embedsplitter"
-    outfile = "embedTree_MC_embedFlipReco.root"
+    originalmuon = "embedsplitter:pfLep"
+    outfile = "/uscmst1b_scratch/lpc1/3DayLifetime/joshmt/embedTreeMC_embedTauGenTauHad-2012-11-28.root"
 
 #same for MC and embedded
-genparticlesource = "genParticles"
+ttbardecsrc = "ttbarCoder"
+genparticlesource = "genParticles::PAT"
 vtxsource = "goodVertices"
 
 process = cms.Process("MakeTree")
@@ -89,17 +87,18 @@ process.maketree = cms.EDAnalyzer('EmbedTree',
 
 process.TFileService = cms.Service("TFileService", fileName = cms.string(outfile) )
 
-if what=="MC":
-    process.p = cms.Path(process.ttbarCoder
-                         *process.trackIsolationMaker
-                         *process.vetoMuons
-                         *process.vetoElectrons
-                         *process.maketree)
-elif what=="embedded":
-    process.p = cms.Path(process.trackIsolationMaker
-                         *process.vetoMuons
-                         *process.vetoElectrons
-                         *process.maketree)
+#if what=="MC":
+#this should actually run in both cases now
+process.p = cms.Path(process.ttbarCoder
+                     *process.trackIsolationMaker
+                     *process.vetoMuons
+                     *process.vetoElectrons
+                     *process.maketree)
+##elif what=="embedded":
+##    process.p = cms.Path(process.trackIsolationMaker
+##                         *process.vetoMuons
+##                         *process.vetoElectrons
+##                         *process.maketree)
     
 #magic from SAK
 def InputConfiguration(postfix, process):
@@ -122,3 +121,4 @@ def InputConfiguration(postfix, process):
         
 
 InputConfiguration("", process)
+
