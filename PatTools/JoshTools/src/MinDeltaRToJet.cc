@@ -5,9 +5,15 @@
 // 
 /**\class MinDeltaRToJet MinDeltaRToJet.cc PatTools/MinDeltaRToJet/src/MinDeltaRToJet.cc
 
-given a list of jets and a PFCandidate, find the minDeltaR between the PF candidate and the jets in the list
+ - given a list of jets and a PFCandidate, find the minDeltaR between the PF candidate and the jets in the list
+[excluding the jet that contains that PF candidate]
 
-produce a single float with that value
+ - produce a single float with that value
+
+ -- OR --
+   - given a list of jets and a genParticle, find the minDeltaR between the genParticle and the jets in the list.
+   trick is to remove the reco'd version of the genParticle from the jet list
+The only idea I have is to impose a lower limit on minDeltaR. Hard-coded to 0.3 for now
 
 */
 //
@@ -58,7 +64,7 @@ class MinDeltaRToJet : public edm::EDProducer {
   virtual void endLuminosityBlock(edm::LuminosityBlock&, edm::EventSetup const&);
   
       // ----------member data ---------------------------
-  edm::InputTag candSrc_,jetSrc_;
+  edm::InputTag candSrc_,genCandSrc_,jetSrc_;
 
 };
 
@@ -76,6 +82,7 @@ class MinDeltaRToJet : public edm::EDProducer {
 //
 MinDeltaRToJet::MinDeltaRToJet(const edm::ParameterSet& iConfig) :
   candSrc_(iConfig.getParameter<edm::InputTag>("pfCandSource")),
+  genCandSrc_(iConfig.getParameter<edm::InputTag>("GenCandSource")),
   jetSrc_(iConfig.getParameter<edm::InputTag>("JetSource"))
 {
   //register your products
@@ -107,23 +114,38 @@ MinDeltaRToJet::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   edm::Handle< edm::View<reco::PFCandidate> > pfcand;
   iEvent.getByLabel(candSrc_,pfcand);
 
+  edm::Handle< edm::View<reco::GenParticle> > gencand;
+  iEvent.getByLabel(genCandSrc_,gencand);
+
   edm::Handle<edm::View<pat::Jet> > jets;
   iEvent.getByLabel(jetSrc_,jets);
 
   std::auto_ptr< float > minDeltaRToJet(new float);
 
+  const bool usePf = !(pfcand.failedToGet());
+  const size_t loopmax = usePf ? pfcand->size() : gencand->size() ;
   float mindr = 999;
-  for (size_t k=0; k<pfcand->size(); k++) {
-    if (k>0) {std::cout<<" [MinDeltaRToJet] pfcand list is bigger than one element"<<std::endl; break;}
+  for (size_t k=0; k<loopmax; k++) {
+    //if multiple elements in input list, we'll find the min over all of them
+    //    if (k>0) {std::cout<<" [MinDeltaRToJet] cand list is bigger than one element"<<std::endl; break;}
 
-    double muoneta = (*pfcand)[k].eta();
-    double muonphi = (*pfcand)[k].phi();
+    double muoneta,muonphi;
+    if (usePf) {
+      muoneta = (*pfcand)[k].eta();
+      muonphi = (*pfcand)[k].phi();
+    }
+    else { //we call it muon but really it's a generic particle
+      muoneta = (*gencand)[k].eta();
+      muonphi = (*gencand)[k].phi();
+    }
     //    std::cout<<"[muon] "<<(*pfcand)[k].pt()<<" "<<(*pfcand)[k].eta()<<" "<<(*pfcand)[k].phi()<<std::endl;
 
     for (edm::View<pat::Jet>::const_iterator jet = jets->begin(); jet != jets->end(); ++jet) {
       float dr = reco::deltaR( jet->eta(), jet->phi(), muoneta,muonphi);
-      if ( dr < mindr) {
+
+      if ( dr < mindr && usePf) { //
 	//loop over jet constituents to check if this jet is actually one and the same as the muon
+	//we do this with a *very* tight DR and pT match
 	//	std::cout<<"[jet] "<<jet->pt()<<" "<<jet->eta()<<" "<<jet->phi()<<std::endl;
 	bool usethisjet=true;
 	for (size_t ijc = 0; ijc<jet->getPFConstituents().size(); ijc++ ) {
@@ -136,6 +158,10 @@ MinDeltaRToJet::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 	  }
 	}
 	if (usethisjet)	mindr=dr;
+      }
+      else if (!usePf) {
+	//here the logic is simple -- don't accept a dr less than cutoff of 0.3
+	if ( dr < mindr && dr>= 0.3) mindr=dr;
       }
     }
   }

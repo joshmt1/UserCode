@@ -39,7 +39,10 @@
 #include "DataFormats/METReco/interface/MET.h"
 
 #include "DataFormats/MuonReco/interface/Muon.h"
+#include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
+
+#include "DataFormats/VertexReco/interface/Vertex.h"
 
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 
@@ -82,6 +85,7 @@ class EmbedTree : public edm::EDAnalyzer {
       // ----------member data ---------------------------
 
   // -- config info
+  edm::InputTag vtxSrc_;
   edm::InputTag jetSrc_, metSrc_;
   edm::InputTag ttbarDecaySrc_;
   edm::InputTag muonSrc_,electronSrc_;
@@ -91,6 +95,8 @@ class EmbedTree : public edm::EDAnalyzer {
   // ntuple stuff
 
   TTree* tree_;
+
+  int nGoodPV;
 
   //jet counters
   int njets70;
@@ -104,7 +110,9 @@ class EmbedTree : public edm::EDAnalyzer {
 
   //for embedded events only, quantities for the original muon
   float minDRmuonJet;
+  int nseedmuons;
   float seedmuonpt,seedmuoneta,seedmuonphi;
+  float seedWpt;
 
   //MET, jet info
   float DeltaPhiMetJet1;
@@ -132,12 +140,17 @@ class EmbedTree : public edm::EDAnalyzer {
   //mc truth, for unembedded MC only
   int ttbarDecayCode;
   float genLeptonPt1,genLeptonPt2;
+  float genLeptonVisPt1,genLeptonVisPt2;
+  int genLeptonNProng1,genLeptonNProng2;
   float genLeptonEta1,genLeptonEta2;
+  float genLeptonPhi1,genLeptonPhi2;
   int genLeptonFlavor1,genLeptonFlavor2; //provides more info that the (legacy) ttbarDecayCode
 
 };
 
 void EmbedTree::clearTreeVariables() {
+
+  nGoodPV=0;
 
   //to be incremented -- must be zero
   njets70=0;
@@ -149,7 +162,10 @@ void EmbedTree::clearTreeVariables() {
   //generic bogus values
   ttbarDecayCode=-1;
   genLeptonPt1=-1; genLeptonPt2=-1;
+  genLeptonVisPt1=-1; genLeptonVisPt2=-1;
+  genLeptonNProng1=0; genLeptonNProng2=0;
   genLeptonEta1=-99; genLeptonEta2=-99;
+  genLeptonPhi1=-99; genLeptonPhi2=-99;
   genLeptonFlavor1=-1; genLeptonFlavor2=-1; 
 
   MET=-99;
@@ -165,7 +181,9 @@ void EmbedTree::clearTreeVariables() {
   DeltaPhiMetMuon1=-99;
   DeltaPhiMetElectron1=-99;
   minDRmuonJet=-99;
+  nseedmuons=0;
   seedmuonpt=-99; seedmuoneta=-99; seedmuonphi=-99;
+  seedWpt=-99;
 
 }
 
@@ -181,6 +199,7 @@ void EmbedTree::clearTreeVariables() {
 // constructors and destructor
 //
 EmbedTree::EmbedTree(const edm::ParameterSet& iConfig) :
+  vtxSrc_(iConfig.getParameter<edm::InputTag>("VtxSource")),
   jetSrc_(iConfig.getParameter<edm::InputTag>("JetSource")),
   metSrc_(iConfig.getParameter<edm::InputTag>("MetSource")),
   ttbarDecaySrc_(iConfig.getParameter<edm::InputTag>("TtbarDecaySource")),
@@ -227,6 +246,11 @@ EmbedTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   iEvent.getByLabel(metSrc_, mets);
   MET = mets->front().pt();
   METphi = mets->front().phi();
+
+  //fill pv info
+  edm::Handle<edm::View<reco::Vertex> > pvs;
+  iEvent.getByLabel(vtxSrc_, pvs);
+  nGoodPV = pvs->size();
 
   //do not use pat::Jet
   edm::Handle<edm::View<reco::Jet> > jets;
@@ -281,17 +305,44 @@ void EmbedTree::fillPreembedInfo(const edm::Event& iEvent, const edm::EventSetup
     edm::Handle<edm::View<reco::PFCandidate> > mulist;
     iEvent.getByLabel(originalMuonSrc_,mulist);
 
-    int nm=0;
-    for (edm::View<reco::PFCandidate>::const_iterator themu = mulist->begin(); themu != mulist->end(); ++themu) {
-      ++nm;
-      if(nm>1) {
-	std::cout<<"warning -- "<<originalMuonSrc_.label()<<":pfLep is "<<mulist->size()<<" elements. Storing info for the first on the list."<<std::endl;
-	break;
-      }
+    edm::Handle<edm::View<pat::Muon> > mulistpat;
+    if (mulist.failedToGet())  iEvent.getByLabel(originalMuonSrc_,mulistpat);
 
-      seedmuonpt = themu->pt();
-      seedmuoneta = themu->eta();
-      seedmuonphi = themu->phi();
+    nseedmuons=0;
+    if (mulist.failedToGet() ) { //use pat muons
+      //      std::cout<<" [using PAT muons]"<<std::endl;
+      for (edm::View<pat::Muon>::const_iterator themu = mulistpat->begin(); themu != mulistpat->end(); ++themu) {
+	++nseedmuons;
+	if(nseedmuons==1) { //store info for the first guy only
+	  seedmuonpt = themu->pt();
+	  seedmuoneta = themu->eta();
+	  seedmuonphi = themu->phi();
+	}
+      }
+    }
+    else {//use pf cands
+      //      std::cout<<" [using pf muons]"<<std::endl;
+      for (edm::View<reco::PFCandidate>::const_iterator themu = mulist->begin(); themu != mulist->end(); ++themu) {
+	++nseedmuons;
+	if(nseedmuons==1) { //store info for the first guy only
+	  seedmuonpt = themu->pt();
+	  seedmuoneta = themu->eta();
+	  seedmuonphi = themu->phi();
+	}
+      }
+    }
+  }
+
+  //vector<reco::CompositeCandidate>      "WtoMuNu"                   ""                "EMBED"   
+  edm::Handle<edm::View<reco::CompositeCandidate> > wtomunu;
+  iEvent.getByLabel("WtoMuNu",wtomunu);
+  if (!wtomunu.failedToGet()) {
+    int nn=0;
+    for (edm::View<reco::CompositeCandidate>::const_iterator thew = wtomunu->begin(); thew != wtomunu->end(); ++thew) {
+      if (nn==0) {
+	seedWpt = thew->pt();
+	nn++;
+      }
     }
   }
 
@@ -355,9 +406,15 @@ void EmbedTree::fillTtbarDecayCode(const edm::Event& iEvent, const edm::EventSet
 
     //also get the generator-level lepton pT and eta
     edm::Handle<std::vector<float> > genleppt;
+    edm::Handle<std::vector<float> > gentauvispt;
+    edm::Handle<std::vector<int> > gentaunprong;
     edm::Handle<std::vector<float> > genlepeta;
+    edm::Handle<std::vector<float> > genlepphi;
     edm::Handle<std::vector<int> > genlepflavor;
     iEvent.getByLabel(ttbarDecaySrc_.label(),"lepGenPt",genleppt);
+    iEvent.getByLabel(ttbarDecaySrc_.label(),"tauGenVisPt",gentauvispt);
+    iEvent.getByLabel(ttbarDecaySrc_.label(),"tauGenNProng",gentaunprong);
+    iEvent.getByLabel(ttbarDecaySrc_.label(),"lepGenPhi",genlepphi);
     iEvent.getByLabel(ttbarDecaySrc_.label(),"lepGenEta",genlepeta);
     iEvent.getByLabel(ttbarDecaySrc_.label(),"topDecayCode",genlepflavor);
 
@@ -375,8 +432,17 @@ void EmbedTree::fillTtbarDecayCode(const edm::Event& iEvent, const edm::EventSet
     genLeptonPt1 = (*genleppt)[i];
     genLeptonPt2 = (*genleppt)[j];
 
+    genLeptonVisPt1 = (*gentauvispt)[i];
+    genLeptonVisPt2 = (*gentauvispt)[j];
+
+    genLeptonNProng1 = (*gentaunprong)[i];
+    genLeptonNProng2 = (*gentaunprong)[j];
+
     genLeptonEta1 = (*genlepeta)[i];
     genLeptonEta2 = (*genlepeta)[j];
+
+    genLeptonPhi1 = (*genlepphi)[i];
+    genLeptonPhi2 = (*genlepphi)[j];
 
     genLeptonFlavor1 = translateTopCode2PdgId((*genlepflavor)[i]);
     genLeptonFlavor2 = translateTopCode2PdgId((*genlepflavor)[j]);
@@ -424,6 +490,8 @@ void
 EmbedTree::beginJob()
 {
 
+  tree_->Branch("nGoodPV",&nGoodPV,"nGoodPV/I");
+
   tree_->Branch("njets70",&njets70,"njets70/I");
   tree_->Branch("njets50",&njets50,"njets50/I");
   tree_->Branch("njets30",&njets30,"njets30/I");
@@ -452,9 +520,11 @@ EmbedTree::beginJob()
   tree_->Branch("muonphi1",&muonphi1,"muonphi1/F");
   tree_->Branch("muoneta1",&muoneta1,"muoneta1/F");
 
+  tree_->Branch("nseedmuons",&nseedmuons,"nseedmuons/I");
   tree_->Branch("seedmuonpt",&seedmuonpt,"seedmuonpt/F");
   tree_->Branch("seedmuonphi",&seedmuonphi,"seedmuonphi/F");
   tree_->Branch("seedmuoneta",&seedmuoneta,"seedmuoneta/F");
+  tree_->Branch("seedWpt",&seedWpt,"seedWpt/F");
 
   tree_->Branch("minDRmuonJet",&minDRmuonJet,"minDRmuonJet/F");
 
@@ -462,11 +532,17 @@ EmbedTree::beginJob()
   tree_->Branch("ttbarDecayCode",&ttbarDecayCode,"ttbarDecayCode/I");
   tree_->Branch("genLeptonFlavor1",&genLeptonFlavor1,"genLeptonFlavor1/I");
   tree_->Branch("genLeptonPt1",&genLeptonPt1,"genLeptonPt1/F");
+  tree_->Branch("genLeptonVisPt1",&genLeptonVisPt1,"genLeptonVisPt1/F");
+  tree_->Branch("genLeptonNProng1",&genLeptonNProng1,"genLeptonNProng1/I");
   tree_->Branch("genLeptonEta1",&genLeptonEta1,"genLeptonEta1/F");
+  tree_->Branch("genLeptonPhi1",&genLeptonPhi1,"genLeptonPhi1/F");
 
   tree_->Branch("genLeptonFlavor2",&genLeptonFlavor2,"genLeptonFlavor2/I");
   tree_->Branch("genLeptonPt2",&genLeptonPt2,"genLeptonPt2/F");
+  tree_->Branch("genLeptonVisPt2",&genLeptonVisPt2,"genLeptonVisPt2/F");
+  tree_->Branch("genLeptonNProng2",&genLeptonNProng2,"genLeptonNProng2/I");
   tree_->Branch("genLeptonEta2",&genLeptonEta2,"genLeptonEta2/F");
+  tree_->Branch("genLeptonPhi2",&genLeptonPhi2,"genLeptonPhi2/F");
 
 
 }
