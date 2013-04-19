@@ -120,6 +120,10 @@ namespace jmt {
     return TMath::Sqrt(deltaR2 (eta1, phi1, eta2, phi2));
   }
 
+  int signOf(double a) {
+    return (a>= 0.0) ? 1 : -1;
+  }
+
   // == error propagation ==
 
   //because not all versions of ROOT have it built in
