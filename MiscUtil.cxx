@@ -41,8 +41,7 @@ namespace jmt {
   }
 
   //utility function for making output more readable
-  TString format_nevents(double n,double e, const bool moreDigits=false) {
-    const TString latexMode_=true; //hard code for now
+  TString format_nevents(double n,double e, const bool moreDigits=false,const bool latexMode_=true) {
     const TString pm = latexMode_ ?  "\\pm ": " +/- ";
 
     const int eCutoff = moreDigits ? 10 : 1;
