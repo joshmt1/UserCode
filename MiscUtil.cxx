@@ -15,7 +15,7 @@ namespace jmt {
 
   //======misc utilities======
   //gets rid of = > < from cuts in order to be better included in file names
-  TString fortranize(TString cut) {
+  TString fortranize(TString cut,const TString options="") {
 
     cut.ReplaceAll(" ",""); //remove all spaces
 
@@ -36,6 +36,8 @@ namespace jmt {
     //this is pretty ugly
     cut.ReplaceAll("(","L");
     cut.ReplaceAll(")","R");
+
+    if (options.Contains("dash")) cut.ReplaceAll("-","_");
 
     return cut;
   }
