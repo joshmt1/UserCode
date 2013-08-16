@@ -38,9 +38,7 @@ void calculateTagProb_ewk(vector<pair<jetFlavor,tagStatus> > & event, float &Pro
   TH1D * h_ltageff  = (TH1D *)f_tageff_->Get(ltageffname);
   */
 
-  unsigned int js = 4;
-  unsigned int jetsize = js > event.size() ? event.size() : js; 
-
+  unsigned int jetsize = event.size() ;
 
   if ( jetsize < 1 ) return;
 
