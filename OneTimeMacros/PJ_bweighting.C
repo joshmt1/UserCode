@@ -38,9 +38,9 @@ void calculateTagProb_ewk(vector<pair<jetFlavor,tagStatus> > & event, float &Pro
   TH1D * h_ltageff  = (TH1D *)f_tageff_->Get(ltageffname);
   */
 
-  //unsigned int js = 4;
-  //unsigned int jetsize = js > jets_AK5PF_pt->size() ? jets_AK5PF_pt->size() : js; 
-  unsigned int jetsize = event.size();
+  unsigned int js = 4;
+  unsigned int jetsize = js > event.size() ? event.size() : js; 
+
 
   if ( jetsize < 1 ) return;
 
@@ -504,6 +504,11 @@ void countWeighted( const vector< vector<pair<jetFlavor,tagStatus> >  > & datase
   n2b=0;
   n3b=0;
   n4b=0;
+
+  double  n2be=0;
+  double  n3be=0;
+  double  n4be=0;
+
   //loop over events
   for (size_t iev = 0; iev<dataset.size(); ++iev) {
     vector<pair<jetFlavor,tagStatus> > event = dataset.at(iev);
@@ -512,9 +517,13 @@ void countWeighted( const vector< vector<pair<jetFlavor,tagStatus> >  > & datase
     n2b+= prob2;
     n3b+= prob3;
     n4b+=prob4;
+    //sum of the squares of the weights
+    n2be+= prob2*prob2;
+    n3be+= prob3*prob3;
+    n4be+=prob4*prob4;
   }
 
-  cout<<"2b 3b 4b  "<<n2b<<" "<<n3b<<" "<<n4b<<endl;
+  cout<<"2b 3b 4b  "<<n2b<<" +- "<<sqrt(n2be)<<" "<<n3b<<" +- "<<sqrt(n3be)<<" "<<n4b<<" +- "<<sqrt(n4be)<<endl;
 
 
 }
@@ -522,7 +531,7 @@ void countWeighted( const vector< vector<pair<jetFlavor,tagStatus> >  > & datase
 void PJgo(const ULong64_t ngen = 1000000) {
   rnd_ = new TRandom3(223449876); //some seed
   closureTestMode_=true; //set SFs to 1
-  chanceOfJet5_=0; //turn off 5th jet
+  chanceOfJet5_=0.5; //turn off 5th jet
 
 
   vector< vector<pair<jetFlavor,tagStatus> >  > MC;
