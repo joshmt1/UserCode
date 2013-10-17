@@ -58,21 +58,19 @@ double getEffMC( const jetFlavor flav, const tagStatus tag) {
   double eff=1; //this is for the k0 (untagged) case
 
   if (flav==klf) {
-    if      (tag==kL) eff = 0.1;
-    else if (tag==kM) eff = 0.01;
-    else if (tag==kT) eff = 0.001;
+    if      (tag==kL) eff = 0.1; //this seems very vaguely correct (depends a lot on pt)
+    else if (tag==kM) eff = 0.015; //again, higher at high pT
+    else if (tag==kT) eff = 0.002;
   }
   else if (flav==kc) {
-    //i have no idea if these are right
-    if      (tag==kL) eff = 0.3;
-    else if (tag==kM) eff = 0.2;
-    else if (tag==kT) eff = 0.1;
+    if      (tag==kL) eff = 0.4; //ballpark figures throughout, here
+    else if (tag==kM) eff = 0.17;
+    else if (tag==kT) eff = 0.04;
   }
   else if (flav==kb) {
-    //again, just a guess
-    if      (tag==kL) eff = 0.8;
-    else if (tag==kM) eff = 0.7;
-    else if (tag==kT) eff = 0.6;
+    if      (tag==kL) eff = 0.8;  //ballpark ok
+    else if (tag==kM) eff = 0.65; //varies so strongly with pT. hard to say without looking in more detail
+    else if (tag==kT) eff = 0.5; //again, the pT dependence is strong
   }
   return eff;
 
@@ -92,19 +90,20 @@ double getSF(const jetFlavor flav, const tagStatus tag) {
 
 
   if (flav==klf) {
-    if      (tag==kL) sf = 1.1;
-    else if (tag==kM) sf = 1.3;
-    else if (tag==kT) sf = 1.5;
+    if      (tag==kL) sf = 1.13;
+    else if (tag==kM) sf = 1.21;
+    else if (tag==kT) sf = 1.23;
   }
   else if (flav==kc) {
-    if      (tag==kL) sf = 0.95;
-    else if (tag==kM) sf = 0.9;
-    else if (tag==kT) sf = 0.8;
+    if      (tag==kL) sf = 0.97;
+    else if (tag==kM) sf = 0.96;
+    else if (tag==kT) sf = 0.94;
   }
   else if (flav==kb) {
-    if      (tag==kL) sf = 0.95;
-    else if (tag==kM) sf = 0.9;
-    else if (tag==kT) sf = 0.8;
+    //
+    if      (tag==kL) sf = 0.97;
+    else if (tag==kM) sf = 0.96;
+    else if (tag==kT) sf = 0.94;
   }
   return sf;
 
@@ -137,7 +136,7 @@ tagStatus getTagStatus(const bool isMC, const jetFlavor flav ) {
   return tag;
 }
 
-float chanceOfJet5_ = 0.50;
+float chanceOfJet5_ = 0.00; //turn off the 5th jet
 vector<pair<jetFlavor,tagStatus> > generateTtbar(const bool isMC) {
 
   vector<pair<jetFlavor,tagStatus> > ttbarEvent;
@@ -287,6 +286,7 @@ void countInBins( const vector< vector<pair<jetFlavor,tagStatus> >  > & dataset/
   ULong64_t n2b=0;
   ULong64_t n3b=0;
   ULong64_t n4b=0;
+  ULong64_t nother=0;
 
   //loop over events
   for (size_t iev = 0; iev<dataset.size(); ++iev) {
@@ -309,9 +309,11 @@ void countInBins( const vector< vector<pair<jetFlavor,tagStatus> >  > & dataset/
     else if ( nT >= 2 && (nM+nT >=3) && (nT+nM+nL>=4)) {
       n4b++;
     }
+    else nother++;
+
   }
 
-  cout<<"2b 3b 4b  "<<n2b<<" "<<n3b<<" "<<n4b<<endl;
+  cout<<"nother 2b 3b 4b  "<<nother<<" "<<n2b<<" "<<n3b<<" "<<n4b<<endl;
 
 }
 
