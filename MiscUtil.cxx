@@ -37,6 +37,9 @@ namespace jmt {
     cut.ReplaceAll("(","L");
     cut.ReplaceAll(")","R");
 
+    //can't decide if this one should be a default or only enabled by an option
+    cut.ReplaceAll(".","p");
+
     if (options.Contains("dash")) cut.ReplaceAll("-","_");
 
     return cut;
