@@ -126,7 +126,7 @@ void calculateTagProb_ewk(vector<pair<jetFlavor,tagStatus> > & event, float &Pro
   } //ensure 4jets
 
   if ( jetsize == 4 ) {
-
+    cout<<" == "<<endl;
   //4T
   for (unsigned int ijet=0; ijet<jetsize-3; ++ijet) {
     //    if(!isGoodJet(ijet,pTthresh)) continue; //switch to 20 GeV threshold for b jets
@@ -140,6 +140,7 @@ void calculateTagProb_ewk(vector<pair<jetFlavor,tagStatus> > & event, float &Pro
         for (unsigned int ljet=kjet+1; ljet<jetsize; ++ljet) {
 	  //          if(isGoodJet(ljet,pTthresh)) continue;
           double effl = jetTagEff_ewk(event.at(ljet), kT);
+	  cout<<ijet<<" "<<jjet<<" "<<kjet<<" "<<ljet<<endl;
           Prob4b += effi*effj*effk*effl;
         } //l loop
       }// k loop
