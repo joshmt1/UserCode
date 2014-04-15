@@ -136,6 +136,30 @@ tagStatus getTagStatus(const bool isMC, const jetFlavor flav ) {
   return tag;
 }
 
+float chanceOfJet5_signal_ = 0.25;
+vector<pair<jetFlavor,tagStatus> > generateSignal(const bool isMC) {
+
+  vector<pair<jetFlavor,tagStatus> > event;
+
+  //generate 4 b's
+
+  for (int iii=0;iii<4;iii++)    event.push_back(make_pair( kb, getTagStatus(isMC, kb)));
+
+  //see if there's a 5th jet
+  if (rnd_->Uniform() <chanceOfJet5_signal_) {
+    jetFlavor extraJet;
+    double r = rnd_->Uniform();
+    //these numbers determine the true flavor composition of the extra jet
+    if (r < 0.6) extraJet = klf;
+    else if (r < 0.8) extraJet = kc;
+    else extraJet = kb;
+    event.push_back(make_pair( extraJet, getTagStatus(isMC, extraJet)));
+  }
+
+  return event;
+
+}
+
 float chanceOfJet5_ = 0.00; //turn off the 5th jet
 vector<pair<jetFlavor,tagStatus> > generateTtbar(const bool isMC) {
 
@@ -325,10 +349,10 @@ void go(const ULong64_t ngen = 1000000) {
   vector< vector<pair<jetFlavor,tagStatus> >  > data;
 
   for (ULong64_t iev = 0; iev <ngen; ++iev) {
-    vector<pair<jetFlavor,tagStatus> > dataevent  = generateTtbar(false);
+    vector<pair<jetFlavor,tagStatus> > dataevent  = generateSignal(false);
     data.push_back(dataevent);
 
-    vector<pair<jetFlavor,tagStatus> > mcevent  = generateTtbar(true);
+    vector<pair<jetFlavor,tagStatus> > mcevent  = generateSignal(true);
     MC.push_back(mcevent);
   }
 
