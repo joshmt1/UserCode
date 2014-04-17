@@ -25,6 +25,7 @@ void FlatTree(const char *inputFile)
   // Get pointers to branches used in this analysis
   TClonesArray *branchGenJet = treeReader->UseBranch("GenJet");
   TClonesArray *branchJet = treeReader->UseBranch("Jet");
+  TClonesArray *branchMet = treeReader->UseBranch("MissingET");
   //  TClonesArray *branchElectron = treeReader->UseBranch("Electron");
   //  TClonesArray *branchMuon = treeReader->UseBranch("Muon");
   //  TClonesArray *branchPhoton = treeReader->UseBranch("Photon");
@@ -34,8 +35,24 @@ void FlatTree(const char *inputFile)
 
   SimpleTree tr("simpleTree.root");
   tr.AddVariable("HT");
-  tr.AddVariable("njets30");
+  tr.AddVariable("MET");
+  tr.AddVariable("METphi");
+  tr.AddVariable("MHT");
+  tr.AddVariable("MHTphi");
+  tr.AddVariable("VSPT");
+  tr.AddVariable("MT2");
+  tr.AddInt("njets20");
+  tr.AddInt("njets40");
+  tr.AddInt("nbjets40loose");
+  tr.AddInt("nbjets40tight");
   tr.AddArray("jetPt",20);
+
+  //i think we veto on these things
+  tr.AddInt("nElectrons");
+  tr.AddInt("nMuons");
+  tr.AddInt("nTaus");
+  //no need for photons or tighter muons, probably
+
 
   // Loop over all events
   for(Long64_t entry = 0; entry < numberOfEntries; ++entry) {
@@ -43,17 +60,68 @@ void FlatTree(const char *inputFile)
     treeReader->ReadEntry(entry);
   
     if (verbose||entry%5000==0) cout << "Event " << entry << " / " << numberOfEntries << endl;
-    
-    float HT = 0;
-    int njets30=0;
 
+    //store MET
+    assert( branchMet->GetEntries() ==1); //sanity
+    MissingET * met = (MissingET*) branchMet->At(0);
+    tr.Set("MET",met->MET);
+    tr.Set("METphi",met->Phi);
+    
+    float HT = 0,MHTx=0,MHTy=0,MSTx=0,MSTy=0;
+    int njets40=0,nbjets40loose=0,nbjets40tight=0;
+    double pa[3]={0,0,0};
+    double pb[3]={0,0,0};
+    double pmiss[3]={0,0,0};
+    pmiss[1] = met->MET*cos(met->Phi);
+    pmiss[2] = met->MET*sin(met->Phi);
+
+    //TODO count electrons, muons, taus
+
+    //also calculate MST
+
+    //jets to go into the MT2 calculation
+    vector<float> mt2jets_px;
+    vector<float> mt2jets_py;
+    vector<float> mt2jets_pz;
+    vector<float> mt2jets_e;
+
+    float minDeltaPhi=1e9;
       // Loop over jets
       for (int i = 0 ; i < branchJet->GetEntries() ; i++) {
 	Jet *jet = (Jet*) branchJet->At(i);
-	if (jet->PT > 30.) {
+
+	//TODO add eta, quality cuts
+
+	if (jet->PT>20 && std::abs(jet->Eta)<2.4) { //mt2 and MHT jets ; TODO quality cuts
+	  mt2jets_px.push_back( jet->PT * cos(jet->Phi));
+	  mt2jets_py.push_back( jet->PT * sin(jet->Phi));
+	  TLorentzVector jjj = jet->P4(); //let ROOT do the math for me
+	  mt2jets_pz.push_back( jjj.Pz());
+	  mt2jets_e.push_back(  jjj.E());
+
+	  //my nomenclaure -- MHT uses only jets, MST uses jets and leptons
+	  MHTx -= jet->PT * cos(jet->Phi);
+	  MHTy -= jet->PT * sin(jet->Phi);
+	  MSTx -= jet->PT * cos(jet->Phi);
+	  MSTy -= jet->PT * sin(jet->Phi);
+	}
+
+	//HT calculation ; TODO quality cuts
+	if (jet->PT>50 && std::abs(jet->Eta)<3) {
 	  HT += jet->PT;
-	  if (njets30<20) tr.Set("jetPt",njets30,jet->PT);
-	  njets30++;
+	}
+
+	//"all purpose" jets e.g. b-tagging TODO quality
+	if (jet->PT > 40. && std::abs(jet->Eta)<2.4) {
+	  if (njets40<20) tr.Set("jetPt",njets40,jet->PT);
+	  njets40++;
+
+	  //TODO check that I have tight versus loose correct!
+	  if ( jet->BTag&1) ++nbjets40loose;
+	  if ( jet->BTag&2) ++nbjets40tight;
+
+	  //use lead 4 jets for mindeltaphi
+	  if (njets40 <=4 && Util::DeltaPhi(jet->Phi,met->Phi) < minDeltaPhi) minDeltaPhi = Util::DeltaPhi(jet->Phi,met->Phi);
 
 /*
 	  cout << "  Jet " << i << endl;
@@ -81,14 +149,52 @@ void FlatTree(const char *inputFile)
 // 	      }
 // 	    }
 // 	  } 
-	}
-      }
+	} //jet pT 40
+      } //loop over jets
       // } // verbose 
 
       tr.Set("HT",HT);
-      tr.Set("njets30",float(njets30));
+      tr.Set("MHT",sqrt(MHTx*MHTx + MHTy*MHTy));
+      tr.Set("MHTphi",atan2(MHTy,MHTx)); 
+      tr.Set("minDeltaPhi",minDeltaPhi);
+
+      //VSPT calculation
+      double MST = sqrt(MSTx*MSTx + MSTy*MSTy);
+      double MSTphi = atan2(MSTy,MSTx);
+      TVector3 METvec( met->MET*cos(met->Phi),met->MET*sin(met->Phi) ,0);
+      TVector3 MSTvec( MST*cos(MSTphi),MST*sin(MSTphi),0);
+      TVector3 vdiff = METvec-MSTvec;
+      tr.Set("VSPT",vdiff.Mag());
+
+      tr.SetInt("njets40",njets40);
+      tr.SetInt("nbjets40loose",nbjets40loose);
+      tr.SetInt("nbjets40tight",nbjets40tight);
+      tr.SetInt("njets20",(int)mt2jets_px.size());
+
+      if (mt2jets_px.size()>=2) {
+// 	FindHemispheres hemifinder(branchJet);
+// 	pa[1] = hemifinder.Px(1);
+// 	pa[2] = hemifinder.Py(1);
+// 	pb[1] = hemifinder.Px(2);
+// 	pb[2] = hemifinder.Py(2);
+
+	Hemisphere ethhemi(mt2jets_px,mt2jets_py,mt2jets_pz,mt2jets_e,2,3); //final arguments are options (inv mass seeds, min Lund distance)
+	pa[1] = ethhemi.getAxis1()[0] * ethhemi.getAxis1()[3];
+	pa[2] = ethhemi.getAxis1()[1] * ethhemi.getAxis1()[3];
+	pb[1] = ethhemi.getAxis2()[0] * ethhemi.getAxis2()[3];
+	pb[2] = ethhemi.getAxis2()[1] * ethhemi.getAxis2()[3];
+	mt2_bisect::mt2 mt2_event_eth;
+	mt2_event_eth.set_momenta( pa, pb, pmiss );
+	mt2_event_eth.set_mn( 0 ); //LSP mass
+	float  mt2_value_eth = (float) mt2_event_eth.get_mt2();
+	tr.Set("MT2", mt2_value_eth);
+
+      }
+      else {tr.Set("MT2", -99);}//tr.Set("MT2jmt", -1);}
 
       tr.Fill();
   } // event
+
+
 
 }

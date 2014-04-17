@@ -2,12 +2,15 @@
 #include <utility>
 #include <vector>
 
+#include <cassert>
+
 #include "TROOT.h"
 #include "TSystem.h"
 #include "TApplication.h"
 
 #include "TString.h"
 
+#include "TStopwatch.h"
 //#include "TH2.h"
 //#include "THStack.h"
 //#include "TLegend.h"
@@ -16,6 +19,11 @@
 //#include "TLorentzVector.h"
 
 #include "external/mt2analysis/SimpleTree.hh"
+#include "external/mt2analysis/mt2_bisect.h"
+#include "external/mt2analysis/FindHemispheres.hh"
+#include "external/mt2analysis/Hemisphere.hh"
+#include "external/mt2analysis/Utilities.hh"
+
 
 #include "classes/DelphesClasses.h"
 

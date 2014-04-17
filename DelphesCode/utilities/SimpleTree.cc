@@ -47,6 +47,11 @@ void SimpleTree::SetBool(const TString & name, bool val) {
   if (iter != bools_.end() )     iter->second = val;
 }
 
+void SimpleTree::SetInt(const TString & name, int val) {
+  map<TString,int>::iterator iter = ints_.find(name);
+  if (iter != ints_.end() )     iter->second = val;
+}
+
 void SimpleTree::Set(const TString & name,int index, float val) { //for arrays
 
   map<TString,float*>::iterator iter = arrays_.find(name);
@@ -99,6 +104,23 @@ void SimpleTree::AddDouble(const TString & name, double dummyVal) {
   TString decoratedName = name;
   decoratedName += "/D";
   tree_->Branch(name,&doubles_[name],decoratedName);
+
+}
+
+void SimpleTree::AddInt(const TString & name, int dummyVal) {
+
+  if ( ints_.count(name) != 0) {
+    cout<<"Variable with name "<<name<<" is already in the tree!"<<endl;
+    return;
+  }
+
+  cout<<"Adding int "<<name<<" to tree"<<endl;
+  ints_[name] = dummyVal;
+  ints_dummyVals_[name]=dummyVal;
+
+  TString decoratedName = name;
+  decoratedName += "/I";
+  tree_->Branch(name,&ints_[name],decoratedName);
 
 }
 
