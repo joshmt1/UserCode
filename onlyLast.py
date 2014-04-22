@@ -3,7 +3,7 @@ import os, sys, re
 ###############################################################
 
 #Usage:
-# python onlyLast.py <path to input directory on CASTOR>
+# python onlyLast.py <path to input directory>
 
 #now updated to handle output from the latest CRAB with
 #file names like this:
@@ -14,6 +14,9 @@ import os, sys, re
 # this script now automatically checks if the input dir is pointing
 # to the T3 and adapts accordingly
 # e.g. python onlyLast.py "$CUSE/blah" 
+
+# 2014 - jmt, remove CASTOR functionality and replace with local
+#file commands.
 
 ###############################################################
 
@@ -49,7 +52,7 @@ if "srm" in location:
 outputdir = inputdir
 outputdir += 'EXTRAS'
 
-mkdircommand = "nsmkdir "
+mkdircommand = "mkdir "
 mkdircommand += outputdir
 
 #if isT3 == 'T3':
@@ -58,9 +61,9 @@ mkdircommand += outputdir
 
 
 #get a file listing into tmpfile
-cmd = 'nsls -l '
+cmd = 'ls -l '
 cmd += inputdir
-cmd += ' | awk \'// {print $5,$9;}\' > '
+cmd += ' | awk \'/root/ {print $5,$9;}\' > '
 
 
 if isT3 == True:
@@ -81,7 +84,6 @@ if isT3 == True:
 
 
 
-
 f = open(tmpfile,'r')
 
 #to deal with the arbitrary extension to the filename that crab
@@ -96,6 +98,10 @@ stub = 'stub'
 
 #do some accounting
 nmoved = 0
+nmoved_unique = 0
+nnotmoved = 0
+#check for max file index
+max_file_index = -1;
 
 for line in f:
     mypair = line.split()
@@ -116,6 +122,10 @@ for line in f:
         else:
             indexdict[result.group(2)] = [result.group(3)]
             completefilenames[result.group(2)] = [mypair[1]]
+
+        #just for user output
+        if int(result.group(2)) > max_file_index:
+            max_file_index = int(result.group(2))
 #        print result.group(0)
 #        print result.group(1)
 #        print result.group(2)
@@ -126,7 +136,9 @@ for line in f:
 for ii in indexdict:
     if len(indexdict[ii])==1:
         print "nothing to do for ",ii
+        nnotmoved +=1
     else:
+        nmoved_unique+=1
         indexdict[ii].sort()
         #will this work? in my one test case, yes
         completefilenames[ii].sort()
@@ -139,39 +151,44 @@ for ii in indexdict:
                 print mkdircommand
                 #this will give a harmless error if the dir already exists
                 os.system(mkdircommand)
+                alreadymadedir=1
 
             s=inputdir
             s+=jj
             print "moving ", s
-            cpcmd = 'rfcp '
-            if isT3 == True:
+
+            if isT3:
                 cpcmd = 'lcg-cp --verbose -b -D srmv2 "'
-            cpcmd += s
-
-            if isT3 == True:
-                cpcmd += '" "'
-            else: cpcmd += ' '
-
-            cpcmd += outputdir
-            if isT3 == True:
+                cpcmd += s
+                cpcmd += '" "';
+                cpcmd += outputdir
                 cpcmd +='/'
                 cpcmd +=jj
                 cpcmd += '"'
-            print cpcmd
-            os.system(cpcmd)
-            rmcmd = 'rfrm '
-            if isT3 == True:
+                print cpcmd
+                os.system(cpcmd)
                 rmcmd = 'srmrm '
-            rmcmd += s
-            print rmcmd
-            os.system(rmcmd)
+                rmcmd += s
+                print rmcmd
+                os.system(rmcmd)
+            else:
+                mvcmd = 'mv %s %s' % (s,outputdir)
+                print mvcmd
+                os.system(mvcmd)
+
             nmoved = nmoved+1
+    
+
+
 
 f.close()
 os.remove(tmpfile)
 
 print "----------------------------"
+print "Unique files in total: ",nmoved_unique + nnotmoved
 print "I moved this many files: ",nmoved
+print "I left this many alone: ",nnotmoved
+print "Max file index: ",max_file_index
 print "----------------------------"
 
 
