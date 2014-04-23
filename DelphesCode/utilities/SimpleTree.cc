@@ -28,11 +28,11 @@ SimpleTree::~SimpleTree() {
   //  delete outputFile_;
 }
 
-void SimpleTree::Set(const TString & name, float val) {
-
+void SimpleTree::Set(const TString & name, float val, bool accumulate) {
   map<TString,float>::iterator iter = vars_.find(name);
   if (iter != vars_.end() ) {
-    iter->second = val;
+    if (accumulate)  iter->second += val;
+    else             iter->second = val;
   }
 
 }
@@ -47,9 +47,12 @@ void SimpleTree::SetBool(const TString & name, bool val) {
   if (iter != bools_.end() )     iter->second = val;
 }
 
-void SimpleTree::SetInt(const TString & name, int val) {
+void SimpleTree::SetInt(const TString & name, int val,bool accumulate) {
   map<TString,int>::iterator iter = ints_.find(name);
-  if (iter != ints_.end() )     iter->second = val;
+  if (iter != ints_.end() ) {
+    if (accumulate) iter->second += val;
+    else            iter->second = val;
+  }
 }
 
 void SimpleTree::Set(const TString & name,int index, float val) { //for arrays
@@ -70,6 +73,15 @@ float SimpleTree::Get(const TString & name) {
   cout<<"Warning in Get -- not found: "<<name<<endl;
   return -1;
 
+}
+
+int SimpleTree::GetInt(const TString & name) {
+  map<TString,int>::iterator iter = ints_.find(name);
+  if (iter != ints_.end() ) {
+    return iter->second;
+  }
+  cout<<"Warning in GetInt -- not found: "<<name<<endl;
+  return -1;
 }
 
 void SimpleTree::AddVariable(const TString & name, float dummyVal) {

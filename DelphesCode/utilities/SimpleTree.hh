@@ -16,7 +16,7 @@ public:
   SimpleTree(const TString & outfilename);
   ~SimpleTree();
 
-  //handles float,double,bool and fixed array of float
+  //handles float,double,bool,int and fixed array of float
   //that's not everything but it is good enough for just about anything in practice
 
   void AddVariable(const TString & name, float dummyVal = -99);
@@ -25,12 +25,15 @@ public:
   void AddInt(const TString & name, int dummyVal=-99);
   void AddArray(const TString & name, int length, float dummyVal = -99);
   void Fill();
-  void Set(const TString & name, float val);
+  //if accumulate is true, then don't overwrite but instead +=
+  void Set(const TString & name, float val, bool accumulate=false );
   void SetDouble(const TString & name, double val);
   void SetBool(const TString & name, bool val);
-  void SetInt(const TString & name, int val);
+  void SetInt(const TString & name, int val,bool accumulate=false);
   void Set(const TString & name,int index, float val); //for arrays
+
   float Get(const TString & name);
+  int GetInt(const TString & name);
 
 
 private:

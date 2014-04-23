@@ -34,17 +34,17 @@ void FlatTree(const char *inputFile)
   bool listJetTowers = false;
 
   SimpleTree tr("simpleTree.root");
-  tr.AddVariable("HT");
+  tr.AddVariable("HT",0);
   tr.AddVariable("MET");
   tr.AddVariable("METphi");
   tr.AddVariable("MHT");
   tr.AddVariable("MHTphi");
   tr.AddVariable("VSPT");
   tr.AddVariable("MT2");
-  tr.AddInt("njets20");
-  tr.AddInt("njets40");
-  tr.AddInt("nbjets40loose");
-  tr.AddInt("nbjets40tight");
+  tr.AddInt("njets20",0);
+  tr.AddInt("njets40",0);
+  tr.AddInt("nbjets40loose",0);
+  tr.AddInt("nbjets40tight",0);
   tr.AddArray("jetPt",20);
 
   //i think we veto on these things
@@ -67,8 +67,8 @@ void FlatTree(const char *inputFile)
     tr.Set("MET",met->MET);
     tr.Set("METphi",met->Phi);
     
-    float HT = 0,MHTx=0,MHTy=0,MSTx=0,MSTy=0;
-    int njets40=0,nbjets40loose=0,nbjets40tight=0;
+    float MHTx=0,MHTy=0,MSTx=0,MSTy=0;
+
     double pa[3]={0,0,0};
     double pb[3]={0,0,0};
     double pmiss[3]={0,0,0};
@@ -108,20 +108,20 @@ void FlatTree(const char *inputFile)
 
 	//HT calculation ; TODO quality cuts
 	if (jet->PT>50 && std::abs(jet->Eta)<3) {
-	  HT += jet->PT;
+	  tr.Set("HT",jet->PT,true);
 	}
 
 	//"all purpose" jets e.g. b-tagging TODO quality
 	if (jet->PT > 40. && std::abs(jet->Eta)<2.4) {
-	  if (njets40<20) tr.Set("jetPt",njets40,jet->PT);
-	  njets40++;
+	  if ( tr.GetInt("njets40")<20) tr.Set("jetPt",tr.GetInt("njets40"),jet->PT);
+	  tr.SetInt("njets40",1,true);
 
 	  //TODO check that I have tight versus loose correct!
-	  if ( jet->BTag&1) ++nbjets40loose;
-	  if ( jet->BTag&2) ++nbjets40tight;
+	  if ( jet->BTag&1) tr.SetInt("nbjets40loose",1,true);
+	  if ( jet->BTag&2) tr.SetInt("nbjets40tight",1,true);
 
 	  //use lead 4 jets for mindeltaphi
-	  if (njets40 <=4 && Util::DeltaPhi(jet->Phi,met->Phi) < minDeltaPhi) minDeltaPhi = Util::DeltaPhi(jet->Phi,met->Phi);
+	  if (tr.GetInt("njets40") <=4 && Util::DeltaPhi(jet->Phi,met->Phi) < minDeltaPhi) minDeltaPhi = Util::DeltaPhi(jet->Phi,met->Phi);
 
 /*
 	  cout << "  Jet " << i << endl;
@@ -153,7 +153,6 @@ void FlatTree(const char *inputFile)
       } //loop over jets
       // } // verbose 
 
-      tr.Set("HT",HT);
       tr.Set("MHT",sqrt(MHTx*MHTx + MHTy*MHTy));
       tr.Set("MHTphi",atan2(MHTy,MHTx)); 
       tr.Set("minDeltaPhi",minDeltaPhi);
@@ -166,9 +165,6 @@ void FlatTree(const char *inputFile)
       TVector3 vdiff = METvec-MSTvec;
       tr.Set("VSPT",vdiff.Mag());
 
-      tr.SetInt("njets40",njets40);
-      tr.SetInt("nbjets40loose",nbjets40loose);
-      tr.SetInt("nbjets40tight",nbjets40tight);
       tr.SetInt("njets20",(int)mt2jets_px.size());
 
       if (mt2jets_px.size()>=2) {
