@@ -1,6 +1,7 @@
 #include "SimpleTree.hh"
 
 #include <iostream>
+#include <cassert>
 
 using namespace std;
 
@@ -34,17 +35,21 @@ void SimpleTree::Set(const TString & name, float val, bool accumulate) {
     if (accumulate)  iter->second += val;
     else             iter->second = val;
   }
+  else {cout<<"die on var "<<name<<endl; assert(0);}
 
 }
 
 void SimpleTree::SetDouble(const TString & name, double val) {
   map<TString,double>::iterator iter = doubles_.find(name);
   if (iter != doubles_.end() )     iter->second = val;
+  else assert(0);
+
 }
 
 void SimpleTree::SetBool(const TString & name, bool val) {
   map<TString,bool>::iterator iter = bools_.find(name);
   if (iter != bools_.end() )     iter->second = val;
+  else assert(0);
 }
 
 void SimpleTree::SetInt(const TString & name, int val,bool accumulate) {
@@ -53,6 +58,8 @@ void SimpleTree::SetInt(const TString & name, int val,bool accumulate) {
     if (accumulate) iter->second += val;
     else            iter->second = val;
   }
+  else assert(0);
+
 }
 
 void SimpleTree::Set(const TString & name,int index, float val) { //for arrays
@@ -61,6 +68,7 @@ void SimpleTree::Set(const TString & name,int index, float val) { //for arrays
   if (iter != arrays_.end() ) {
     iter->second[index] = val;
   }
+  else assert(0);
 
 }
 
@@ -185,6 +193,10 @@ void SimpleTree::Fill() {
 
   for ( map<TString,double>::iterator ii = doubles_.begin(); ii!=doubles_.end(); ++ii) {
     ii->second = doubles_dummyVals_[ii->first];
+  }
+
+  for ( map<TString,int>::iterator ii = ints_.begin(); ii!=ints_.end(); ++ii) {
+    ii->second = ints_dummyVals_[ii->first];
   }
 
   for ( map<TString,bool>::iterator ii = bools_.begin(); ii!=bools_.end(); ++ii) {

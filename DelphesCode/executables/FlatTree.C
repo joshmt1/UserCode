@@ -10,14 +10,18 @@ N.B. you must touch FlatTree.cpp in order to convince Make that there is anythin
 
 //------------------------------------------------------------------------------
 
-void FlatTree(const char *inputFile)
+void FlatTree(TString inputFile,TString outputFile)
 {
   //  gSystem->Load("libDelphes");
+
+  //inputFile can be something like:
+  //"root://eoscms.cern.ch//eos/cms/store/group/phys_higgs/upgrade/PhaseI/Configuration0/NoPileUp/tt-4p-600-1100-v1510_14TEV/tt-4p-600-1100-v1510_14TEV*.root"
 
   // Create chain of root trees
   TChain chain("Delphes");
   chain.Add(inputFile);
   
+
   // Create object of class ExRootTreeReader
   ExRootTreeReader *treeReader = new ExRootTreeReader(&chain);
   Long64_t numberOfEntries = treeReader->GetEntries();
@@ -26,14 +30,19 @@ void FlatTree(const char *inputFile)
   TClonesArray *branchGenJet = treeReader->UseBranch("GenJet");
   TClonesArray *branchJet = treeReader->UseBranch("Jet");
   TClonesArray *branchMet = treeReader->UseBranch("MissingET");
-  //  TClonesArray *branchElectron = treeReader->UseBranch("Electron");
-  //  TClonesArray *branchMuon = treeReader->UseBranch("Muon");
+  TClonesArray *branchEvent = treeReader->UseBranch("Event");
+  TClonesArray *branchElectron = treeReader->UseBranch("Electron");
+  TClonesArray *branchMuon = treeReader->UseBranch("Muon");
   //  TClonesArray *branchPhoton = treeReader->UseBranch("Photon");
 
   bool verbose =false;
   bool listJetTowers = false;
 
-  SimpleTree tr("simpleTree.root");
+  SimpleTree tr(outputFile);
+  //bookkeeping
+  tr.AddDouble("weight");
+
+  //jet observables
   tr.AddVariable("HT",0);
   tr.AddVariable("MET");
   tr.AddVariable("METphi");
@@ -41,18 +50,28 @@ void FlatTree(const char *inputFile)
   tr.AddVariable("MHTphi");
   tr.AddVariable("VSPT");
   tr.AddVariable("MT2");
+  tr.AddVariable("minDeltaPhi");
   tr.AddInt("njets20",0);
   tr.AddInt("njets40",0);
   tr.AddInt("nbjets40loose",0);
   tr.AddInt("nbjets40tight",0);
-  tr.AddArray("jetPt",20);
-
-  //i think we veto on these things
-  tr.AddInt("nElectrons");
-  tr.AddInt("nMuons");
-  tr.AddInt("nTaus");
+  tr.AddInt("nElectrons",0);
+  tr.AddInt("nMuons",0);
+  tr.AddInt("nTaus",0);
+  const unsigned int MAX_njets=20;
+  tr.AddArray("jetPt",MAX_njets); //could add eta, etc
+  const unsigned int MAX_leptons=4;
+  tr.AddArray("electronIso",MAX_leptons); //*not* relative iso
+  tr.AddArray("muonIso",MAX_leptons); //*not* relative iso
+  tr.AddArray("electronPt",MAX_leptons);
+  tr.AddArray("muonPt",MAX_leptons);
   //no need for photons or tighter muons, probably
 
+
+  CrossSections cross_section(inputFile);
+  const Long64_t n_events_generated = numberOfEntries; //for now, enforce that the whole sample is run over in one job!
+
+  TStopwatch loopTimer; //automatically starts the timer
 
   // Loop over all events
   for(Long64_t entry = 0; entry < numberOfEntries; ++entry) {
@@ -60,6 +79,11 @@ void FlatTree(const char *inputFile)
     treeReader->ReadEntry(entry);
   
     if (verbose||entry%5000==0) cout << "Event " << entry << " / " << numberOfEntries << endl;
+
+    assert(branchEvent->GetEntries()==1);
+    LHEFEvent* evt = (LHEFEvent*)branchEvent->At(0);
+    //    cout<<"Event weight = "<<evt->Weight<<endl;
+    tr.SetDouble("weight",evt->Weight * cross_section.Get() / n_events_generated); //weight for 1 pb-1
 
     //store MET
     assert( branchMet->GetEntries() ==1); //sanity
@@ -75,9 +99,30 @@ void FlatTree(const char *inputFile)
     pmiss[1] = met->MET*cos(met->Phi);
     pmiss[2] = met->MET*sin(met->Phi);
 
-    //TODO count electrons, muons, taus
-
-    //also calculate MST
+    //count electrons, muons
+    for (int i = 0 ; i < branchElectron->GetEntries() ; i++) {
+      Electron *el = (Electron*) branchElectron->At(i);
+      if (el->PT < 10 ) continue;
+      if ( std::abs(el->Eta) > 2.4) continue; //TODO quality, isolation
+      //good electron
+      //store electron iso
+    if ( tr.GetInt("nElectrons") < MAX_leptons) {
+tr.Set("electronIso",tr.GetInt("nElectrons"),el->IsolationVar);
+       tr.Set("electronPt",tr.GetInt("nElectrons"),el->PT);
+    }
+      tr.SetInt("nElectrons",1,true);
+      MSTx -= el->PT * cos(el->Phi);
+      MSTy -= el->PT * sin(el->Phi);
+    }
+    for (int i = 0 ; i < branchMuon->GetEntries() ; i++) {
+      Muon *mu = (Muon*) branchMuon->At(i);
+      if (mu->PT < 10 ) continue;
+      if ( std::abs(mu->Eta) > 2.4) continue; //TODO quality, isolation
+      //good muon
+      tr.SetInt("nMuons",1,true);
+      MSTx -= mu->PT * cos(mu->Phi);
+      MSTy -= mu->PT * sin(mu->Phi);
+    }
 
     //jets to go into the MT2 calculation
     vector<float> mt2jets_px;
@@ -104,6 +149,9 @@ void FlatTree(const char *inputFile)
 	  MHTy -= jet->PT * sin(jet->Phi);
 	  MSTx -= jet->PT * cos(jet->Phi);
 	  MSTy -= jet->PT * sin(jet->Phi);
+
+	  //use 20 GeV threshold for taus as well
+	  if ( jet->TauTag == 1)  tr.SetInt("nTaus",1,true);
 	}
 
 	//HT calculation ; TODO quality cuts
@@ -113,7 +161,7 @@ void FlatTree(const char *inputFile)
 
 	//"all purpose" jets e.g. b-tagging TODO quality
 	if (jet->PT > 40. && std::abs(jet->Eta)<2.4) {
-	  if ( tr.GetInt("njets40")<20) tr.Set("jetPt",tr.GetInt("njets40"),jet->PT);
+	  if ( tr.GetInt("njets40")<MAX_njets) tr.Set("jetPt",tr.GetInt("njets40"),jet->PT);
 	  tr.SetInt("njets40",1,true);
 
 	  //TODO check that I have tight versus loose correct!
@@ -123,32 +171,7 @@ void FlatTree(const char *inputFile)
 	  //use lead 4 jets for mindeltaphi
 	  if (tr.GetInt("njets40") <=4 && Util::DeltaPhi(jet->Phi,met->Phi) < minDeltaPhi) minDeltaPhi = Util::DeltaPhi(jet->Phi,met->Phi);
 
-/*
-	  cout << "  Jet " << i << endl;
-	  cout << "    pT: " << jet->PT << endl;
-	  cout << "    Eta: " << jet->Eta << endl;
-	  cout << "    BTag: " << bool(jet->BTag&1) << " | " << bool(jet->BTag&2) << endl;
-          cout << "    TauTag: " << jet->TauTag << endl;
-	  //	  cout << "    Area: " << jet->AreaP4().Pt() << endl;
-	  cout << "    Jet Pileup ID" << endl;
-	  cout << "      Beta*: " << jet->BetaStar << endl;
-	  cout << "      Fractional pT in annuli (<0.1, 0.1-0.2, ..., 0.4-0.5) " << jet->FracPt[0] << " " << jet->FracPt[1] << " " << jet->FracPt[2] << " " << jet->FracPt[3] << " " << jet->FracPt[4] << endl;
-	  cout << "      <dR^2>: " << jet->MeanSqDeltaR << endl;
-          cout << "      NNeutrals: " << jet->NNeutrals << endl;
-	  cout << "      NCharged: " << jet->NCharged << endl;
-	  cout << "    Number of constituents: " << jet->Constituents.GetEntries() << endl;
-*/
-// 	  if (listJetTowers && branchEFlowTrack && branchEFlowTower && branchEFlowMuon) {
-// 	    for (int j = 0 ; j < jet->Constituents.GetEntries() ; j++) {
-// 	      TObject *obj = jet->Constituents[j];
-// 	      if (obj && obj->IsA() == Tower::Class()) {
-// 		Tower *tow = static_cast<Tower *> ( obj ) ;
-// 		cout << "     Jet constituent Et Eta Phi Time (at calo) " << tow->ET << " " << tow->Eta << " " << tow->Phi << " " << tow->TOuter << endl;
-// 	      } else {
-// 		//		cout << "  not a tower - could check if it's a track instead (cf. Example3.C)" << endl;
-// 	      }
-// 	    }
-// 	  } 
+
 	} //jet pT 40
       } //loop over jets
       // } // verbose 
@@ -191,6 +214,8 @@ void FlatTree(const char *inputFile)
       tr.Fill();
   } // event
 
-
+  loopTimer.Stop();
+  cout<<"CPU (Wall): "<<numberOfEntries <<" / "<<loopTimer.CpuTime()<<" ("<<loopTimer.RealTime()<<") sec = "<<
+    numberOfEntries/loopTimer.CpuTime()<<" ("<<numberOfEntries/loopTimer.RealTime()<<") Hz"<<endl;
 
 }

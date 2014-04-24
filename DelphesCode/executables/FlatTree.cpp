@@ -23,7 +23,7 @@
 #include "external/mt2analysis/FindHemispheres.hh"
 #include "external/mt2analysis/Hemisphere.hh"
 #include "external/mt2analysis/Utilities.hh"
-
+#include "external/mt2analysis/CrossSections.hh"
 
 #include "classes/DelphesClasses.h"
 
@@ -47,10 +47,11 @@ int main(int argc, char *argv[])
 {
   char *appName = "FlatTree";
 
-  if(argc != 2)
+  if(argc != 2 && argc !=3)
   {
-    cout << " Usage: " << appName << " input_file" << endl;
+    cout << " Usage: " << appName << " input_file [output_file]" << endl;
     cout << " input_file - input file in ROOT format ('Delphes' tree)," << endl;
+    cout << " output_file - optional name of output file" << endl;
     return 1;
   }
 
@@ -61,12 +62,14 @@ int main(int argc, char *argv[])
   TApplication app(appName, &appargc, appargv);
 
   TString inputFile(argv[1]);
+  TString outputFile = "simpleTree.root";
+  if (argc==3) outputFile = TString(argv[2]);
 
 //------------------------------------------------------------------------------
 
 // Here you call your macro's main function 
 
-  FlatTree(inputFile);
+  FlatTree(inputFile,outputFile);
 
 //------------------------------------------------------------------------------
 
