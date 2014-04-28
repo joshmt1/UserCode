@@ -108,6 +108,8 @@ for line in f:
 #file size
     size = int(mypair[0])
 #parse filename
+    if not mypair[1].endswith('.root'):
+        continue #yet another check that the filename ends in .root
     result = re.match('(.*)_([0-9]*)_([0-9]*)_(.*).root',mypair[1])
     if size > 0:
         if stub=='stub':
