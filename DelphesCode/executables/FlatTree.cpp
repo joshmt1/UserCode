@@ -24,6 +24,7 @@
 #include "external/mt2analysis/Hemisphere.hh"
 #include "external/mt2analysis/Utilities.hh"
 #include "external/mt2analysis/CrossSections.hh"
+#include "external/mt2analysis/McTruthInfo.hh"
 
 #include "classes/DelphesClasses.h"
 

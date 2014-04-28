@@ -27,7 +27,7 @@ void FlatTree(TString inputFile,TString outputFile)
   Long64_t numberOfEntries = treeReader->GetEntries();
   
   // Get pointers to branches used in this analysis
-  TClonesArray *branchGenJet = treeReader->UseBranch("GenJet");
+  TClonesArray *branchGenParticles = treeReader->UseBranch("Particle");
   TClonesArray *branchJet = treeReader->UseBranch("Jet");
   TClonesArray *branchMet = treeReader->UseBranch("MissingET");
   TClonesArray *branchEvent = treeReader->UseBranch("Event");
@@ -41,6 +41,8 @@ void FlatTree(TString inputFile,TString outputFile)
   SimpleTree tr(outputFile);
   //bookkeeping
   tr.AddDouble("weight");
+
+  tr.AddInt("ttbarDecayCode");
 
   //jet observables
   tr.AddVariable("HT",0);
@@ -73,6 +75,8 @@ void FlatTree(TString inputFile,TString outputFile)
 
   TStopwatch loopTimer; //automatically starts the timer
 
+  McTruthInfo geninfo;
+
   // Loop over all events
   for(Long64_t entry = 0; entry < numberOfEntries; ++entry) {
     // Load selected branches with data from specified event
@@ -84,6 +88,7 @@ void FlatTree(TString inputFile,TString outputFile)
     LHEFEvent* evt = (LHEFEvent*)branchEvent->At(0);
     //    cout<<"Event weight = "<<evt->Weight<<endl;
     tr.SetDouble("weight",evt->Weight * cross_section.Get() / n_events_generated); //weight for 1 pb-1
+    tr.SetInt( geninfo.GetTtbarDecayCode(branchGenParticles));
 
     //store MET
     assert( branchMet->GetEntries() ==1); //sanity
