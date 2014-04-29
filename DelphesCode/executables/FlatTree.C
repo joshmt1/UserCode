@@ -36,7 +36,7 @@ void FlatTree(TString inputFile,TString outputFile)
   //  TClonesArray *branchPhoton = treeReader->UseBranch("Photon");
 
   bool verbose =false;
-  bool listJetTowers = false;
+  //  bool listJetTowers = false;
 
   SimpleTree tr(outputFile);
   //bookkeeping
@@ -53,16 +53,16 @@ void FlatTree(TString inputFile,TString outputFile)
   tr.AddVariable("VSPT");
   tr.AddVariable("MT2");
   tr.AddVariable("minDeltaPhi");
-  tr.AddInt("njets20",0);
+  tr.AddInt("njets30",0);
   tr.AddInt("njets40",0);
   tr.AddInt("nbjets40loose",0);
   tr.AddInt("nbjets40tight",0);
   tr.AddInt("nElectrons",0);
   tr.AddInt("nMuons",0);
   tr.AddInt("nTaus",0);
-  const unsigned int MAX_njets=20;
+  const int MAX_njets=20;
   tr.AddArray("jetPt",MAX_njets); //could add eta, etc
-  const unsigned int MAX_leptons=4;
+  const int MAX_leptons=4;
   tr.AddArray("electronIso",MAX_leptons); //*not* relative iso
   tr.AddArray("muonIso",MAX_leptons); //*not* relative iso
   tr.AddArray("electronPt",MAX_leptons);
@@ -88,7 +88,7 @@ void FlatTree(TString inputFile,TString outputFile)
     LHEFEvent* evt = (LHEFEvent*)branchEvent->At(0);
     //    cout<<"Event weight = "<<evt->Weight<<endl;
     tr.SetDouble("weight",evt->Weight * cross_section.Get() / n_events_generated); //weight for 1 pb-1
-    tr.SetInt( geninfo.GetTtbarDecayCode(branchGenParticles));
+    tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode(branchGenParticles));
 
     //store MET
     assert( branchMet->GetEntries() ==1); //sanity
@@ -111,10 +111,10 @@ void FlatTree(TString inputFile,TString outputFile)
       if ( std::abs(el->Eta) > 2.4) continue; //TODO quality, isolation
       //good electron
       //store electron iso
-    if ( tr.GetInt("nElectrons") < MAX_leptons) {
-tr.Set("electronIso",tr.GetInt("nElectrons"),el->IsolationVar);
-       tr.Set("electronPt",tr.GetInt("nElectrons"),el->PT);
-    }
+      if ( tr.GetInt("nElectrons") < MAX_leptons) {
+	tr.Set("electronIso",tr.GetInt("nElectrons"),el->IsolationVar);
+	tr.Set("electronPt",tr.GetInt("nElectrons"),el->PT);
+      }
       tr.SetInt("nElectrons",1,true);
       MSTx -= el->PT * cos(el->Phi);
       MSTy -= el->PT * sin(el->Phi);
@@ -140,9 +140,7 @@ tr.Set("electronIso",tr.GetInt("nElectrons"),el->IsolationVar);
       for (int i = 0 ; i < branchJet->GetEntries() ; i++) {
 	Jet *jet = (Jet*) branchJet->At(i);
 
-	//TODO add eta, quality cuts
-
-	if (jet->PT>20 && std::abs(jet->Eta)<2.4) { //mt2 and MHT jets ; TODO quality cuts
+	if (jet->PT>30 && std::abs(jet->Eta)<2.4) { //mt2 and MHT jets 
 	  mt2jets_px.push_back( jet->PT * cos(jet->Phi));
 	  mt2jets_py.push_back( jet->PT * sin(jet->Phi));
 	  TLorentzVector jjj = jet->P4(); //let ROOT do the math for me
@@ -155,7 +153,7 @@ tr.Set("electronIso",tr.GetInt("nElectrons"),el->IsolationVar);
 	  MSTx -= jet->PT * cos(jet->Phi);
 	  MSTy -= jet->PT * sin(jet->Phi);
 
-	  //use 20 GeV threshold for taus as well
+	  //use 30 GeV threshold for taus as well ; was 20 in the real analysis
 	  if ( jet->TauTag == 1)  tr.SetInt("nTaus",1,true);
 	}
 
@@ -193,7 +191,7 @@ tr.Set("electronIso",tr.GetInt("nElectrons"),el->IsolationVar);
       TVector3 vdiff = METvec-MSTvec;
       tr.Set("VSPT",vdiff.Mag());
 
-      tr.SetInt("njets20",(int)mt2jets_px.size());
+      tr.SetInt("njets30",(int)mt2jets_px.size());
 
       if (mt2jets_px.size()>=2) {
 // 	FindHemispheres hemifinder(branchJet);
@@ -220,7 +218,8 @@ tr.Set("electronIso",tr.GetInt("nElectrons"),el->IsolationVar);
   } // event
 
   loopTimer.Stop();
-  cout<<"CPU (Wall): "<<numberOfEntries <<" / "<<loopTimer.CpuTime()<<" ("<<loopTimer.RealTime()<<") sec = "<<
+  cout<<"CPU (Wall) : "<<numberOfEntries <<" / "<<loopTimer.CpuTime()<<" ("<<loopTimer.RealTime()<<") sec = "<<
     numberOfEntries/loopTimer.CpuTime()<<" ("<<numberOfEntries/loopTimer.RealTime()<<") Hz"<<endl;
+
 
 }
