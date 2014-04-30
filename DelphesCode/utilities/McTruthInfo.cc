@@ -17,9 +17,13 @@ McTruthInfo::~McTruthInfo() {
 bool McTruthInfo::checkMom(int index, int PidToLookFor) {
 
   //get mom index
-  int momIndex1 = ((GenParticle*)genParticles_->At(index))->M1;
+  GenParticle * theCand =(GenParticle*) genParticles_->At(index);
+  if (theCand==0) return false; //TClonesArray::At returns 0 if index is not found
+  int momIndex1 = theCand->M1;
   if (momIndex1 >=0 ) {
-    if ( std::abs(((GenParticle*)genParticles_->At(momIndex1))->PID)==PidToLookFor) return true;
+    GenParticle * theMom = (GenParticle*)genParticles_->At(momIndex1);
+    if (theMom==0) return false; //TClonesArray::At returns 0 if index is not found
+    if ( std::abs(theMom ->PID)==PidToLookFor) return true;
     else  return checkMom( momIndex1,PidToLookFor);
   }
 
@@ -36,6 +40,7 @@ int McTruthInfo::GetTtbarDecayCode(TClonesArray* genParticles) {
   //  cout<<" ~~~~~~~~~~~"<<endl;
   for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
+    if (c==0) continue; //try to prevent crashes....
     int pid = std::abs(c->PID);
     //    cout<<c->PID<<" "<<c->M1<<endl;
     if (pid == 11 || pid == 13 || pid==15 || pid==1 ||pid==2 ||pid==3||pid==4 ||pid==5) { //find ultimate top->W decay product
@@ -67,6 +72,6 @@ int McTruthInfo::GetTtbarDecayCode(TClonesArray* genParticles) {
   else if  ( ntau==2) return 8;
   else if  ( ntau==1 && ne+nmu==1) return 9;
 
-  return 0;
+  return 0; //uncategorized
 
 }

@@ -17,6 +17,9 @@ void FlatTree(TString inputFile,TString outputFile)
   //inputFile can be something like:
   //"root://eoscms.cern.ch//eos/cms/store/group/phys_higgs/upgrade/PhaseI/Configuration0/NoPileUp/tt-4p-600-1100-v1510_14TEV/tt-4p-600-1100-v1510_14TEV*.root"
 
+  cout<<" *** beginning of FlatTree ***"<<endl;
+  cout<<"inputFile is: "<<inputFile<<endl;
+
   // Create chain of root trees
   TChain chain("Delphes");
   chain.Add(inputFile);
@@ -108,7 +111,7 @@ void FlatTree(TString inputFile,TString outputFile)
     for (int i = 0 ; i < branchElectron->GetEntries() ; i++) {
       Electron *el = (Electron*) branchElectron->At(i);
       if (el->PT < 10 ) continue;
-      if ( std::abs(el->Eta) > 2.4) continue; //TODO quality, isolation
+      if ( std::abs(el->Eta) > 2.4) continue; 
       //good electron
       //store electron iso
       if ( tr.GetInt("nElectrons") < MAX_leptons) {
@@ -122,7 +125,7 @@ void FlatTree(TString inputFile,TString outputFile)
     for (int i = 0 ; i < branchMuon->GetEntries() ; i++) {
       Muon *mu = (Muon*) branchMuon->At(i);
       if (mu->PT < 10 ) continue;
-      if ( std::abs(mu->Eta) > 2.4) continue; //TODO quality, isolation
+      if ( std::abs(mu->Eta) > 2.4) continue; 
       //good muon
       tr.SetInt("nMuons",1,true);
       MSTx -= mu->PT * cos(mu->Phi);
