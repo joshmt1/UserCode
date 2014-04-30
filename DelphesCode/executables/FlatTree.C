@@ -56,8 +56,12 @@ void FlatTree(TString inputFile,TString outputFile)
   tr.AddVariable("VSPT");
   tr.AddVariable("MT2");
   tr.AddVariable("minDeltaPhi");
+  tr.AddVariable("mll"); //for edge analysis
+  tr.AddVariable("mll_maxEta");//max eta of the OS dileptons
   tr.AddInt("njets30",0);
+  tr.AddInt("njets30eta3p0",0);
   tr.AddInt("njets40",0);
+  tr.AddInt("njets40eta3p0",0);
   tr.AddInt("nbjets40loose",0);
   tr.AddInt("nbjets40tight",0);
   tr.AddInt("nElectrons",0);
@@ -132,6 +136,10 @@ void FlatTree(TString inputFile,TString outputFile)
       MSTy -= mu->PT * sin(mu->Phi);
     }
 
+    MllComputer mllcomp(branchElectron,branchMuon);
+    tr.Set("mll",mllcomp.GetMll());
+    tr.Set("mll_maxEta",mllcomp.GetMaxEta()); //must be called after GetMll()
+
     //jets to go into the MT2 calculation
     vector<float> mt2jets_px;
     vector<float> mt2jets_py;
@@ -160,9 +168,16 @@ void FlatTree(TString inputFile,TString outputFile)
 	  if ( jet->TauTag == 1)  tr.SetInt("nTaus",1,true);
 	}
 
-	//HT calculation ; TODO quality cuts
-	if (jet->PT>50 && std::abs(jet->Eta)<3) {
-	  tr.Set("HT",jet->PT,true);
+
+	//eta 3.0 jets: used for edge analysis and for HT calculation in MT2 analysis
+	if (jet->PT>30 && std::abs(jet->Eta)<3) { 
+	  tr.SetInt("njets30eta3p0",1,true);
+	  if (jet->PT>40) {
+	    tr.SetInt("njets40eta3p0",1,true);
+	    if (jet->PT>50) { //HT calculation for MT2
+	      tr.Set("HT",jet->PT,true); 
+	    }
+	  }
 	}
 
 	//"all purpose" jets e.g. b-tagging TODO quality
