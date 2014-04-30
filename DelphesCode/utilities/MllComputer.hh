@@ -19,6 +19,7 @@ public:
   ~MllComputer();
   float GetMll();
   float GetMaxEta() {return maxEta_;}
+  bool isSF() {return isSF_;}
 
 private:
   TClonesArray* el_;
@@ -29,6 +30,7 @@ private:
   //  std::vector<int> good_mu_;
   void findGoodLeptons() ;
   float maxEta_;
+  bool isSF_;
 
   // pair(pT, pair(flavor,index))
   std::set< std::pair<float, std::pair<LeptonFlavor,int> > > lep_pt_;

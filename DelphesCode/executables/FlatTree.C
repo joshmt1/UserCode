@@ -58,12 +58,14 @@ void FlatTree(TString inputFile,TString outputFile)
   tr.AddVariable("minDeltaPhi");
   tr.AddVariable("mll"); //for edge analysis
   tr.AddVariable("mll_maxEta");//max eta of the OS dileptons
+  tr.AddBool("isSF");
   tr.AddInt("njets30",0);
   tr.AddInt("njets30eta3p0",0);
   tr.AddInt("njets40",0);
   tr.AddInt("njets40eta3p0",0);
   tr.AddInt("nbjets40loose",0);
   tr.AddInt("nbjets40tight",0);
+  //leptons for MT2
   tr.AddInt("nElectrons",0);
   tr.AddInt("nMuons",0);
   tr.AddInt("nTaus",0);
@@ -136,9 +138,11 @@ void FlatTree(TString inputFile,TString outputFile)
       MSTy -= mu->PT * sin(mu->Phi);
     }
 
+    //OSDL Edge variables
     MllComputer mllcomp(branchElectron,branchMuon);
     tr.Set("mll",mllcomp.GetMll());
     tr.Set("mll_maxEta",mllcomp.GetMaxEta()); //must be called after GetMll()
+    tr.SetBool("isSF",mllcomp.isSF()); //ditto
 
     //jets to go into the MT2 calculation
     vector<float> mt2jets_px;
@@ -180,7 +184,7 @@ void FlatTree(TString inputFile,TString outputFile)
 	  }
 	}
 
-	//"all purpose" jets e.g. b-tagging TODO quality
+	//"all purpose" jets e.g. b-tagging
 	if (jet->PT > 40. && std::abs(jet->Eta)<2.4) {
 	  if ( tr.GetInt("njets40")<MAX_njets) tr.Set("jetPt",tr.GetInt("njets40"),jet->PT);
 	  tr.SetInt("njets40",1,true);
