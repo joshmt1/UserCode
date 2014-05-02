@@ -1,9 +1,10 @@
 #include "CrossSections.hh"
 
+#include <iostream>
 #include <cassert>
 
 CrossSections::CrossSections(const TString samplename) :
-  xs_(0)
+  xs_(1)
   //  samplename_(samplename)
 {
   // from https://twiki.cern.ch/twiki/bin/viewauth/CMS/HiggsWG/Phase2UpgradeStudies
@@ -60,7 +61,9 @@ CrossSections::CrossSections(const TString samplename) :
   else if (samplename.Contains("ttB-4p-900-1600-v1510_14TEV")) xs_=0.250469000;
   else if (samplename.Contains("ttB-4p-1600-2500-v1510_14TEV")) xs_=0.023744100;
   else if (samplename.Contains("ttB-4p-2500-100000-v1510_14TEV")) xs_=0.002088160;
-  else assert(0);
+  else {
+    std::cout<<" WARNING -- this sample has no known cross-section. Using value of "<<xs_<<std::endl;
+  }
 }
 
 CrossSections::~CrossSections() {
