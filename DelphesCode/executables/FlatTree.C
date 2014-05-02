@@ -97,9 +97,14 @@ void FlatTree(TString inputFile,TString outputFile)
     if (verbose||entry%5000==0) cout << "Event " << entry << " / " << numberOfEntries << endl;
 
     assert(branchEvent->GetEntries()==1);
-    HepMCEvent* evt = (HepMCEvent*)branchEvent->At(0);
-    //    cout<<"Event weight = "<<evt->Weight<endl;
-    tr.SetDouble("weight",evt->Weight * cross_section.Get() / n_events_generated); //weight for 1 pb-1
+    //signal uses HepMCEvent; others use LHEFEvent
+    HepMCEvent* evt1 = dynamic_cast<HepMCEvent*>( branchEvent->At(0));
+    LHEFEvent* evt2 = dynamic_cast<LHEFEvent*>( branchEvent->At(0));
+    double w=0;
+    if  (evt1) w=evt1->Weight;
+    else if (evt2) w=evt2->Weight;
+    else assert(0);
+    tr.SetDouble("weight",w * cross_section.Get() / n_events_generated); //weight for 1 pb-1
     tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode(branchGenParticles));
 
     //    geninfo.Dump();//for debug
