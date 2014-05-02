@@ -25,6 +25,7 @@
 #include "external/mt2analysis/Utilities.hh"
 #include "external/mt2analysis/CrossSections.hh"
 #include "external/mt2analysis/McTruthInfo.hh"
+#include "external/mt2analysis/MllComputer.hh"
 
 #include "classes/DelphesClasses.h"
 

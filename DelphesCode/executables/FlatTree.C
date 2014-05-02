@@ -82,6 +82,9 @@ void FlatTree(TString inputFile,TString outputFile)
   CrossSections cross_section(inputFile);
   const Long64_t n_events_generated = numberOfEntries; //for now, enforce that the whole sample is run over in one job!
 
+  //count number of 'bad jets' and number of events with bad jets
+  Long64_t nbadjets=0,neventsWithBadjets=0;
+
   TStopwatch loopTimer; //automatically starts the timer
 
   McTruthInfo geninfo;
@@ -94,10 +97,12 @@ void FlatTree(TString inputFile,TString outputFile)
     if (verbose||entry%5000==0) cout << "Event " << entry << " / " << numberOfEntries << endl;
 
     assert(branchEvent->GetEntries()==1);
-    LHEFEvent* evt = (LHEFEvent*)branchEvent->At(0);
-    //    cout<<"Event weight = "<<evt->Weight<<endl;
+    HepMCEvent* evt = (HepMCEvent*)branchEvent->At(0);
+    //    cout<<"Event weight = "<<evt->Weight<endl;
     tr.SetDouble("weight",evt->Weight * cross_section.Get() / n_events_generated); //weight for 1 pb-1
     tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode(branchGenParticles));
+
+    //    geninfo.Dump();//for debug
 
     //store MET
     assert( branchMet->GetEntries() ==1); //sanity
@@ -151,14 +156,24 @@ void FlatTree(TString inputFile,TString outputFile)
     vector<float> mt2jets_e;
 
     float minDeltaPhi=1e9;
+    bool badjetinthisevent=false;
       // Loop over jets
       for (int i = 0 ; i < branchJet->GetEntries() ; i++) {
 	Jet *jet = (Jet*) branchJet->At(i);
 
+	if (jet->PT>30 && jet->Mass < 0) {
+	  //	  cout<<" ** Bad jet **, fixing it by setting mass to 0"<<endl;
+	  jet->Mass = 0;
+	  nbadjets++;
+	  if (!badjetinthisevent) { neventsWithBadjets++; badjetinthisevent=true;}
+	  //	    cout<<jet->PT<<" "<<jet->Eta<<" "<<jet->Mass<<endl;	    
+	}
+
 	if (jet->PT>30 && std::abs(jet->Eta)<2.4) { //mt2 and MHT jets 
-	  mt2jets_px.push_back( jet->PT * cos(jet->Phi));
-	  mt2jets_py.push_back( jet->PT * sin(jet->Phi));
-	  TLorentzVector jjj = jet->P4(); //let ROOT do the math for me
+
+	  TLorentzVector jjj = jet->P4();
+	  mt2jets_px.push_back( jjj.Px());
+	  mt2jets_py.push_back( jjj.Py());
 	  mt2jets_pz.push_back( jjj.Pz());
 	  mt2jets_e.push_back(  jjj.E());
 
@@ -240,7 +255,11 @@ void FlatTree(TString inputFile,TString outputFile)
   } // event
 
   loopTimer.Stop();
-  cout<<"CPU (Wall) : "<<numberOfEntries <<" / "<<loopTimer.CpuTime()<<" ("<<loopTimer.RealTime()<<") sec = "<<
+
+  cout<<"-- Number of 'bad jets' (30 GeV) = "<<nbadjets<<endl;
+  cout<<"-- number of events with a 'bad jet' (30 GeV) = "<<neventsWithBadjets<<endl;
+
+  cout<<"events / CPU (Wall): "<<numberOfEntries <<" / "<<loopTimer.CpuTime()<<" ("<<loopTimer.RealTime()<<") sec = "<<
     numberOfEntries/loopTimer.CpuTime()<<" ("<<numberOfEntries/loopTimer.RealTime()<<") Hz"<<endl;
 
 
