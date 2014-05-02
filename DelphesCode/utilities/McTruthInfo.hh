@@ -11,7 +11,9 @@ class McTruthInfo {
 public:
   McTruthInfo();
   ~McTruthInfo();
-  int GetTtbarDecayCode(TClonesArray* genParticles) ;
+  int GetTtbarDecayCode(TClonesArray* genParticles=0) ;
+
+  void Dump(TClonesArray* genParticles=0);
 
 private:
   TClonesArray * genParticles_;

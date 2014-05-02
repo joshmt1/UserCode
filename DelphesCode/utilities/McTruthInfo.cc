@@ -14,6 +14,18 @@ McTruthInfo::McTruthInfo() :
 McTruthInfo::~McTruthInfo() {
 }
 
+void McTruthInfo::Dump(TClonesArray* genParticles) {
+  if (genParticles!=0)     genParticles_=genParticles;
+
+  cout<<" ~~~~~~~~~~~"<<endl;
+  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+    GenParticle * c =(GenParticle*) genParticles_->At(k);
+    if (c==0) continue;
+    cout<<c->PID<<" "<<c->M1<<endl;
+  }
+
+}
+
 bool McTruthInfo::checkMom(int index, int PidToLookFor) {
 
   //get mom index
