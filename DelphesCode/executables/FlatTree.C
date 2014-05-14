@@ -46,6 +46,7 @@ void FlatTree(TString inputFile,TString outputFile)
   tr.AddDouble("weight");
 
   tr.AddInt("ttbarDecayCode");
+  tr.AddInt("SusyProductionMode");
 
   //jet observables
   tr.AddVariable("HT",0);
@@ -107,7 +108,14 @@ void FlatTree(TString inputFile,TString outputFile)
     tr.SetDouble("weight",w * cross_section.Get() / n_events_generated); //weight for 1 pb-1
     tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode(branchGenParticles));
 
-    //    geninfo.Dump();//for debug
+    /*
+    geninfo.Dump();//for debug
+    vector<int> susymoms=    geninfo.findSusyMoms();
+    for (size_t iiii=0;iiii<susymoms.size();iiii++) {
+      cout<<"SUSY mom = "<<susymoms[iiii]<<endl;
+    }
+    */
+    tr.SetInt("SusyProductionMode",   geninfo.getSusyProductionProcess(branchGenParticles));
 
     //store MET
     assert( branchMet->GetEntries() ==1); //sanity

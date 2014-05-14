@@ -26,7 +26,82 @@ void McTruthInfo::Dump(TClonesArray* genParticles) {
 
 }
 
+bool McTruthInfo::isSusy(int pid) {
+  //is this particle a SUSY particle or not?
+  pid = std::abs(pid); //just in case
+
+  if (pid>=1000001 && pid<=1000039) return true;
+  if (pid>=2000001 && pid<=2000039) return true;
+  //indices only go up to 2000015 but going to 39 seems ok too
+
+  return false;
+}
+
+int McTruthInfo::getSusyProductionProcess(TClonesArray* genParticles) {
+
+  if (genParticles!=0)     genParticles_=genParticles;
+
+  vector<int> susyMoms = findSusyMoms(genParticles);
+
+  int n_slepton = 0;
+  int n_ewkino = 0;
+  int n_gluino=0;
+  int n_stop = 0;
+  int n_sbottom = 0;
+  int n_squark = 0;
+  int n_other=0;
+
+  for (size_t i=0; i<susyMoms.size(); i++) {
+    int pid = std::abs(susyMoms[i]);
+    if ( pid >= 1000001 && pid <= 1000004) n_squark++;
+    else if ( pid == 1000005 || pid==2000005) n_sbottom++;
+    else if ( pid == 1000006 || pid==2000006) n_stop++;
+    else if ( pid >= 1000011 && pid <= 1000016) n_slepton++;
+    else if ( pid >= 2000011 && pid <= 2000016) n_slepton++;
+    else if ( pid >= 2000001 && pid <= 2000004) n_squark++;
+    else if ( pid==1000021) n_gluino++;
+    else if ( pid>=1000012 && pid <= 1000037) n_ewkino++;
+    else n_other++;
+  }
+
+  return   n_slepton*1000000
+    +    n_ewkino*100000
+    +    n_gluino*10000
+    +    n_stop *1000
+    +    n_sbottom*100
+    +    n_squark *10
+    +    n_other*1;
+  
+}
+
+vector<int> McTruthInfo::findSusyMoms(TClonesArray* genParticles) {
+  //look for SUSY particles whose moms are not SUSY particles
+  //these are the produced particles in the hard-scatter
+  vector<int> susyMoms;
+
+  if (genParticles!=0)     genParticles_=genParticles;
+
+  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+    GenParticle * c =(GenParticle*) genParticles_->At(k);
+    if (c==0) continue; //try to prevent crashes....
+    int pid = std::abs(c->PID);
+
+    int momIndex1 = c->M1;
+    if (momIndex1<0) continue;
+    GenParticle * theMom = (GenParticle*)genParticles_->At(momIndex1);
+    int momPid = std::abs(theMom->PID);
+    if (isSusy(pid) && !isSusy(momPid)) {
+      susyMoms.push_back(c->PID);
+    }
+    //could save time by cutting off the loop after vector size is 2
+  }
+  return susyMoms;
+
+}
+
 bool McTruthInfo::checkMom(int index, int PidToLookFor) {
+  //recursive check of whether the mom or any grandmom of the particle at index
+  //is of PID PidToLoopFor
 
   //get mom index
   GenParticle * theCand =(GenParticle*) genParticles_->At(index);
@@ -45,7 +120,7 @@ bool McTruthInfo::checkMom(int index, int PidToLookFor) {
 }
 
 int McTruthInfo::GetTtbarDecayCode(TClonesArray* genParticles) {
-
+  //classify ttbar events using my old coding scheme
   if (genParticles!=0)     genParticles_=genParticles;
   
   int ne=0, nmu=0, ntau=0, nq=0,nb=0;
