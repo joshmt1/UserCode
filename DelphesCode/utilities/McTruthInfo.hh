@@ -16,6 +16,7 @@ public:
   int getSusyProductionProcess();
   void Dump();
   int findChi2ToChi1();
+  int findZinSusy();
 
 
 

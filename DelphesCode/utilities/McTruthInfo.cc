@@ -36,6 +36,25 @@ bool McTruthInfo::isSusy(int pid) {
   return false;
 }
 
+/* look for Z in SUSY cascades */
+int McTruthInfo::findZinSusy() {
+
+  int nz=0;
+
+  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+    GenParticle * c =(GenParticle*) genParticles_->At(k);
+    if (c==0) continue; //try to prevent crashes....
+    int pid = std::abs(c->PID);
+
+    if (pid==23) { //Z
+      //does this Z come from SUSY?
+      if (  checkMom(k,1000000) ) nz++;
+    }
+  }
+  return nz;
+
+}
+
 /*
 look for chi_20 -> slepton lepton -> lepton chi_10 lepton
  */
@@ -127,6 +146,8 @@ bool McTruthInfo::checkMom(int index, int PidToLookFor, int recursionsLeft) {
   //recursive (or not) check of whether the mom or any grandmom (if recursive)
   // of the particle at index is of PID PidToLoopFor
 
+  //special case: PidToLookFor of 1000000 means 'any SUSY particle'
+
   //get mom index
   GenParticle * theCand =(GenParticle*) genParticles_->At(index);
   if (theCand==0) return false; //TClonesArray::At returns 0 if index is not found
@@ -135,6 +156,7 @@ bool McTruthInfo::checkMom(int index, int PidToLookFor, int recursionsLeft) {
     GenParticle * theMom = (GenParticle*)genParticles_->At(momIndex1);
     if (theMom==0) return false; //TClonesArray::At returns 0 if index is not found
     if ( std::abs(theMom ->PID)==PidToLookFor) return true;
+    else if (PidToLookFor==1000000 && isSusy(theMom->PID)) return true;
     else  {
       if (recursionsLeft>0) return checkMom( momIndex1,PidToLookFor,recursionsLeft-1);
       else return false;

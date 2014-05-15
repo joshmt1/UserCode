@@ -47,6 +47,8 @@ void FlatTree(TString inputFile,TString outputFile)
 
   tr.AddInt("ttbarDecayCode");
   tr.AddInt("SusyProductionMode");
+  tr.AddInt("Chi2ToChi1Code");
+  tr.AddInt("nZFromSusy");
 
   //jet observables
   tr.AddVariable("HT",0);
@@ -106,16 +108,21 @@ void FlatTree(TString inputFile,TString outputFile)
     else if (evt2) w=evt2->Weight;
     else assert(0);
     tr.SetDouble("weight",w * cross_section.Get() / n_events_generated); //weight for 1 pb-1
-    tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode(branchGenParticles));
+    geninfo.Set(branchGenParticles);
+    tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode());
 
-    /*
-    geninfo.Dump();//for debug
+    /* //for debug
+    geninfo.Dump();
     vector<int> susymoms=    geninfo.findSusyMoms();
     for (size_t iiii=0;iiii<susymoms.size();iiii++) {
       cout<<"SUSY mom = "<<susymoms[iiii]<<endl;
     }
     */
-    tr.SetInt("SusyProductionMode",   geninfo.getSusyProductionProcess(branchGenParticles));
+
+    tr.SetInt("SusyProductionMode",   geninfo.getSusyProductionProcess());
+    tr.SetInt("Chi2ToChi1Code",   geninfo.findChi2ToChi1());
+    //cout<<"nZ = "<< geninfo.findZinSusy()<<endl;
+    tr.SetInt("nZFromSusy",    geninfo.findZinSusy());
 
     //store MET
     assert( branchMet->GetEntries() ==1); //sanity
