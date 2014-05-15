@@ -1,7 +1,7 @@
 #include "McTruthInfo.hh"
 
 #include <iostream>
-//#include <cassert>
+#include <cassert>
 #include "classes/DelphesClasses.h"
 
 using namespace std;
@@ -14,14 +14,13 @@ McTruthInfo::McTruthInfo() :
 McTruthInfo::~McTruthInfo() {
 }
 
-void McTruthInfo::Dump(TClonesArray* genParticles) {
-  if (genParticles!=0)     genParticles_=genParticles;
+void McTruthInfo::Dump() {
 
   cout<<" ~~~~~~~~~~~"<<endl;
   for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue;
-    cout<<c->PID<<" "<<c->M1<<endl;
+    cout<<k<<"\t"<<c->PID<<" "<<c->M1<<endl;
   }
 
 }
@@ -37,11 +36,38 @@ bool McTruthInfo::isSusy(int pid) {
   return false;
 }
 
-int McTruthInfo::getSusyProductionProcess(TClonesArray* genParticles) {
+/*
+look for chi_20 -> slepton lepton -> lepton chi_10 lepton
+ */
+int McTruthInfo::findChi2ToChi1() {
 
-  if (genParticles!=0)     genParticles_=genParticles;
+  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+    GenParticle * c =(GenParticle*) genParticles_->At(k);
+    if (c==0) continue; //try to prevent crashes....
+    int pid = std::abs(c->PID);
 
-  vector<int> susyMoms = findSusyMoms(genParticles);
+    if (pid==1000022) { //chi10
+      //if the mom a slepton?
+      bool el = checkMom(k,1000011,0);
+      bool mu=checkMom(k,1000013,0);
+      bool tau = checkMom(k,1000015,0);
+      if (el||mu||tau ) {
+	//is the grandmom a chi_20?
+	if (checkMom(k,1000023,1) ) {
+	  if (el) return 1000011;
+	  else if (mu) return 1000013;
+	  else if (tau) return 1000015;
+	  else assert(0);
+	}
+      }
+    }
+  }
+  return 0;
+}
+
+int McTruthInfo::getSusyProductionProcess() {
+
+  vector<int> susyMoms = findSusyMoms();
 
   int n_slepton = 0;
   int n_ewkino = 0;
@@ -74,12 +100,10 @@ int McTruthInfo::getSusyProductionProcess(TClonesArray* genParticles) {
   
 }
 
-vector<int> McTruthInfo::findSusyMoms(TClonesArray* genParticles) {
+vector<int> McTruthInfo::findSusyMoms() {
   //look for SUSY particles whose moms are not SUSY particles
   //these are the produced particles in the hard-scatter
   vector<int> susyMoms;
-
-  if (genParticles!=0)     genParticles_=genParticles;
 
   for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
@@ -99,9 +123,9 @@ vector<int> McTruthInfo::findSusyMoms(TClonesArray* genParticles) {
 
 }
 
-bool McTruthInfo::checkMom(int index, int PidToLookFor) {
-  //recursive check of whether the mom or any grandmom of the particle at index
-  //is of PID PidToLoopFor
+bool McTruthInfo::checkMom(int index, int PidToLookFor, int recursionsLeft) {
+  //recursive (or not) check of whether the mom or any grandmom (if recursive)
+  // of the particle at index is of PID PidToLoopFor
 
   //get mom index
   GenParticle * theCand =(GenParticle*) genParticles_->At(index);
@@ -111,7 +135,10 @@ bool McTruthInfo::checkMom(int index, int PidToLookFor) {
     GenParticle * theMom = (GenParticle*)genParticles_->At(momIndex1);
     if (theMom==0) return false; //TClonesArray::At returns 0 if index is not found
     if ( std::abs(theMom ->PID)==PidToLookFor) return true;
-    else  return checkMom( momIndex1,PidToLookFor);
+    else  {
+      if (recursionsLeft>0) return checkMom( momIndex1,PidToLookFor,recursionsLeft-1);
+      else return false;
+    }
   }
 
   //if momIndex is <0
@@ -119,9 +146,8 @@ bool McTruthInfo::checkMom(int index, int PidToLookFor) {
 
 }
 
-int McTruthInfo::GetTtbarDecayCode(TClonesArray* genParticles) {
+int McTruthInfo::GetTtbarDecayCode() {
   //classify ttbar events using my old coding scheme
-  if (genParticles!=0)     genParticles_=genParticles;
   
   int ne=0, nmu=0, ntau=0, nq=0,nb=0;
   //  cout<<" ~~~~~~~~~~~"<<endl;

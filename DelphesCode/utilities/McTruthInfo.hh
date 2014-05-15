@@ -11,15 +11,19 @@ class McTruthInfo {
 public:
   McTruthInfo();
   ~McTruthInfo();
-  int GetTtbarDecayCode(TClonesArray* genParticles=0) ;
-  std::vector<int> findSusyMoms(TClonesArray* genParticles=0) ;
-  int getSusyProductionProcess(TClonesArray* genParticles=0) ;
-  void Dump(TClonesArray* genParticles=0);
+  int GetTtbarDecayCode();
+  std::vector<int> findSusyMoms();
+  int getSusyProductionProcess();
+  void Dump();
+  int findChi2ToChi1();
 
+
+
+  void Set(TClonesArray* g) {genParticles_=g;}
 
 private:
   TClonesArray * genParticles_;
-  bool checkMom(int index, int PidToLookFor);
+  bool checkMom(int index, int PidToLookFor,int recursionsLeft=999);
 
   bool isSusy(int pid) ;
 
