@@ -15,7 +15,7 @@ public:
   std::vector<int> findSusyMoms();
   int getSusyProductionProcess();
   void Dump();
-  int findChi2ToChi1();
+  int findChi2ToChi1(); //return 10*nStaus + nSElectron+Smuon
   int findZinSusy();
 
 

@@ -57,8 +57,13 @@ int McTruthInfo::findZinSusy() {
 
 /*
 look for chi_20 -> slepton lepton -> lepton chi_10 lepton
+code is 10*nStaus + nSElectron+Smuon
+should allow for a simple cut that removes events with taus or
+multiple edge decays while still retaining that info in case it is of interest
  */
 int McTruthInfo::findChi2ToChi1() {
+
+  int code = 0;
 
   for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
@@ -73,15 +78,15 @@ int McTruthInfo::findChi2ToChi1() {
       if (el||mu||tau ) {
 	//is the grandmom a chi_20?
 	if (checkMom(k,1000023,1) ) {
-	  if (el) return 1000011;
-	  else if (mu) return 1000013;
-	  else if (tau) return 1000015;
+	  if (el) ++code;
+	  else if (mu) ++code;
+	  else if (tau) code += 10;
 	  else assert(0);
 	}
       }
     }
   }
-  return 0;
+  return code;
 }
 
 int McTruthInfo::getSusyProductionProcess() {

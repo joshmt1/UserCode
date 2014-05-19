@@ -111,8 +111,9 @@ void FlatTree(TString inputFile,TString outputFile)
     geninfo.Set(branchGenParticles);
     tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode());
 
-    /* //for debug
-    geninfo.Dump();
+     //for debug
+    //geninfo.Dump();
+    /*
     vector<int> susymoms=    geninfo.findSusyMoms();
     for (size_t iiii=0;iiii<susymoms.size();iiii++) {
       cout<<"SUSY mom = "<<susymoms[iiii]<<endl;
