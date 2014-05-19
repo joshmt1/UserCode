@@ -20,7 +20,7 @@ void McTruthInfo::Dump() {
   for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue;
-    cout<<k<<"\t"<<c->PID<<" "<<c->M1<<endl;
+    cout<<k<<"\t"<<c->PID<<" "<<c->M1<<" "<<c->Mass<<endl;
   }
 
 }
