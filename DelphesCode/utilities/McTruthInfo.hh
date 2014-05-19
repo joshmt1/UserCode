@@ -9,6 +9,8 @@
 class McTruthInfo {
 
 public:
+  enum leptonType {kElMu,kTau};
+
   McTruthInfo();
   ~McTruthInfo();
   int GetTtbarDecayCode();
@@ -17,7 +19,7 @@ public:
   void Dump();
   int findChi2ToChi1(); //return 10*nStaus + nSElectron+Smuon
   int findZinSusy();
-
+  int countTrueLeptons(leptonType lt);
 
 
   void Set(TClonesArray* g) {genParticles_=g;}

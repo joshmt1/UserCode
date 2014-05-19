@@ -55,6 +55,24 @@ int McTruthInfo::findZinSusy() {
 
 }
 
+int McTruthInfo::countTrueLeptons(leptonType lt) {
+
+  int n=0;
+  //easy as pie, except that depending on what is stored, we might actually
+  //want to restrict ourselves to status 3 or the Pythia 8 equivalent
+  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+    GenParticle * c =(GenParticle*) genParticles_->At(k);
+    if (c==0) continue; //try to prevent crashes....
+    int pid = std::abs(c->PID);
+
+    if (pid==11 && lt==kElMu) n++;
+    else if (pid==13 && lt==kElMu) n++;
+    else if (pid==15 && lt==kTau) n++;
+  }
+
+  return n;
+}
+
 /*
 look for chi_20 -> slepton lepton -> lepton chi_10 lepton
 code is 10*nStaus + nSElectron+Smuon

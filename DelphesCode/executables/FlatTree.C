@@ -45,10 +45,13 @@ void FlatTree(TString inputFile,TString outputFile)
   //bookkeeping
   tr.AddDouble("weight");
 
+  //stuff to characterize the mc truth (mostly for signal)
   tr.AddInt("ttbarDecayCode");
   tr.AddInt("SusyProductionMode");
   tr.AddInt("Chi2ToChi1Code");
   tr.AddInt("nZFromSusy");
+  tr.AddInt("nTrueElMu");
+  tr.AddInt("nTrueTau");
 
   //jet observables
   tr.AddVariable("HT",0);
@@ -124,6 +127,8 @@ void FlatTree(TString inputFile,TString outputFile)
     tr.SetInt("Chi2ToChi1Code",   geninfo.findChi2ToChi1());
     //cout<<"nZ = "<< geninfo.findZinSusy()<<endl;
     tr.SetInt("nZFromSusy",    geninfo.findZinSusy());
+    tr.SetInt("nTrueElMu",geninfo.countTrueLeptons(McTruthInfo::kElMu));
+    tr.SetInt("nTrueTau", geninfo.countTrueLeptons(McTruthInfo::kTau));
 
     //store MET
     assert( branchMet->GetEntries() ==1); //sanity
