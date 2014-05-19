@@ -50,6 +50,8 @@ void FlatTree(TString inputFile,TString outputFile)
   tr.AddInt("SusyProductionMode");
   tr.AddInt("Chi2ToChi1Code");
   tr.AddInt("nZFromSusy");
+  tr.AddInt("nbFromSusy");
+  tr.AddInt("ntFromSusy");
   tr.AddInt("nTrueElMu");
   tr.AddInt("nTrueTau");
 
@@ -115,7 +117,8 @@ void FlatTree(TString inputFile,TString outputFile)
     tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode());
 
      //for debug
-    //geninfo.Dump();
+    //    geninfo.Dump();
+    //    cout<<"nTrue e+mu tau "<<geninfo.countTrueLeptons(McTruthInfo::kElMu)<<" "<<geninfo.countTrueLeptons(McTruthInfo::kTau)<<endl;
     /*
     vector<int> susymoms=    geninfo.findSusyMoms();
     for (size_t iiii=0;iiii<susymoms.size();iiii++) {
@@ -126,9 +129,12 @@ void FlatTree(TString inputFile,TString outputFile)
     tr.SetInt("SusyProductionMode",   geninfo.getSusyProductionProcess());
     tr.SetInt("Chi2ToChi1Code",   geninfo.findChi2ToChi1());
     //cout<<"nZ = "<< geninfo.findZinSusy()<<endl;
-    tr.SetInt("nZFromSusy",    geninfo.findZinSusy());
+    tr.SetInt("nZFromSusy",    geninfo.findPinSusy(23));
+    tr.SetInt("nbFromSusy",    geninfo.findPinSusy(5));
+    tr.SetInt("ntFromSusy",    geninfo.findPinSusy(6));
     tr.SetInt("nTrueElMu",geninfo.countTrueLeptons(McTruthInfo::kElMu));
     tr.SetInt("nTrueTau", geninfo.countTrueLeptons(McTruthInfo::kTau));
+
 
     //store MET
     assert( branchMet->GetEntries() ==1); //sanity

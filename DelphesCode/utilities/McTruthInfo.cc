@@ -36,22 +36,22 @@ bool McTruthInfo::isSusy(int pid) {
   return false;
 }
 
-/* look for Z in SUSY cascades */
-int McTruthInfo::findZinSusy() {
+/* look for a given particle in SUSY cascades */
+int McTruthInfo::findPinSusy(int pidToFind) {
 
-  int nz=0;
+  int np=0;
 
   for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue; //try to prevent crashes....
     int pid = std::abs(c->PID);
 
-    if (pid==23) { //Z
-      //does this Z come from SUSY?
-      if (  checkMom(k,1000000) ) nz++;
+    if (pid==pidToFind) { 
+      //does this particle come from SUSY?
+      if (  checkMom(k,1000000) ) np++;
     }
   }
-  return nz;
+  return np;
 
 }
 

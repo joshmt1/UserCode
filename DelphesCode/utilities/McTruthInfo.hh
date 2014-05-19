@@ -18,7 +18,7 @@ public:
   int getSusyProductionProcess();
   void Dump();
   int findChi2ToChi1(); //return 10*nStaus + nSElectron+Smuon
-  int findZinSusy();
+  int findPinSusy(int pidToFind);
   int countTrueLeptons(leptonType lt);
 
 
