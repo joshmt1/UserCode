@@ -12,11 +12,15 @@ MllComputer::MllComputer(TClonesArray* el, TClonesArray* mu) :
   mu_(mu),
   foundGood_(false),
   maxEta_(-99),
-  isSF_(false)
+  isSF_(false),
+  p4_l1_(0),
+  p4_l2_(0)
 {
 }
 
 MllComputer::~MllComputer() {
+ delete p4_l1_;
+ delete p4_l2_;
 }
 
 float MllComputer::GetMee_Test() {
@@ -67,17 +71,20 @@ float MllComputer::GetMll() {
   if (!foundGood_) findGoodLeptons();
   if (lep_pt_.size() <2) return -2;
 
+  if (p4_l1_!=0) delete p4_l1_;
+  if (p4_l2_!=0) delete p4_l2_;
+
   //
   set< pair<float, pair<LeptonFlavor,int> > >::reverse_iterator rit;
   int ii=0;
   int    lead_lepton_charge=0;
   LeptonFlavor l1fl=kMuon;
-  TLorentzVector l1;
+  //  TLorentzVector l1;
   for (rit=lep_pt_.rbegin(); rit != lep_pt_.rend(); ++rit) {
 
     if (ii==0) { // lead lepton info
       lead_lepton_charge =  GetCharge(rit);
-      l1 = Get4Vector(rit);
+      p4_l1_ = new TLorentzVector( Get4Vector(rit) );
       l1fl = rit->second.first;
     }
     else if (ii>0) { //for non-leading leptons
@@ -87,15 +94,16 @@ float MllComputer::GetMll() {
       if (lead_lepton_charge != ch2) { //OS lepton pair
 	//compute DR
 	TLorentzVector l2 = Get4Vector(rit);
-	float dr=Util::GetDeltaR(l2.Eta(),l1.Eta(),l2.Phi(),l1.Phi());
+	float dr=Util::GetDeltaR(l2.Eta(),p4_l1_->Eta(),l2.Phi(),p4_l1_->Phi());
 	//	cout<<"\t\tDR="<<dr<<endl;
 	if (dr>0.3) { //passes dr cut
-	  TLorentzVector ll = l1+l2;
+	  TLorentzVector ll = (*p4_l1_)+l2;
 	  //	  cout<<"Mll = "<<ll.M()<<endl;
-	  if ( std::abs(l2.Eta()) > std::abs(l1.Eta()) ) maxEta_ = std::abs(l2.Eta());
-	  else maxEta_ = std::abs(l1.Eta());
+	  if ( std::abs(l2.Eta()) > std::abs(p4_l1_->Eta()) ) maxEta_ = std::abs(l2.Eta());
+	  else maxEta_ = std::abs(p4_l1_->Eta());
 	  LeptonFlavor l2fl = rit->second.first;
 	  isSF_ = (l1fl == l2fl);
+	  p4_l2_ = new TLorentzVector(l2);
 	  return ll.M();
 	}
       }
@@ -107,6 +115,12 @@ float MllComputer::GetMll() {
 
 
   return -1;
+}
+
+TLorentzVector* MllComputer::GetLeptonP4(int index) {
+  if (index==1) return p4_l1_;
+  if (index==2) return p4_l2_;
+  return 0;
 }
 
 void MllComputer::findGoodLeptons() {

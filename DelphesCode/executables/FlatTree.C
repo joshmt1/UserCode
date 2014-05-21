@@ -67,6 +67,14 @@ void FlatTree(TString inputFile,TString outputFile)
   tr.AddVariable("mll"); //for edge analysis
   tr.AddVariable("mll_maxEta");//max eta of the OS dileptons
   tr.AddBool("isSF");
+  tr.AddVariable("leptonPt1");
+  tr.AddVariable("leptonPt2");
+  tr.AddVariable("leptonEta1");
+  tr.AddVariable("leptonEta2");
+  //llq inv mass; minimized over the lead two jets
+  tr.AddVariable("mllqmin");
+  //lq invariant masses (using two leading jets)
+  tr.AddArray("mlq",4);
   tr.AddInt("njets30",0);
   tr.AddInt("njets30eta3p0",0);
   tr.AddInt("njets40",0);
@@ -117,7 +125,7 @@ void FlatTree(TString inputFile,TString outputFile)
     tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode());
 
      //for debug
-    //    geninfo.Dump();
+    //geninfo.Dump();
     //    cout<<"nTrue e+mu tau "<<geninfo.countTrueLeptons(McTruthInfo::kElMu)<<" "<<geninfo.countTrueLeptons(McTruthInfo::kTau)<<endl;
     /*
     vector<int> susymoms=    geninfo.findSusyMoms();
@@ -126,6 +134,7 @@ void FlatTree(TString inputFile,TString outputFile)
     }
     */
 
+    // production code
     tr.SetInt("SusyProductionMode",   geninfo.getSusyProductionProcess());
     tr.SetInt("Chi2ToChi1Code",   geninfo.findChi2ToChi1());
     //    cout<<"Chi2ToChi1Code = "<<geninfo.findChi2ToChi1()<<endl;
@@ -135,7 +144,7 @@ void FlatTree(TString inputFile,TString outputFile)
     tr.SetInt("ntFromSusy",    geninfo.findPinSusy(6));
     tr.SetInt("nTrueElMu",geninfo.countTrueLeptons(McTruthInfo::kElMu));
     tr.SetInt("nTrueTau", geninfo.countTrueLeptons(McTruthInfo::kTau));
-
+    
 
     //store MET
     assert( branchMet->GetEntries() ==1); //sanity
@@ -181,6 +190,13 @@ void FlatTree(TString inputFile,TString outputFile)
     tr.Set("mll",mllcomp.GetMll());
     tr.Set("mll_maxEta",mllcomp.GetMaxEta()); //must be called after GetMll()
     tr.SetBool("isSF",mllcomp.isSF()); //ditto
+    TLorentzVector* lepton1 = mllcomp.GetLeptonP4(1);
+    TLorentzVector* lepton2 = mllcomp.GetLeptonP4(2);
+
+    if (lepton1!=0)  tr.Set("leptonPt1",lepton1->Pt());
+    if (lepton2!=0)  tr.Set("leptonPt2",lepton2->Pt());
+    if (lepton1!=0)  tr.Set("leptonEta1",lepton1->Eta());
+    if (lepton2!=0)  tr.Set("leptonEta2",lepton2->Eta());
 
     //jets to go into the MT2 calculation
     vector<float> mt2jets_px;
@@ -188,6 +204,7 @@ void FlatTree(TString inputFile,TString outputFile)
     vector<float> mt2jets_pz;
     vector<float> mt2jets_e;
 
+    float mllq1=1e9,mllq2=1e9;
     float minDeltaPhi=1e9;
     bool badjetinthisevent=false;
       // Loop over jets
@@ -224,6 +241,21 @@ void FlatTree(TString inputFile,TString outputFile)
 	//eta 3.0 jets: used for edge analysis and for HT calculation in MT2 analysis
 	if (jet->PT>30 && std::abs(jet->Eta)<3) { 
 	  tr.SetInt("njets30eta3p0",1,true);
+
+	  if (lepton1!=0 && lepton2!=0) {
+	    int nj=tr.GetInt("njets30eta3p0");
+	    if      (nj == 1) {
+	      mllq1 = ((*lepton1)+(*lepton2)+jet->P4()).M();
+	      tr.Set("mlq",0, ((*lepton1)+jet->P4()).M());
+	      tr.Set("mlq",1, ((*lepton2)+jet->P4()).M());
+	    }
+	    else if (nj == 2) {
+	      mllq2 = ((*lepton1)+(*lepton2)+jet->P4()).M();
+	      tr.Set("mlq",2, ((*lepton1)+jet->P4()).M());
+	      tr.Set("mlq",3, ((*lepton2)+jet->P4()).M());
+	    }
+	  }
+
 	  if (jet->PT>40) {
 	    tr.SetInt("njets40eta3p0",1,true);
 	    if (jet->PT>50) { //HT calculation for MT2
@@ -248,6 +280,9 @@ void FlatTree(TString inputFile,TString outputFile)
 	} //jet pT 40
       } //loop over jets
       // } // verbose 
+
+      float mllq = mllq1<mllq2 ? mllq1 : mllq2;
+      tr.Set("mllqmin",mllq);
 
       tr.Set("MHT",sqrt(MHTx*MHTx + MHTy*MHTy));
       tr.Set("MHTphi",atan2(MHTy,MHTx)); 

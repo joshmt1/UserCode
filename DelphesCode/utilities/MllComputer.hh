@@ -20,6 +20,8 @@ public:
   float GetMll();
   float GetMaxEta() {return maxEta_;}
   bool isSF() {return isSF_;}
+  TLorentzVector* GetLeptonP4(int index);
+
   float GetMee_Test() ;//special test
 
 private:
@@ -32,6 +34,8 @@ private:
   void findGoodLeptons() ;
   float maxEta_;
   bool isSF_;
+  TLorentzVector* p4_l1_;
+  TLorentzVector* p4_l2_;
 
   // pair(pT, pair(flavor,index))
   std::set< std::pair<float, std::pair<LeptonFlavor,int> > > lep_pt_;
