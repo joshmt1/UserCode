@@ -128,6 +128,7 @@ void FlatTree(TString inputFile,TString outputFile)
 
     tr.SetInt("SusyProductionMode",   geninfo.getSusyProductionProcess());
     tr.SetInt("Chi2ToChi1Code",   geninfo.findChi2ToChi1());
+    //    cout<<"Chi2ToChi1Code = "<<geninfo.findChi2ToChi1()<<endl;
     //cout<<"nZ = "<< geninfo.findZinSusy()<<endl;
     tr.SetInt("nZFromSusy",    geninfo.findPinSusy(23));
     tr.SetInt("nbFromSusy",    geninfo.findPinSusy(5));
@@ -293,6 +294,5 @@ void FlatTree(TString inputFile,TString outputFile)
 
   cout<<"events / CPU (Wall): "<<numberOfEntries <<" / "<<loopTimer.CpuTime()<<" ("<<loopTimer.RealTime()<<") sec = "<<
     numberOfEntries/loopTimer.CpuTime()<<" ("<<numberOfEntries/loopTimer.RealTime()<<") Hz"<<endl;
-
 
 }

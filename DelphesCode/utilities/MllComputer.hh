@@ -20,6 +20,7 @@ public:
   float GetMll();
   float GetMaxEta() {return maxEta_;}
   bool isSF() {return isSF_;}
+  float GetMee_Test() ;//special test
 
 private:
   TClonesArray* el_;

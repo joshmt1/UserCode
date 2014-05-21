@@ -19,6 +19,47 @@ MllComputer::MllComputer(TClonesArray* el, TClonesArray* mu) :
 MllComputer::~MllComputer() {
 }
 
+float MllComputer::GetMee_Test() {
+  //not for serious use
+  //just trying to match a plot made by somebody else
+
+  /*
+  int charge1=0;
+  TLorentzVector e1;
+  for (int i = 0 ; i < el_->GetEntries() ; i++) {
+    Electron *el = (Electron*) el_->At(i);
+    if (charge1==0) {
+      charge1 = el->Charge;
+      e1=el->P4();
+    }
+    else { //we already found the first electron
+      if ( el->Charge == -charge1) {  //found OS leptons
+	TLorentzVector e2 = el->P4();
+	TLorentzVector ll = e1+e2;
+	return ll.M();
+      }
+      //if same sign, ignore and move on
+    }
+  }
+  */
+
+  //insert batool's code directly
+  Electron *elec1, *elec2;
+  // If event contains at least 2 electrons
+  if(el_->GetEntries() > 1)
+    {
+      // Take first two electrons
+      elec1 = (Electron *) el_->At(0);
+      elec2 = (Electron *) el_->At(1);
+
+      //  their invariant mass
+      if ((elec1->Charge+elec2->Charge) !=0) return -10;
+      return ((elec1->P4()) + (elec2->P4())).M();
+    }
+
+  return 0;
+}
+
 float MllComputer::GetMll() {
 
   //get highest pT *good* lepton, where good means in eta acceptance
