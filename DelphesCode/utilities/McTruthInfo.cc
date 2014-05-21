@@ -233,3 +233,37 @@ int McTruthInfo::GetTtbarDecayCode() {
   return 0; //uncategorized
 
 }
+
+
+// *** DY truth info
+//find Z->ll
+//return: gen-level P4, flavor
+vector< pair< TLorentzVector, int> > McTruthInfo::GetDYTruth() {
+
+  //this method assumes Z comes first in list (which it should)
+  //we ignore Z decays other than e,mu
+
+  int Zindex=-99;
+  vector<  pair< TLorentzVector, int> > Zdaughters;
+  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+    GenParticle * c =(GenParticle*) genParticles_->At(k);
+    if (c==0) continue;
+    if ( c->PID ==23 ) {    //look for Z
+      Zindex = k;
+    }
+    if ( c->M1 == Zindex) {    //look for daughters of Z
+      int pid = std::abs(c->PID);
+      if (pid == 11 || pid == 13) {
+	pair<TLorentzVector,int> thisDaughter = make_pair( c->P4(), c->PID);
+	Zdaughters.push_back(thisDaughter);
+      }
+    }
+
+    if (Zdaughters.size()==2) break;
+  }
+  return Zdaughters;
+}
+
+
+
+//bool McTruthInfo::DeltaRMatch(

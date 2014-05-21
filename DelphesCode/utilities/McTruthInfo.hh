@@ -5,6 +5,9 @@
 #define MCTRUTHINFO_H
 
 #include "TClonesArray.h"
+#include "TLorentzVector.h"
+#include <vector>
+#include <utility>
 
 class McTruthInfo {
 
@@ -13,16 +16,22 @@ public:
 
   McTruthInfo();
   ~McTruthInfo();
-  int GetTtbarDecayCode();
+  int GetTtbarDecayCode(); //for ttbar
+
+  //for SUSY
   std::vector<int> findSusyMoms();
   int getSusyProductionProcess();
-  void Dump();
   int findChi2ToChi1(); //return 10*nStaus + nSElectron+Smuon
   int findPinSusy(int pidToFind);
-  int countTrueLeptons(leptonType lt);
 
-
+  //for anything
   void Set(TClonesArray* g) {genParticles_=g;}
+  int countTrueLeptons(leptonType lt);
+  void Dump();
+
+  //DY MC truth
+  std::vector< std::pair< TLorentzVector, int> > GetDYTruth() ;
+
 
 private:
   TClonesArray * genParticles_;
