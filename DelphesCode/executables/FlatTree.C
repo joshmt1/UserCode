@@ -71,6 +71,8 @@ void FlatTree(TString inputFile,TString outputFile)
   tr.AddVariable("leptonPt2");
   tr.AddVariable("leptonEta1");
   tr.AddVariable("leptonEta2");
+  tr.AddInt("leptonFlavor1");
+  tr.AddInt("leptonFlavor2");
   //llq inv mass; minimized over the lead two jets
   tr.AddVariable("mllqmin");
   //lq invariant masses (using two leading jets)
@@ -130,13 +132,14 @@ void FlatTree(TString inputFile,TString outputFile)
     tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode());
 
      //for debug
-    //    geninfo.Dump();
+    //       geninfo.Dump();
     //    cout<<"nTrue e+mu tau "<<geninfo.countTrueLeptons(McTruthInfo::kElMu)<<" "<<geninfo.countTrueLeptons(McTruthInfo::kTau)<<endl;
     /*
-    vector<int> susymoms=    geninfo.findSusyMoms();
+       vector<int> susymoms=    geninfo.findSusyMoms();
     for (size_t iiii=0;iiii<susymoms.size();iiii++) {
       cout<<"SUSY mom = "<<susymoms[iiii]<<endl;
     }
+    cout<<" Susy prod code = "<< geninfo.getSusyProductionProcess()<<" ; "<<endl;
     */
 
     // production code
@@ -214,6 +217,8 @@ void FlatTree(TString inputFile,TString outputFile)
     if (lepton2!=0)  tr.Set("leptonPt2",lepton2->Pt());
     if (lepton1!=0)  tr.Set("leptonEta1",lepton1->Eta());
     if (lepton2!=0)  tr.Set("leptonEta2",lepton2->Eta());
+    if (lepton1!=0)  tr.SetInt("leptonFlavor1",mllcomp.GetLeptonFlavor(1));
+    if (lepton2!=0)  tr.SetInt("leptonFlavor2",mllcomp.GetLeptonFlavor(2));
 
     //jets to go into the MT2 calculation
     vector<float> mt2jets_px;

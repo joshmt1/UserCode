@@ -14,7 +14,9 @@ MllComputer::MllComputer(TClonesArray* el, TClonesArray* mu) :
   maxEta_(-99),
   isSF_(false),
   p4_l1_(0),
-  p4_l2_(0)
+  p4_l2_(0),
+  l1_flavor_(-99),
+  l2_flavor_(-99)
 {
 }
 
@@ -86,6 +88,8 @@ float MllComputer::GetMll() {
       lead_lepton_charge =  GetCharge(rit);
       p4_l1_ = new TLorentzVector( Get4Vector(rit) );
       l1fl = rit->second.first;
+      l1_flavor_ = (l1fl==kElectron) ? 11 : 13;
+      l1_flavor_ *= lead_lepton_charge;
     }
     else if (ii>0) { //for non-leading leptons
       //find 2nd highest pT lepton with opposite charge and DR>0.3 compared to first lepton
@@ -104,6 +108,8 @@ float MllComputer::GetMll() {
 	  LeptonFlavor l2fl = rit->second.first;
 	  isSF_ = (l1fl == l2fl);
 	  p4_l2_ = new TLorentzVector(l2);
+	  l2_flavor_ = (l2fl==kElectron) ? 11 : 13;
+	  l2_flavor_ *= ch2;
 	  return ll.M();
 	}
       }
@@ -120,6 +126,12 @@ float MllComputer::GetMll() {
 TLorentzVector* MllComputer::GetLeptonP4(int index) {
   if (index==1) return p4_l1_;
   if (index==2) return p4_l2_;
+  return 0;
+}
+
+int MllComputer::GetLeptonFlavor(int index) {
+  if (index==1) return l1_flavor_;
+  if (index==2) return l2_flavor_;
   return 0;
 }
 
