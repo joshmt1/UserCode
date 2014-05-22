@@ -31,6 +31,8 @@ public:
 
   //DY MC truth
   std::vector< std::pair< TLorentzVector, int> > GetDYTruth() ;
+  std::vector<int> MatchDYRecoGen(const std::vector< std::pair< TLorentzVector, int> > & genDY,
+				  TClonesArray * els,TClonesArray * mus);
 
 
 private:

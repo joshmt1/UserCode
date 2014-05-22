@@ -4,6 +4,9 @@
 #include <cassert>
 #include "classes/DelphesClasses.h"
 
+#include "external/mt2analysis/Utilities.hh"
+
+
 using namespace std;
 
 McTruthInfo::McTruthInfo() :
@@ -264,6 +267,55 @@ vector< pair< TLorentzVector, int> > McTruthInfo::GetDYTruth() {
   return Zdaughters;
 }
 
+//input: (1) list of reco e and mu
+// (2) output of GetDYTruth()
+//output: vector of is matched or not, given as indices on the e/mu list
+vector<int> McTruthInfo::MatchDYRecoGen(const vector< pair< TLorentzVector, int> > & genDY,
+					TClonesArray * els,TClonesArray * mus) {
 
+  vector<int> recomatches;
 
-//bool McTruthInfo::DeltaRMatch(
+  //loop over gen-level particles
+  for (size_t igen = 0; igen<genDY.size(); ++igen) {
+
+    TLorentzVector  genP4 = genDY[igen].first;
+    //check if particle is e or mu
+    int  flavor = std::abs(genDY[igen].second);
+
+    //loop over e/mu list
+    int nr=0;
+    if (flavor==11) nr = els->GetEntries();
+    else if (flavor==13) nr=mus->GetEntries();
+    else assert(0);
+
+    int matchindex=-1;
+    for (int ireco=0;ireco<nr;ireco++) {
+      //look for DR (and pT?) match
+      TLorentzVector * recoP4=0;
+      if (flavor==11) recoP4 = new TLorentzVector( ((Electron*)els->At(ireco))->P4());
+      else if (flavor==13) recoP4 = new TLorentzVector( ((Muon*)mus->At(ireco))->P4());
+
+      double dr = Util::GetDeltaR(genP4.Eta(), recoP4->Eta(), genP4.Phi(), recoP4->Phi());
+      //it appears that there is ~no resolution smearing in Delphes for
+      //phi and eta, so dr match is sufficient, and can be very tight
+      //leave loose pt match, but not really necessary
+      //(it appears that pT tends to be well within 5%, so this is very loose)
+      if (dr<0.04 && std::abs(1- genP4.Pt()/recoP4->Pt() )<0.3) {
+	matchindex=ireco;
+	//debug
+	//	cout<<"[DY match] "<<flavor<<"\t"<<dr<<" "<< 1- genP4.Pt()/recoP4->Pt() <<endl;
+	delete recoP4;
+	break;
+      }
+
+      delete recoP4;
+    }
+    //if found, push_back index on e/mu list to output vector
+    //if not found, pushback dummy index
+    recomatches.push_back(matchindex);
+
+  }
+  return recomatches;
+
+}
+

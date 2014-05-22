@@ -93,7 +93,12 @@ void FlatTree(TString inputFile,TString outputFile)
   tr.AddArray("electronPt",MAX_leptons);
   tr.AddArray("muonPt",MAX_leptons);
   //no need for photons or tighter muons, probably
-
+  //MC truth for DY events
+  tr.AddVariable("DYgenPt1");
+  tr.AddVariable("DYgenPt2");
+  tr.AddInt("DYflavor",-99999);
+  tr.AddBool("DYgenRecoMatch1");
+  tr.AddBool("DYgenRecoMatch2");
 
   CrossSections cross_section(inputFile);
   const Long64_t n_events_generated = numberOfEntries; //for now, enforce that the whole sample is run over in one job!
@@ -125,7 +130,7 @@ void FlatTree(TString inputFile,TString outputFile)
     tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode());
 
      //for debug
-    //geninfo.Dump();
+    //    geninfo.Dump();
     //    cout<<"nTrue e+mu tau "<<geninfo.countTrueLeptons(McTruthInfo::kElMu)<<" "<<geninfo.countTrueLeptons(McTruthInfo::kTau)<<endl;
     /*
     vector<int> susymoms=    geninfo.findSusyMoms();
@@ -144,7 +149,18 @@ void FlatTree(TString inputFile,TString outputFile)
     tr.SetInt("ntFromSusy",    geninfo.findPinSusy(6));
     tr.SetInt("nTrueElMu",geninfo.countTrueLeptons(McTruthInfo::kElMu));
     tr.SetInt("nTrueTau", geninfo.countTrueLeptons(McTruthInfo::kTau));
-    
+
+    //DY truth
+    std::vector< std::pair< TLorentzVector, int> > gendy=geninfo.GetDYTruth() ;
+    vector<int> dymatches =  geninfo.MatchDYRecoGen( gendy,branchElectron,branchMuon);
+    if ( gendy.size()==2 ) {
+      tr.Set("DYgenPt1",gendy[0].first.Pt());
+      tr.Set("DYgenPt2",gendy[1].first.Pt());
+      tr.SetInt("DYflavor",std::abs(gendy[0].second));
+      tr.SetBool("DYgenRecoMatch1",dymatches[0]>=0);
+      tr.SetBool("DYgenRecoMatch2",dymatches[1]>=0);
+    }
+
 
     //store MET
     assert( branchMet->GetEntries() ==1); //sanity
@@ -163,6 +179,7 @@ void FlatTree(TString inputFile,TString outputFile)
     //count electrons, muons
     for (int i = 0 ; i < branchElectron->GetEntries() ; i++) {
       Electron *el = (Electron*) branchElectron->At(i);
+
       if (el->PT < 10 ) continue;
       if ( std::abs(el->Eta) > 2.4) continue; 
       //good electron
