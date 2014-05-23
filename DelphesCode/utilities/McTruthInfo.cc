@@ -158,6 +158,7 @@ vector<int> McTruthInfo::findSusyMoms() {
     int momIndex1 = c->M1;
     if (momIndex1<0) continue;
     GenParticle * theMom = (GenParticle*)genParticles_->At(momIndex1);
+    if (theMom==0) continue; //saw momIndex1 be invalid once
     int momPid = std::abs(theMom->PID);
     if (isSusy(pid) && !isSusy(momPid)) {
       susyMoms.push_back(c->PID);
@@ -300,7 +301,7 @@ vector<int> McTruthInfo::MatchDYRecoGen(const vector< pair< TLorentzVector, int>
       //phi and eta, so dr match is sufficient, and can be very tight
       //leave loose pt match, but not really necessary
       //(it appears that pT tends to be well within 5%, so this is very loose)
-      if (dr<0.04 && std::abs(1- genP4.Pt()/recoP4->Pt() )<0.3) {
+      if (dr<0.03 && std::abs(1- genP4.Pt()/recoP4->Pt() )<0.3) {
 	matchindex=ireco;
 	//debug
 	//	cout<<"[DY match] "<<flavor<<"\t"<<dr<<" "<< 1- genP4.Pt()/recoP4->Pt() <<endl;

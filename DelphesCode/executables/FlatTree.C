@@ -10,7 +10,7 @@ N.B. you must touch FlatTree.cpp in order to convince Make that there is anythin
 
 //------------------------------------------------------------------------------
 
-void FlatTree(TString inputFile,TString outputFile)
+void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int nJobs)
 {
   //  gSystem->Load("libDelphes");
 
@@ -41,6 +41,12 @@ void FlatTree(TString inputFile,TString outputFile)
   bool verbose =false;
   //  bool listJetTowers = false;
 
+  if (nJobs>1) {
+    TString fileEnding;
+    fileEnding.Form(".%d_%d.root",jobIndex,nJobs);
+    assert(outputFile.EndsWith(".root"));
+    outputFile.ReplaceAll(".root",fileEnding);
+  }
   SimpleTree tr(outputFile);
   //bookkeeping
   tr.AddDouble("weight");
@@ -112,12 +118,16 @@ void FlatTree(TString inputFile,TString outputFile)
 
   McTruthInfo geninfo;
 
-  // Loop over all events
-  for(Long64_t entry = 0; entry < numberOfEntries; ++entry) {
+  // Loop over selected events
+  Long64_t nperjob = numberOfEntries/nJobs;
+  Long64_t firstEvent = (jobIndex-1)*nperjob;
+  Long64_t lastEvent = nJobs==jobIndex ? numberOfEntries : jobIndex*nperjob;
+  cout<<"Running on events from "<<firstEvent+1<<" through "<<lastEvent<<endl;
+  for (Long64_t entry = firstEvent; entry < lastEvent; ++entry) {
     // Load selected branches with data from specified event
     treeReader->ReadEntry(entry);
   
-    if (verbose||entry%5000==0) cout << "Event " << entry << " / " << numberOfEntries << endl;
+    if (verbose||((entry-firstEvent)%5000==0 &&entry>0)) cout << "Event " << entry-firstEvent << " / " << lastEvent-firstEvent << endl;
 
     assert(branchEvent->GetEntries()==1);
     //signal uses HepMCEvent; others use LHEFEvent
@@ -129,7 +139,7 @@ void FlatTree(TString inputFile,TString outputFile)
     else assert(0);
     tr.SetDouble("weight",w * cross_section.Get() / n_events_generated); //weight for 1 pb-1
     geninfo.Set(branchGenParticles);
-    tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode());
+    if (cross_section.GetProcess()==CrossSections::kTop)  tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode());
 
      //for debug
     //       geninfo.Dump();
@@ -143,27 +153,30 @@ void FlatTree(TString inputFile,TString outputFile)
     */
 
     // production code
-    tr.SetInt("SusyProductionMode",   geninfo.getSusyProductionProcess());
-    tr.SetInt("Chi2ToChi1Code",   geninfo.findChi2ToChi1());
-    //    cout<<"Chi2ToChi1Code = "<<geninfo.findChi2ToChi1()<<endl;
-    //cout<<"nZ = "<< geninfo.findZinSusy()<<endl;
-    tr.SetInt("nZFromSusy",    geninfo.findPinSusy(23));
-    tr.SetInt("nbFromSusy",    geninfo.findPinSusy(5));
-    tr.SetInt("ntFromSusy",    geninfo.findPinSusy(6));
+    if (cross_section.GetProcess()==CrossSections::kSignal) {
+      tr.SetInt("SusyProductionMode",   geninfo.getSusyProductionProcess());
+      tr.SetInt("Chi2ToChi1Code",   geninfo.findChi2ToChi1());
+      //    cout<<"Chi2ToChi1Code = "<<geninfo.findChi2ToChi1()<<endl;
+      //cout<<"nZ = "<< geninfo.findZinSusy()<<endl;
+      tr.SetInt("nZFromSusy",    geninfo.findPinSusy(23));
+      tr.SetInt("nbFromSusy",    geninfo.findPinSusy(5));
+      tr.SetInt("ntFromSusy",    geninfo.findPinSusy(6));
+    }
     tr.SetInt("nTrueElMu",geninfo.countTrueLeptons(McTruthInfo::kElMu));
     tr.SetInt("nTrueTau", geninfo.countTrueLeptons(McTruthInfo::kTau));
 
     //DY truth
-    std::vector< std::pair< TLorentzVector, int> > gendy=geninfo.GetDYTruth() ;
-    vector<int> dymatches =  geninfo.MatchDYRecoGen( gendy,branchElectron,branchMuon);
-    if ( gendy.size()==2 ) {
-      tr.Set("DYgenPt1",gendy[0].first.Pt());
-      tr.Set("DYgenPt2",gendy[1].first.Pt());
-      tr.SetInt("DYflavor",std::abs(gendy[0].second));
-      tr.SetBool("DYgenRecoMatch1",dymatches[0]>=0);
-      tr.SetBool("DYgenRecoMatch2",dymatches[1]>=0);
+    if (cross_section.GetProcess()==CrossSections::kBoson) {
+      std::vector< std::pair< TLorentzVector, int> > gendy=geninfo.GetDYTruth() ;
+      vector<int> dymatches =  geninfo.MatchDYRecoGen( gendy,branchElectron,branchMuon);
+      if ( gendy.size()==2 ) {
+	tr.Set("DYgenPt1",gendy[0].first.Pt());
+	tr.Set("DYgenPt2",gendy[1].first.Pt());
+	tr.SetInt("DYflavor",std::abs(gendy[0].second));
+	tr.SetBool("DYgenRecoMatch1",dymatches[0]>=0);
+	tr.SetBool("DYgenRecoMatch2",dymatches[1]>=0);
+      }
     }
-
 
     //store MET
     assert( branchMet->GetEntries() ==1); //sanity
@@ -349,7 +362,7 @@ void FlatTree(TString inputFile,TString outputFile)
   cout<<"-- Number of 'bad jets' (30 GeV) = "<<nbadjets<<endl;
   cout<<"-- number of events with a 'bad jet' (30 GeV) = "<<neventsWithBadjets<<endl;
 
-  cout<<"events / CPU (Wall): "<<numberOfEntries <<" / "<<loopTimer.CpuTime()<<" ("<<loopTimer.RealTime()<<") sec = "<<
-    numberOfEntries/loopTimer.CpuTime()<<" ("<<numberOfEntries/loopTimer.RealTime()<<") Hz"<<endl;
+  cout<<"events / CPU (Wall): "<<lastEvent-firstEvent <<" / "<<loopTimer.CpuTime()<<" ("<<loopTimer.RealTime()<<") sec = "<<
+    (lastEvent-firstEvent)/loopTimer.CpuTime()<<" ("<<(lastEvent-firstEvent)/loopTimer.RealTime()<<") Hz"<<endl;
 
 }

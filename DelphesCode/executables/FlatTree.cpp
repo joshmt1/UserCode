@@ -49,11 +49,12 @@ int main(int argc, char *argv[])
 {
   char *appName = "FlatTree";
 
-  if(argc != 2 && argc !=3)
+  if(argc < 2 )
   {
-    cout << " Usage: " << appName << " input_file [output_file]" << endl;
+    cout << " Usage: " << appName << " input_file [-O output_file] [-N x y]" << endl;
     cout << " input_file - input file in ROOT format ('Delphes' tree)," << endl;
     cout << " output_file - optional name of output file" << endl;
+    cout << " x,y - optional job splitting parameters. This is job x of total y" << endl;
     return 1;
   }
 
@@ -65,13 +66,32 @@ int main(int argc, char *argv[])
 
   TString inputFile(argv[1]);
   TString outputFile = "simpleTree.root";
-  if (argc==3) outputFile = TString(argv[2]);
+
+  int x=1,y=1;
+  for (int iarg = 2; iarg<argc; ) {
+
+    TString arg = argv[iarg];
+    if (arg=="-O") {
+      outputFile = argv[iarg+1];
+      iarg+=2;
+    }
+    else if (arg=="-N") {
+      x = TString(argv[iarg+1]).Atoi();
+      y = TString(argv[iarg+2]).Atoi();
+      iarg+=3;
+    }
+    else {
+      cout << " Usage: " << appName << " input_file [-O output_file] [-N x y]" << endl;
+      assert(0);
+    }
+
+  }
 
 //------------------------------------------------------------------------------
 
 // Here you call your macro's main function 
 
-  FlatTree(inputFile,outputFile);
+  FlatTree(inputFile,outputFile,x,y);
 
 //------------------------------------------------------------------------------
 
