@@ -3,9 +3,10 @@
 #include <iostream>
 #include <cassert>
 
+
 CrossSections::CrossSections(const TString samplename) :
-  xs_(1)
-  //  samplename_(samplename)
+  xs_(1),
+  proc_(kNone)
 {
   // from https://twiki.cern.ch/twiki/bin/viewauth/CMS/HiggsWG/Phase2UpgradeStudies
   if (samplename.Contains("B-4p-0-1-v1510_14TEV")) xs_=200944.681290000;
@@ -64,9 +65,26 @@ CrossSections::CrossSections(const TString samplename) :
   else {
     std::cout<<" WARNING -- this sample has no known cross-section. Using value of "<<xs_<<std::endl;
   }
+
+  //now set proc
+  SetProc(samplename);
 }
 
 CrossSections::~CrossSections() {
  
 }
 
+void CrossSections::SetProc(TString name) {
+
+  //set proc_
+  if (name.BeginsWith("BB")) proc_ = kRare;
+  else if (name.BeginsWith("B")) proc_=kBoson;
+  else if (name.BeginsWith("LLB")) proc_=kRare;
+  else if (name.BeginsWith("LL")) proc_=kBoson;
+  else if (name.BeginsWith("ttB")) proc_=kRare;
+  else if (name.BeginsWith("t")) proc_=kTop;
+  else if (name.BeginsWith("H")) proc_=kRare;
+  else if (name.Contains("susy")) proc_=kSignal;
+  else proc_=kNone;
+
+}
