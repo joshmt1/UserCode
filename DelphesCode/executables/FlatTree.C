@@ -43,7 +43,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
 
   if (nJobs>1) {
     TString fileEnding;
-    fileEnding.Form(".%d_%d.root",jobIndex,nJobs);
+    fileEnding.Form("_%d_%d.root",jobIndex,nJobs);
     assert(outputFile.EndsWith(".root"));
     outputFile.ReplaceAll(".root",fileEnding);
   }
