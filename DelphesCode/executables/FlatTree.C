@@ -41,12 +41,13 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   bool verbose =false;
   //  bool listJetTowers = false;
 
-  if (nJobs>1) {
-    TString fileEnding;
-    fileEnding.Form("_%d_%d.root",jobIndex,nJobs);
-    assert(outputFile.EndsWith(".root"));
-    outputFile.ReplaceAll(".root",fileEnding);
-  }
+  //turns out that i don't want this fancy logic.
+  //it is easier and more straightforward to handle the naming in the submission script and not here
+  //  TString fileEnding;
+  //  fileEnding.Form("_%d_%d.root",jobIndex,nJobs);
+  //  assert(outputFile.EndsWith(".root"));
+  //  outputFile.ReplaceAll(".root",fileEnding);
+
   SimpleTree tr(outputFile);
   //bookkeeping
   tr.AddDouble("weight");
