@@ -138,6 +138,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
     if  (evt1) w=evt1->Weight;
     else if (evt2) w=evt2->Weight;
     else assert(0);
+    //    cout<<w<<endl;
     tr.SetDouble("weight",w * cross_section.Get() / n_events_generated); //weight for 1 pb-1
     geninfo.Set(branchGenParticles);
     if (cross_section.GetProcess()==CrossSections::kTop)  tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode());

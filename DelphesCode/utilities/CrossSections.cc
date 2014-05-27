@@ -76,22 +76,20 @@ CrossSections::~CrossSections() {
 
 void CrossSections::SetProc(TString name) {
 
-  int lastslash = name.Last('/');
-
-  name = name(lastslash+1,name.Length());
-
   //set proc_
-  if (name.BeginsWith("BB")) proc_ = kRare;
-  else if (name.BeginsWith("B")) proc_=kBoson;
-  else if (name.BeginsWith("LLB")) proc_=kRare;
-  else if (name.BeginsWith("LL")) proc_=kBoson;
-  else if (name.BeginsWith("ttB")) proc_=kRare;
-  else if (name.BeginsWith("t")) proc_=kTop;
-  else if (name.BeginsWith("H")) proc_=kRare;
+  if (name.Contains("BB")) proc_ = kRare;
   else if (name.Contains("susy")) proc_=kSignal;
+  else if (name.Contains("scenario")) proc_=kSignal;
+  else if (name.Contains("B-")) proc_=kBoson;
+  else if (name.Contains("Bj")) proc_=kBoson;
+  else if (name.Contains("LLB")) proc_=kRare;
+  else if (name.Contains("LL")) proc_=kBoson;
+  else if (name.Contains("ttB")) proc_=kRare;
+  else if (name.Contains("H-")) proc_=kRare;
+  else if (name.Contains("t")) proc_=kTop;
   else proc_=kNone;
 
   std::cout<<"SetProc: "<<name<<" "<<proc_<<std::endl;
- 
+  if (proc_==kNone) assert(0);
 
 }
