@@ -61,6 +61,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddInt("ntFromSusy");
   tr.AddInt("nTrueElMu");
   tr.AddInt("nTrueTau");
+  tr.AddBool("leptonsMatchChi2ToChi1");
 
   //jet observables
   tr.AddVariable("HT",0);
@@ -144,7 +145,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
     if (cross_section.GetProcess()==CrossSections::kTop)  tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode());
 
      //for debug
-    //       geninfo.Dump();
+    //          geninfo.Dump();
     //    cout<<"nTrue e+mu tau "<<geninfo.countTrueLeptons(McTruthInfo::kElMu)<<" "<<geninfo.countTrueLeptons(McTruthInfo::kTau)<<endl;
     /*
        vector<int> susymoms=    geninfo.findSusyMoms();
@@ -234,6 +235,14 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
     if (lepton2!=0)  tr.Set("leptonEta2",lepton2->Eta());
     if (lepton1!=0)  tr.SetInt("leptonFlavor1",mllcomp.GetLeptonFlavor(1));
     if (lepton2!=0)  tr.SetInt("leptonFlavor2",mllcomp.GetLeptonFlavor(2));
+
+    //if reco leptons and Signal
+    if (lepton1!=0 && lepton2!=0 && cross_section.GetProcess()==CrossSections::kSignal) {
+      //do these match the leptons from N2->l~ l->N1 
+      tr.SetBool("leptonsMatchChi2ToChi1", geninfo.matchesChi2ToChi1Gen(*lepton1,*lepton2,mllcomp.GetLeptonFlavor(1),mllcomp.GetLeptonFlavor(2)));
+      //could also check match to SUSY Z; would need additional code
+
+    }
 
     //jets to go into the MT2 calculation
     vector<float> mt2jets_px;

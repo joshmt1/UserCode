@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <cassert>
-#include "classes/DelphesClasses.h"
 
 #include "external/mt2analysis/Utilities.hh"
 
@@ -84,7 +83,12 @@ multiple edge decays while still retaining that info in case it is of interest
  */
 int McTruthInfo::findChi2ToChi1() {
 
+  edge_l1_.clear();
+  edge_l2_.clear();
+
   int code = 0;
+
+  GenParticle * edge_l1 = 0;
 
   for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
@@ -106,8 +110,69 @@ int McTruthInfo::findChi2ToChi1() {
 	}
       }
     }
+    //not needed for primary logic of finding decay chain, but i also want to find leptons themselves
+    else if (pid==11 || pid==13) {
+      //look for lepton from slepton, with gmom of chi20
+      if ( checkMom(k,pid+1000000,0) && checkMom(k,1000023,1) ) {
+	edge_l2_.push_back( c);
+	assert(edge_l1);
+	edge_l1_.push_back( edge_l1);
+      }
+      //look for lepton from chi20
+      else if (checkMom(k,1000023,0)) edge_l1 = c;
+	// edge_l1_.push_back( c);
+      //vector structure only needed for the case where there are 2 N2->N1 decays
+    }
+
   }
+
+  //  cout<<"[code] "<<code<<"\t"<<edge_l1_.size()<<" "<<edge_l2_.size()<<endl;
+
   return code;
+}
+
+bool McTruthInfo::matchesChi2ToChi1Gen(const TLorentzVector & l1, const TLorentzVector & l2,int l1_flavor,int l2_flavor) {
+  //check if l1 and l2 are DR matches to the gen-level edge lepton
+
+  const double max = 0.05;
+
+  bool match=false;
+
+  if (!(edge_l2_.size() == edge_l1_.size())) {
+    cout<<"bad! "<<edge_l2_.size()<<" "<<edge_l1_.size()<<endl;
+    assert(0);
+  }
+  //cout<<"~~ "<<edge_l2_.size()<<endl;
+  for (size_t j = 0; j<edge_l2_.size() ; j++) {
+
+    //check flavor
+    //    cout<<"flavors "<<l1_flavor<<" "<<edge_l1_[j]->PID<<endl;
+    if (std::abs(l1_flavor)!= std::abs(edge_l1_[j]->PID)) continue;
+
+    TLorentzVector g_l1 = edge_l1_[j]->P4();
+    TLorentzVector g_l2 = edge_l2_[j]->P4();
+    //associate via charge
+    if (l1_flavor == -edge_l2_[j]->PID) { //tricky! in l1_flavor I used e- is negative. PID uses e- is positive
+      g_l1 = edge_l2_[j]->P4();
+      g_l2 = edge_l1_[j]->P4();
+    }
+
+    //    l1.Print();
+    //    g_l1.Print();
+    //    l2.Print();
+    //    g_l2.Print();
+
+    double dr1 =  Util::GetDeltaR(l1.Eta(),g_l1.Eta(),l1.Phi(), g_l1.Phi());
+    double dr2 =  Util::GetDeltaR(l2.Eta(),g_l2.Eta(),l2.Phi(), g_l2.Phi());
+
+    if (dr1 < max && dr2<max) {
+      //      cout<<"Is match"<<endl;
+      match=true;
+      break;
+    }
+    //    else cout<<"No match"<<endl;
+  }
+  return match;
 }
 
 int McTruthInfo::getSusyProductionProcess() {
