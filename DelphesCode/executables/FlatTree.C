@@ -65,6 +65,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddInt("nTrueTau");
   tr.AddBool("leptonsMatchChi2ToChi1");
   tr.AddBool("leptonsMatchChi2ToChi1_loose");
+  tr.AddBool("leptonsMatchChi2ToChi1_rand");
 
   //jet observables
   tr.AddVariable("HT",0);
@@ -89,6 +90,11 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddBool("isSF_loose");
   tr.AddInt("leptonFlavor1_loose");
   tr.AddInt("leptonFlavor2_loose");
+
+  tr.AddVariable("mll_rand"); //for edge analysis test
+  tr.AddBool("isSF_rand");
+  tr.AddInt("leptonFlavor1_rand");
+  tr.AddInt("leptonFlavor2_rand");
 
   //llq inv mass; minimized over the lead two jets
   tr.AddVariable("mllqmin");
@@ -255,6 +261,22 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
     if (lepton1_loose!=0)  tr.SetInt("leptonFlavor1_loose",mllcomp_loose.GetLeptonFlavor(1));
     if (lepton2_loose!=0)  tr.SetInt("leptonFlavor2_loose",mllcomp_loose.GetLeptonFlavor(2));
 
+
+    MllComputer mllcomp_rand(branchElectron,branchMuon);
+    //    mllcomp_rand.minpt_ = 5;//i'm nervous about the idea of going to 0
+    //    mllcomp_rand.maxetacut_ = 5;
+    //    mllcomp_rand.removegap_ = false;
+    mllcomp_rand.randomizeLeptons_=true;
+    mllcomp_rand.seed_ = entry+10001;//use a different seed for each event
+    tr.Set("mll_rand",mllcomp_rand.GetMll());
+    tr.SetBool("isSF_rand",mllcomp_rand.isSF()); //ditto
+    TLorentzVector* lepton1_rand = mllcomp_rand.GetLeptonP4(1);
+    TLorentzVector* lepton2_rand = mllcomp_rand.GetLeptonP4(2);
+    if (lepton1_rand!=0)  tr.SetInt("leptonFlavor1_rand",mllcomp_rand.GetLeptonFlavor(1));
+    if (lepton2_rand!=0)  tr.SetInt("leptonFlavor2_rand",mllcomp_rand.GetLeptonFlavor(2));
+
+
+    //back to the regular mll
     if (lepton1!=0)  tr.Set("leptonPt1",lepton1->Pt());
     if (lepton2!=0)  tr.Set("leptonPt2",lepton2->Pt());
     if (lepton1!=0)  tr.Set("leptonEta1",lepton1->Eta());
@@ -272,6 +294,10 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
     if (lepton1_loose!=0 && lepton2_loose!=0 && cross_section.GetProcess()==CrossSections::kSignal) {
       //do these match the leptons from N2->l~ l->N1 
       tr.SetBool("leptonsMatchChi2ToChi1_loose", geninfo.matchesChi2ToChi1Gen(*lepton1_loose,*lepton2_loose,mllcomp_loose.GetLeptonFlavor(1),mllcomp_loose.GetLeptonFlavor(2)));
+    }
+    if (lepton1_rand!=0 && lepton2_rand!=0 && cross_section.GetProcess()==CrossSections::kSignal) {
+      //do these match the leptons from N2->l~ l->N1 
+      tr.SetBool("leptonsMatchChi2ToChi1_rand", geninfo.matchesChi2ToChi1Gen(*lepton1_rand,*lepton2_rand,mllcomp_rand.GetLeptonFlavor(1),mllcomp_rand.GetLeptonFlavor(2)));
     }
 
     //jets to go into the MT2 calculation

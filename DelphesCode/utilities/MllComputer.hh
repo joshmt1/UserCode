@@ -6,6 +6,7 @@
 
 #include "TClonesArray.h"
 #include "TLorentzVector.h"
+#include "TRandom3.h"
 
 #include <set>
 #include <utility>
@@ -24,16 +25,21 @@ public:
   int GetLeptonFlavor(int index);
 
   float GetMee_Test() ;//special test
+  float GetMll_random() ;
 
   //cuts -- making these public out of laziness
   float minpt_;
   float maxetacut_;//cut value
   bool removegap_;
+  //algorithm customizations
+  bool randomizeLeptons_;
+  int seed_;
+
 private:
   TClonesArray* el_;
   TClonesArray* mu_;
 
-
+  TRandom3 * rand_;
 
   bool foundGood_;
   //  std::vector<int> good_el_;

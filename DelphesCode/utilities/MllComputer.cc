@@ -5,14 +5,18 @@
 #include "classes/DelphesClasses.h"
 #include "external/mt2analysis/Utilities.hh"
 
+
 using namespace std;
 
 MllComputer::MllComputer(TClonesArray* el, TClonesArray* mu) :
   minpt_(20),
   maxetacut_(2.4),
   removegap_(true),
+  randomizeLeptons_(false),
+  seed_(1234),
   el_(el),
   mu_(mu),
+  rand_(0),
   foundGood_(false),
   maxEta_(-99),
   isSF_(false),
@@ -26,6 +30,7 @@ MllComputer::MllComputer(TClonesArray* el, TClonesArray* mu) :
 MllComputer::~MllComputer() {
  delete p4_l1_;
  delete p4_l2_;
+ delete rand_;
 }
 
 float MllComputer::GetMee_Test() {
@@ -69,7 +74,92 @@ float MllComputer::GetMee_Test() {
   return 0;
 }
 
+float MllComputer::GetMll_random() {
+
+  if (rand_==0) rand_ =  new TRandom3(seed_); //do *NOT* always use same seed
+
+  //get Mll *not* selecting leptons by pt sorting
+  //too bad that i need to duplicate some code, but i think it is much cleaner this way
+  if (!foundGood_) findGoodLeptons();
+  if (lep_pt_.size() <2) return -2;
+
+  if (p4_l1_!=0) delete p4_l1_;
+  if (p4_l2_!=0) delete p4_l2_;
+
+  //convert set to vector
+  vector< std::pair<float, std::pair<LeptonFlavor,int> > > lep_pt;
+
+  set< pair<float, pair<LeptonFlavor,int> > >::iterator it;
+  for (it=lep_pt_.begin(); it != lep_pt_.end(); ++it) {
+    lep_pt.push_back( *it);
+  }
+
+  //pick out the two random leptons to use
+  set<int> used;
+  unsigned int n = lep_pt.size();
+  int i1 = rand_->Integer(n);
+  used.insert(i1);
+  if ( lep_pt[i1].second.first ==kElectron) {
+    l1_flavor_ = 11 * ((Electron*)el_->At(lep_pt[i1].second.second))->Charge;
+    p4_l1_ = new TLorentzVector( ((Electron*)el_->At(lep_pt[i1].second.second))->P4());
+  }
+  else if (lep_pt[i1].second.first==kMuon) {
+    l1_flavor_ = 13 * ((Muon*)mu_->At(lep_pt[i1].second.second))->Charge;
+    p4_l1_ = new TLorentzVector( ((Muon*)mu_->At(lep_pt[i1].second.second))->P4());
+  }
+  int i2=-1;
+  while (used.size()<n) {
+
+    i2 = rand_->Integer(n);
+    if (i1==i2) {i2=-1; continue;}
+
+    if ( lep_pt[i2].second.first ==kElectron) {
+      l2_flavor_ = 11 * ((Electron*)el_->At(lep_pt[i2].second.second))->Charge;
+      p4_l2_ = new TLorentzVector( ((Electron*)el_->At(lep_pt[i2].second.second))->P4()); 
+    }
+    else if (lep_pt[i2].second.first==kMuon) {
+      l2_flavor_ = 13 * ((Muon*)mu_->At(lep_pt[i2].second.second))->Charge;
+      p4_l2_ = new TLorentzVector( ((Muon*)mu_->At(lep_pt[i2].second.second))->P4());
+    }
+    //ensure opposite charge!
+    if ( l1_flavor_/std::abs(l1_flavor_) == l2_flavor_/std::abs(l2_flavor_) ) {
+      used.insert(i2);
+      i2=-1;
+      continue;
+    }
+
+    //ok, i2 is an OS lepton
+    break;
+  }
+
+  if (i2<0 )  {
+    //clear other stuff?
+    return -1;
+  }
+
+
+  isSF_ = (std::abs(l1_flavor_)==std::abs(l2_flavor_));
+  maxEta_ = (std::abs(p4_l1_->Eta() )>std::abs(p4_l2_->Eta())) ? std::abs(p4_l1_->Eta() ):std::abs(p4_l2_->Eta());
+
+  //boy, this code was really hard-coded like mad with set in mind
+  //need:
+  /*
+  float maxEta_;//largest value found in event
+  bool isSF_;
+  TLorentzVector* p4_l1_;
+  TLorentzVector* p4_l2_;
+  int l1_flavor_;
+  int l2_flavor_;
+  */
+
+  TLorentzVector mll=(*p4_l1_)+(*p4_l2_);
+  return mll.M();
+
+}
+
 float MllComputer::GetMll() {
+
+  if (randomizeLeptons_) return GetMll_random();
 
   //get highest pT *good* lepton, where good means in eta acceptance
   //(in the real analysis, good also implies some quality cuts)
