@@ -25,15 +25,21 @@ public:
 
   float GetMee_Test() ;//special test
 
+  //cuts -- making these public out of laziness
+  float minpt_;
+  float maxetacut_;//cut value
+  bool removegap_;
 private:
   TClonesArray* el_;
   TClonesArray* mu_;
+
+
 
   bool foundGood_;
   //  std::vector<int> good_el_;
   //  std::vector<int> good_mu_;
   void findGoodLeptons() ;
-  float maxEta_;
+  float maxEta_;//largest value found in event
   bool isSF_;
   TLorentzVector* p4_l1_;
   TLorentzVector* p4_l2_;

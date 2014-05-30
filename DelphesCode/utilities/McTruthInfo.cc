@@ -131,6 +131,19 @@ int McTruthInfo::findChi2ToChi1() {
   return code;
 }
 
+float McTruthInfo::getGenMll(int index) {
+
+  if (index==1 && edge_l1_.size()>=1) {
+    TLorentzVector mll = edge_l1_[0]->P4() + edge_l2_[0]->P4();
+    return mll.M();
+  }
+  else if (index==2 && edge_l1_.size()>=2) {
+    TLorentzVector mll = edge_l1_[1]->P4() + edge_l2_[1]->P4();
+    return mll.M();
+  }
+  return -1;
+}
+
 bool McTruthInfo::matchesChi2ToChi1Gen(const TLorentzVector & l1, const TLorentzVector & l2,int l1_flavor,int l2_flavor) {
   //check if l1 and l2 are DR matches to the gen-level edge lepton
 

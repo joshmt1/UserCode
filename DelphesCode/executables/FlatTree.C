@@ -56,12 +56,15 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddInt("ttbarDecayCode");
   tr.AddInt("SusyProductionMode");
   tr.AddInt("Chi2ToChi1Code");
+  tr.AddVariable("genEdgeMll1");
+  tr.AddVariable("genEdgeMll2");
   tr.AddInt("nZFromSusy");
   tr.AddInt("nbFromSusy");
   tr.AddInt("ntFromSusy");
   tr.AddInt("nTrueElMu");
   tr.AddInt("nTrueTau");
   tr.AddBool("leptonsMatchChi2ToChi1");
+  tr.AddBool("leptonsMatchChi2ToChi1_loose");
 
   //jet observables
   tr.AddVariable("HT",0);
@@ -81,6 +84,12 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddVariable("leptonEta2");
   tr.AddInt("leptonFlavor1");
   tr.AddInt("leptonFlavor2");
+
+  tr.AddVariable("mll_loose"); //for edge analysis test
+  tr.AddBool("isSF_loose");
+  tr.AddInt("leptonFlavor1_loose");
+  tr.AddInt("leptonFlavor2_loose");
+
   //llq inv mass; minimized over the lead two jets
   tr.AddVariable("mllqmin");
   //lq invariant masses (using two leading jets)
@@ -158,7 +167,12 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
     // production code
     if (cross_section.GetProcess()==CrossSections::kSignal) {
       tr.SetInt("SusyProductionMode",   geninfo.getSusyProductionProcess());
-      tr.SetInt("Chi2ToChi1Code",   geninfo.findChi2ToChi1());
+      int code =  geninfo.findChi2ToChi1();
+      tr.SetInt("Chi2ToChi1Code",  code);
+      if (code==1 || code==2) {
+	tr.Set("genEdgeMll1",geninfo.getGenMll(1));
+	tr.Set("genEdgeMll2",geninfo.getGenMll(2));
+      }
       //    cout<<"Chi2ToChi1Code = "<<geninfo.findChi2ToChi1()<<endl;
       //cout<<"nZ = "<< geninfo.findZinSusy()<<endl;
       tr.SetInt("nZFromSusy",    geninfo.findPinSusy(23));
@@ -229,6 +243,18 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
     TLorentzVector* lepton1 = mllcomp.GetLeptonP4(1);
     TLorentzVector* lepton2 = mllcomp.GetLeptonP4(2);
 
+    //redo mll with variations
+    MllComputer mllcomp_loose(branchElectron,branchMuon);
+    mllcomp_loose.minpt_ = 5;//i'm nervous about the idea of going to 0
+    mllcomp_loose.maxetacut_ = 5;
+    mllcomp_loose.removegap_ = false;
+    tr.Set("mll_loose",mllcomp_loose.GetMll());
+    tr.SetBool("isSF_loose",mllcomp_loose.isSF()); //ditto
+    TLorentzVector* lepton1_loose = mllcomp_loose.GetLeptonP4(1);
+    TLorentzVector* lepton2_loose = mllcomp_loose.GetLeptonP4(2);
+    if (lepton1_loose!=0)  tr.SetInt("leptonFlavor1_loose",mllcomp_loose.GetLeptonFlavor(1));
+    if (lepton2_loose!=0)  tr.SetInt("leptonFlavor2_loose",mllcomp_loose.GetLeptonFlavor(2));
+
     if (lepton1!=0)  tr.Set("leptonPt1",lepton1->Pt());
     if (lepton2!=0)  tr.Set("leptonPt2",lepton2->Pt());
     if (lepton1!=0)  tr.Set("leptonEta1",lepton1->Eta());
@@ -242,6 +268,10 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
       tr.SetBool("leptonsMatchChi2ToChi1", geninfo.matchesChi2ToChi1Gen(*lepton1,*lepton2,mllcomp.GetLeptonFlavor(1),mllcomp.GetLeptonFlavor(2)));
       //could also check match to SUSY Z; would need additional code
 
+    }
+    if (lepton1_loose!=0 && lepton2_loose!=0 && cross_section.GetProcess()==CrossSections::kSignal) {
+      //do these match the leptons from N2->l~ l->N1 
+      tr.SetBool("leptonsMatchChi2ToChi1_loose", geninfo.matchesChi2ToChi1Gen(*lepton1_loose,*lepton2_loose,mllcomp_loose.GetLeptonFlavor(1),mllcomp_loose.GetLeptonFlavor(2)));
     }
 
     //jets to go into the MT2 calculation

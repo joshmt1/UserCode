@@ -8,6 +8,9 @@
 using namespace std;
 
 MllComputer::MllComputer(TClonesArray* el, TClonesArray* mu) :
+  minpt_(20),
+  maxetacut_(2.4),
+  removegap_(true),
   el_(el),
   mu_(mu),
   foundGood_(false),
@@ -143,20 +146,20 @@ void MllComputer::findGoodLeptons() {
 
   for (int i = 0 ; i < el_->GetEntries() ; i++) {
     Electron *el = (Electron*) el_->At(i);
-    if (el->PT < 20 ) continue;
+    if (el->PT < minpt_ ) continue;
     float abseta = std::abs(el->Eta);
-    if ( abseta > 2.4) continue; 
-    if ( abseta>1.4 && abseta<1.6) continue;//remove eta range of 1.4-1.6
+    if ( abseta > maxetacut_) continue; 
+    if ( removegap_ && abseta>1.4 && abseta<1.6) continue;//remove eta range of 1.4-1.6
     //TODO remove barrel/endcap transition
     lep_pt_.insert( make_pair( el->PT, make_pair(kElectron,i))); //set sorts by pt, low to high
   }
 
   for (int i = 0 ; i < mu_->GetEntries() ; i++) {
     Muon *mu = (Muon*) mu_->At(i);
-    if (mu->PT < 20 ) continue;
+    if (mu->PT < minpt_ ) continue;
     float abseta = std::abs(mu->Eta);
-    if ( abseta > 2.4) continue; 
-     if ( abseta>1.4 && abseta<1.6) continue;//remove eta range of 1.4-1.6
+    if ( abseta > maxetacut_) continue; 
+     if ( removegap_ && abseta>1.4 && abseta<1.6) continue;//remove eta range of 1.4-1.6
     lep_pt_.insert( make_pair( mu->PT, make_pair(kMuon,i))); //set sorts by pt, low to high
   }
  
