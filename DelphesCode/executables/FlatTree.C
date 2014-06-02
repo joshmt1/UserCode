@@ -64,8 +64,8 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddInt("nTrueElMu");
   tr.AddInt("nTrueTau");
   tr.AddBool("leptonsMatchChi2ToChi1");
+  tr.AddBool("leptonsMatchChi2ToChi1_veryloose");
   tr.AddBool("leptonsMatchChi2ToChi1_loose");
-  tr.AddBool("leptonsMatchChi2ToChi1_rand");
 
   //jet observables
   tr.AddVariable("HT",0);
@@ -86,15 +86,17 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddInt("leptonFlavor1");
   tr.AddInt("leptonFlavor2");
 
+  tr.AddVariable("mll_veryloose"); //for edge analysis test
+  tr.AddBool("isSF_veryloose");
+  tr.AddInt("leptonFlavor1_veryloose");
+  tr.AddInt("leptonFlavor2_veryloose");
+
   tr.AddVariable("mll_loose"); //for edge analysis test
   tr.AddBool("isSF_loose");
+  tr.AddVariable("leptonPt1_loose");
+  tr.AddVariable("leptonPt2_loose");
   tr.AddInt("leptonFlavor1_loose");
   tr.AddInt("leptonFlavor2_loose");
-
-  tr.AddVariable("mll_rand"); //for edge analysis test
-  tr.AddBool("isSF_rand");
-  tr.AddInt("leptonFlavor1_rand");
-  tr.AddInt("leptonFlavor2_rand");
 
   //llq inv mass; minimized over the lead two jets
   tr.AddVariable("mllqmin");
@@ -250,30 +252,30 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
     TLorentzVector* lepton2 = mllcomp.GetLeptonP4(2);
 
     //redo mll with variations
+    MllComputer mllcomp_veryloose(branchElectron,branchMuon);
+    //very loose == unrealistically loose -- no eta cuts and 5 GeV pT threshold
+    mllcomp_veryloose.minpt_ = 5;//i'm nervous about the idea of going to 0
+    mllcomp_veryloose.maxetacut_ = 5;
+    mllcomp_veryloose.removegap_ = false;
+    tr.Set("mll_veryloose",mllcomp_veryloose.GetMll());
+    tr.SetBool("isSF_veryloose",mllcomp_veryloose.isSF()); //ditto
+    TLorentzVector* lepton1_veryloose = mllcomp_veryloose.GetLeptonP4(1);
+    TLorentzVector* lepton2_veryloose = mllcomp_veryloose.GetLeptonP4(2);
+    if (lepton1_veryloose!=0)  tr.SetInt("leptonFlavor1_veryloose",mllcomp_veryloose.GetLeptonFlavor(1));
+    if (lepton2_veryloose!=0)  tr.SetInt("leptonFlavor2_veryloose",mllcomp_veryloose.GetLeptonFlavor(2));
+
+
     MllComputer mllcomp_loose(branchElectron,branchMuon);
-    mllcomp_loose.minpt_ = 5;//i'm nervous about the idea of going to 0
-    mllcomp_loose.maxetacut_ = 5;
-    mllcomp_loose.removegap_ = false;
+    //loose == stanndard eta cuts but loosen pT to 10
+    mllcomp_loose.minpt_ = 10;//
     tr.Set("mll_loose",mllcomp_loose.GetMll());
     tr.SetBool("isSF_loose",mllcomp_loose.isSF()); //ditto
     TLorentzVector* lepton1_loose = mllcomp_loose.GetLeptonP4(1);
     TLorentzVector* lepton2_loose = mllcomp_loose.GetLeptonP4(2);
     if (lepton1_loose!=0)  tr.SetInt("leptonFlavor1_loose",mllcomp_loose.GetLeptonFlavor(1));
     if (lepton2_loose!=0)  tr.SetInt("leptonFlavor2_loose",mllcomp_loose.GetLeptonFlavor(2));
-
-
-    MllComputer mllcomp_rand(branchElectron,branchMuon);
-    //    mllcomp_rand.minpt_ = 5;//i'm nervous about the idea of going to 0
-    //    mllcomp_rand.maxetacut_ = 5;
-    //    mllcomp_rand.removegap_ = false;
-    mllcomp_rand.randomizeLeptons_=true;
-    mllcomp_rand.seed_ = entry+10001;//use a different seed for each event
-    tr.Set("mll_rand",mllcomp_rand.GetMll());
-    tr.SetBool("isSF_rand",mllcomp_rand.isSF()); //ditto
-    TLorentzVector* lepton1_rand = mllcomp_rand.GetLeptonP4(1);
-    TLorentzVector* lepton2_rand = mllcomp_rand.GetLeptonP4(2);
-    if (lepton1_rand!=0)  tr.SetInt("leptonFlavor1_rand",mllcomp_rand.GetLeptonFlavor(1));
-    if (lepton2_rand!=0)  tr.SetInt("leptonFlavor2_rand",mllcomp_rand.GetLeptonFlavor(2));
+    if (lepton1_loose!=0)  tr.Set("leptonPt1_loose",lepton1_loose->Pt());
+    if (lepton2_loose!=0)  tr.Set("leptonPt2_loose",lepton2_loose->Pt());
 
 
     //back to the regular mll
@@ -291,13 +293,13 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
       //could also check match to SUSY Z; would need additional code
 
     }
+    if (lepton1_veryloose!=0 && lepton2_veryloose!=0 && cross_section.GetProcess()==CrossSections::kSignal) {
+      //do these match the leptons from N2->l~ l->N1 
+      tr.SetBool("leptonsMatchChi2ToChi1_veryloose", geninfo.matchesChi2ToChi1Gen(*lepton1_veryloose,*lepton2_veryloose,mllcomp_veryloose.GetLeptonFlavor(1),mllcomp_veryloose.GetLeptonFlavor(2)));
+    }
     if (lepton1_loose!=0 && lepton2_loose!=0 && cross_section.GetProcess()==CrossSections::kSignal) {
       //do these match the leptons from N2->l~ l->N1 
       tr.SetBool("leptonsMatchChi2ToChi1_loose", geninfo.matchesChi2ToChi1Gen(*lepton1_loose,*lepton2_loose,mllcomp_loose.GetLeptonFlavor(1),mllcomp_loose.GetLeptonFlavor(2)));
-    }
-    if (lepton1_rand!=0 && lepton2_rand!=0 && cross_section.GetProcess()==CrossSections::kSignal) {
-      //do these match the leptons from N2->l~ l->N1 
-      tr.SetBool("leptonsMatchChi2ToChi1_rand", geninfo.matchesChi2ToChi1Gen(*lepton1_rand,*lepton2_rand,mllcomp_rand.GetLeptonFlavor(1),mllcomp_rand.GetLeptonFlavor(2)));
     }
 
     //jets to go into the MT2 calculation
@@ -371,9 +373,9 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
 	  if ( tr.GetInt("njets40")<MAX_njets) tr.Set("jetPt",tr.GetInt("njets40"),jet->PT);
 	  tr.SetInt("njets40",1,true);
 
-	  //TODO check that I have tight versus loose correct!
-	  if ( jet->BTag&1) tr.SetInt("nbjets40loose",1,true);
-	  if ( jet->BTag&2) tr.SetInt("nbjets40tight",1,true);
+	  //empiracally determined that this is correct (more loose tags than tight)
+	  if ( jet->BTag&2) tr.SetInt("nbjets40loose",1,true);
+	  if ( jet->BTag&1) tr.SetInt("nbjets40tight",1,true);
 
 	  //use lead 4 jets for mindeltaphi
 	  if (tr.GetInt("njets40") <=4 && Util::DeltaPhi(jet->Phi,met->Phi) < minDeltaPhi) minDeltaPhi = Util::DeltaPhi(jet->Phi,met->Phi);
