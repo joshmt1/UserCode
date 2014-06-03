@@ -23,7 +23,8 @@ public:
   std::vector<int> findSusyMoms();
   int getSusyProductionProcess();
   int findChi2ToChi1(); //return 10*nStaus + nSElectron+Smuon
-  float getGenMll(int index);
+  float getGenMll(int index); //index is which edge decay (in rare case of 2)
+  float getGenEdgeLeptonPt(int index); //index is which lepton; only supports first edge decay in the event 
   bool matchesChi2ToChi1Gen(const TLorentzVector & l1, const TLorentzVector & l2,int l1_flavor,int l2_flavor);
   int findPinSusy(int pidToFind);
 

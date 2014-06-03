@@ -58,6 +58,9 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddInt("Chi2ToChi1Code");
   tr.AddVariable("genEdgeMll1");
   tr.AddVariable("genEdgeMll2");
+  tr.AddVariable("genEdgeLepPt1");
+  tr.AddVariable("genEdgeLepPt2");
+
   tr.AddInt("nZFromSusy");
   tr.AddInt("nbFromSusy");
   tr.AddInt("ntFromSusy");
@@ -180,6 +183,8 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
       if (code==1 || code==2) {
 	tr.Set("genEdgeMll1",geninfo.getGenMll(1));
 	tr.Set("genEdgeMll2",geninfo.getGenMll(2));
+	tr.Set("genEdgeLepPt1",geninfo.getGenEdgeLeptonPt(1));
+	tr.Set("genEdgeLepPt2",geninfo.getGenEdgeLeptonPt(2));
       }
       //    cout<<"Chi2ToChi1Code = "<<geninfo.findChi2ToChi1()<<endl;
       //cout<<"nZ = "<< geninfo.findZinSusy()<<endl;

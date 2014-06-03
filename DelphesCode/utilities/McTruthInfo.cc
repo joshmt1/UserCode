@@ -144,6 +144,16 @@ float McTruthInfo::getGenMll(int index) {
   return -1;
 }
 
+float McTruthInfo::getGenEdgeLeptonPt(int index) { //forget about the possibility of a second edge decay
+
+  if ( edge_l1_.size()>=1) {
+    if (index==1) return edge_l1_[0]->P4().Pt();
+    if (index==2) return edge_l2_[0]->P4().Pt();
+  }
+
+  return -1;
+}
+
 bool McTruthInfo::matchesChi2ToChi1Gen(const TLorentzVector & l1, const TLorentzVector & l2,int l1_flavor,int l2_flavor) {
   //check if l1 and l2 are DR matches to the gen-level edge lepton
 
