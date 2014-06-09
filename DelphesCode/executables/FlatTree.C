@@ -96,7 +96,7 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
   tr.AddVariable("leptonEta2");
   tr.AddInt("leptonFlavor1");
   tr.AddInt("leptonFlavor2");
-  tr.AddVariable("leptonIso1");//absolute isolation (or not?)
+  tr.AddVariable("leptonIso1");//relative isolation
   tr.AddVariable("leptonIso2");
 
   tr.AddVariable("mll_veryloose"); //for edge analysis test
@@ -104,6 +104,8 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
   tr.AddInt("leptonFlavor1_veryloose");
   tr.AddInt("leptonFlavor2_veryloose");
   tr.AddVariable("mll_maxEta_veryloose");//max eta of the OS dileptons
+  tr.AddVariable("leptonIso1_veryloose");//relative isolation
+  tr.AddVariable("leptonIso2_veryloose");
 
   tr.AddVariable("mll_loose"); //for edge analysis test
   tr.AddBool("isSF_loose");
@@ -112,6 +114,8 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
   tr.AddInt("leptonFlavor1_loose");
   tr.AddInt("leptonFlavor2_loose");
   tr.AddVariable("mll_maxEta_loose");//max eta of the OS dileptons
+  tr.AddVariable("leptonIso1_loose");//relative isolation
+  tr.AddVariable("leptonIso2_loose");
 
   //llq inv mass; minimized over the lead two jets
   tr.AddVariable("mllqmin");
@@ -284,6 +288,8 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     TLorentzVector* lepton2_veryloose = mllcomp_veryloose.GetLeptonP4(2);
     if (lepton1_veryloose!=0)  tr.SetInt("leptonFlavor1_veryloose",mllcomp_veryloose.GetLeptonFlavor(1));
     if (lepton2_veryloose!=0)  tr.SetInt("leptonFlavor2_veryloose",mllcomp_veryloose.GetLeptonFlavor(2));
+    if (lepton1_veryloose!=0)  tr.Set("leptonIso1_veryloose",mllcomp_veryloose.GetLeptonIsolation(1));
+    if (lepton2_veryloose!=0)  tr.Set("leptonIso2_veryloose",mllcomp_veryloose.GetLeptonIsolation(2));
     tr.Set("mll_maxEta_veryloose",mllcomp_veryloose.GetMaxEta()); //must be called after GetMll()
 
     MllComputer mllcomp_loose(branchElectron,branchMuon);
@@ -297,6 +303,8 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     if (lepton2_loose!=0)  tr.SetInt("leptonFlavor2_loose",mllcomp_loose.GetLeptonFlavor(2));
     if (lepton1_loose!=0)  tr.Set("leptonPt1_loose",lepton1_loose->Pt());
     if (lepton2_loose!=0)  tr.Set("leptonPt2_loose",lepton2_loose->Pt());
+    if (lepton1_loose!=0)  tr.Set("leptonIso1_loose",mllcomp_loose.GetLeptonIsolation(1));
+    if (lepton2_loose!=0)  tr.Set("leptonIso2_loose",mllcomp_loose.GetLeptonIsolation(2));
     tr.Set("mll_maxEta_loose",mllcomp_loose.GetMaxEta()); //must be called after GetMll()
 
     //back to the regular mll
