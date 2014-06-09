@@ -22,6 +22,8 @@ MllComputer::MllComputer(TClonesArray* el, TClonesArray* mu) :
   isSF_(false),
   p4_l1_(0),
   p4_l2_(0),
+  l1_iso_(-99),
+  l2_iso_(-99),
   l1_flavor_(-99),
   l2_flavor_(-99)
 {
@@ -101,10 +103,12 @@ float MllComputer::GetMll_random() {
   used.insert(i1);
   if ( lep_pt[i1].second.first ==kElectron) {
     l1_flavor_ = 11 * ((Electron*)el_->At(lep_pt[i1].second.second))->Charge;
+    l1_iso_ =  ((Electron*)el_->At(lep_pt[i1].second.second))->IsolationVar;
     p4_l1_ = new TLorentzVector( ((Electron*)el_->At(lep_pt[i1].second.second))->P4());
   }
   else if (lep_pt[i1].second.first==kMuon) {
     l1_flavor_ = 13 * ((Muon*)mu_->At(lep_pt[i1].second.second))->Charge;
+    l1_iso_ =  ((Muon*)mu_->At(lep_pt[i1].second.second))->IsolationVar;
     p4_l1_ = new TLorentzVector( ((Muon*)mu_->At(lep_pt[i1].second.second))->P4());
   }
   int i2=-1;
@@ -115,10 +119,12 @@ float MllComputer::GetMll_random() {
 
     if ( lep_pt[i2].second.first ==kElectron) {
       l2_flavor_ = 11 * ((Electron*)el_->At(lep_pt[i2].second.second))->Charge;
+      l2_iso_ = ((Electron*)el_->At(lep_pt[i2].second.second))->IsolationVar;
       p4_l2_ = new TLorentzVector( ((Electron*)el_->At(lep_pt[i2].second.second))->P4()); 
     }
     else if (lep_pt[i2].second.first==kMuon) {
       l2_flavor_ = 13 * ((Muon*)mu_->At(lep_pt[i2].second.second))->Charge;
+      l2_iso_ = ((Muon*)mu_->At(lep_pt[i2].second.second))->IsolationVar;
       p4_l2_ = new TLorentzVector( ((Muon*)mu_->At(lep_pt[i2].second.second))->P4());
     }
     //ensure opposite charge!
@@ -169,7 +175,8 @@ float MllComputer::GetMll() {
   if (p4_l1_!=0) delete p4_l1_;
   if (p4_l2_!=0) delete p4_l2_;
 
-  //
+  float mll = -1;
+  extra_leptons_.clear();
   set< pair<float, pair<LeptonFlavor,int> > >::reverse_iterator rit;
   int ii=0;
   int    lead_lepton_charge=0;
@@ -183,6 +190,7 @@ float MllComputer::GetMll() {
       l1fl = rit->second.first;
       l1_flavor_ = (l1fl==kElectron) ? 11 : 13;
       l1_flavor_ *= lead_lepton_charge;
+      l1_iso_ = GetIsolation(rit);
     }
     else if (ii>0) { //for non-leading leptons
       //find 2nd highest pT lepton with opposite charge and DR>0.3 compared to first lepton
@@ -193,7 +201,7 @@ float MllComputer::GetMll() {
 	TLorentzVector l2 = Get4Vector(rit);
 	float dr=Util::GetDeltaR(l2.Eta(),p4_l1_->Eta(),l2.Phi(),p4_l1_->Phi());
 	//	cout<<"\t\tDR="<<dr<<endl;
-	if (dr>0.3) { //passes dr cut
+	if (dr>0.3 && mll<0) { //passes dr cut
 	  TLorentzVector ll = (*p4_l1_)+l2;
 	  //	  cout<<"Mll = "<<ll.M()<<endl;
 	  if ( std::abs(l2.Eta()) > std::abs(p4_l1_->Eta()) ) maxEta_ = std::abs(l2.Eta());
@@ -203,8 +211,15 @@ float MllComputer::GetMll() {
 	  p4_l2_ = new TLorentzVector(l2);
 	  l2_flavor_ = (l2fl==kElectron) ? 11 : 13;
 	  l2_flavor_ *= ch2;
-	  return ll.M();
+	  l2_iso_ = GetIsolation(rit);
+	  mll = ll.M();
 	}
+	else {	//lepton that won't go into mLL: add to extra leptons
+	  extra_leptons_.insert(*rit);
+	}
+      }
+      else {	//lepton that won't go into mLL: add to extra leptons
+	extra_leptons_.insert(*rit);
       }
     }
 
@@ -213,7 +228,7 @@ float MllComputer::GetMll() {
  
 
 
-  return -1;
+  return mll;
 }
 
 TLorentzVector* MllComputer::GetLeptonP4(int index) {
@@ -222,9 +237,30 @@ TLorentzVector* MllComputer::GetLeptonP4(int index) {
   return 0;
 }
 
+
+TLorentzVector MllComputer::GetExtraLeptonP4(int index) {
+  set< pair<float, pair<LeptonFlavor,int> > >::reverse_iterator rit;
+  int i=0;
+  for (rit=extra_leptons_.rbegin(); rit != extra_leptons_.rend(); ++rit) {
+    if (i==index) {
+      return Get4Vector(rit);
+    }
+    ++i;
+  }
+
+  TLorentzVector d;
+  return d;
+}
+
 int MllComputer::GetLeptonFlavor(int index) {
   if (index==1) return l1_flavor_;
   if (index==2) return l2_flavor_;
+  return 0;
+}
+
+float MllComputer::GetLeptonIsolation(int index) {
+  if (index==1) return l1_iso_;
+  if (index==2) return l2_iso_;
   return 0;
 }
 
@@ -269,6 +305,20 @@ int MllComputer::GetCharge( set< pair<float, pair<LeptonFlavor,int> > >::reverse
   else assert(0);
 
   return ch;
+}
+
+float MllComputer::GetIsolation( set< pair<float, pair<LeptonFlavor,int> > >::reverse_iterator & rit) {
+  float val=0;
+
+  int lepton_index = rit->second.second;
+  LeptonFlavor lepton_flavor = rit->second.first;
+  if ( lepton_flavor==kElectron)
+    val=   ((Electron*) el_->At(lepton_index))->IsolationVar;
+  else if ( lepton_flavor==kMuon)
+    val=   ((Muon*) mu_->At(lepton_index))->IsolationVar;
+  else assert(0);
+
+  return val;
 }
 
 TLorentzVector MllComputer::Get4Vector( set< pair<float, pair<LeptonFlavor,int> > >::reverse_iterator & rit) {

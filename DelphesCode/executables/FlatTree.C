@@ -81,6 +81,14 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddVariable("minDeltaPhi");
   tr.AddVariable("mll"); //for edge analysis
   tr.AddVariable("mll_maxEta");//max eta of the OS dileptons
+  tr.AddVariable("MT_l3MET",-99);
+  /*
+notes on this variable: right now it uses the same pT threshold as two edge leptons
+in reality one would certainly want to allow at least two different thresholds when
+doing a 3l analysis. This would require reworking the code.
+
+Also, prob need to store the flavor and charge of this lepton if we're really going to use this
+   */
   tr.AddBool("isSF");
   tr.AddVariable("leptonPt1");
   tr.AddVariable("leptonPt2");
@@ -88,11 +96,14 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddVariable("leptonEta2");
   tr.AddInt("leptonFlavor1");
   tr.AddInt("leptonFlavor2");
+  tr.AddVariable("leptonIso1");//absolute isolation (or not?)
+  tr.AddVariable("leptonIso2");
 
   tr.AddVariable("mll_veryloose"); //for edge analysis test
   tr.AddBool("isSF_veryloose");
   tr.AddInt("leptonFlavor1_veryloose");
   tr.AddInt("leptonFlavor2_veryloose");
+  tr.AddVariable("mll_maxEta_veryloose");//max eta of the OS dileptons
 
   tr.AddVariable("mll_loose"); //for edge analysis test
   tr.AddBool("isSF_loose");
@@ -100,6 +111,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddVariable("leptonPt2_loose");
   tr.AddInt("leptonFlavor1_loose");
   tr.AddInt("leptonFlavor2_loose");
+  tr.AddVariable("mll_maxEta_loose");//max eta of the OS dileptons
 
   //llq inv mass; minimized over the lead two jets
   tr.AddVariable("mllqmin");
@@ -118,10 +130,10 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   const int MAX_njets=20;
   tr.AddArray("jetPt",MAX_njets); //could add eta, etc
   const int MAX_leptons=4;
-  tr.AddArray("electronIso",MAX_leptons); //*not* relative iso
-  tr.AddArray("muonIso",MAX_leptons); //*not* relative iso
-  tr.AddArray("electronPt",MAX_leptons);
-  tr.AddArray("muonPt",MAX_leptons);
+  tr.AddArray("electronIso",MAX_leptons); //*not* relative iso (why did I think this?)
+  tr.AddArray("muonIso",MAX_leptons); //*not* relative iso //FIXME forgot to actually store this
+  tr.AddArray("electronPt",MAX_leptons); 
+  tr.AddArray("muonPt",MAX_leptons);//FIXME forgot to actually store this
   //no need for photons or tighter muons, probably
   //MC truth for DY events
   tr.AddVariable("DYgenPt1");
@@ -255,6 +267,10 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
     tr.SetBool("isSF",mllcomp.isSF()); //ditto
     TLorentzVector* lepton1 = mllcomp.GetLeptonP4(1);
     TLorentzVector* lepton2 = mllcomp.GetLeptonP4(2);
+    if ( mllcomp.GetNExtraLeptons() >0) {
+      TLorentzVector pl = mllcomp.GetExtraLeptonP4(0);
+      tr.Set("MT_l3MET",sqrt(2*met->MET*pl.Pt()*(1-cos(Util::DeltaPhi(pl.Phi(),met->Phi)))));
+    }
 
     //redo mll with variations
     MllComputer mllcomp_veryloose(branchElectron,branchMuon);
@@ -268,7 +284,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
     TLorentzVector* lepton2_veryloose = mllcomp_veryloose.GetLeptonP4(2);
     if (lepton1_veryloose!=0)  tr.SetInt("leptonFlavor1_veryloose",mllcomp_veryloose.GetLeptonFlavor(1));
     if (lepton2_veryloose!=0)  tr.SetInt("leptonFlavor2_veryloose",mllcomp_veryloose.GetLeptonFlavor(2));
-
+    tr.Set("mll_maxEta_veryloose",mllcomp_veryloose.GetMaxEta()); //must be called after GetMll()
 
     MllComputer mllcomp_loose(branchElectron,branchMuon);
     //loose == stanndard eta cuts but loosen pT to 10
@@ -281,7 +297,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
     if (lepton2_loose!=0)  tr.SetInt("leptonFlavor2_loose",mllcomp_loose.GetLeptonFlavor(2));
     if (lepton1_loose!=0)  tr.Set("leptonPt1_loose",lepton1_loose->Pt());
     if (lepton2_loose!=0)  tr.Set("leptonPt2_loose",lepton2_loose->Pt());
-
+    tr.Set("mll_maxEta_loose",mllcomp_loose.GetMaxEta()); //must be called after GetMll()
 
     //back to the regular mll
     if (lepton1!=0)  tr.Set("leptonPt1",lepton1->Pt());
@@ -290,6 +306,8 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
     if (lepton2!=0)  tr.Set("leptonEta2",lepton2->Eta());
     if (lepton1!=0)  tr.SetInt("leptonFlavor1",mllcomp.GetLeptonFlavor(1));
     if (lepton2!=0)  tr.SetInt("leptonFlavor2",mllcomp.GetLeptonFlavor(2));
+    if (lepton1!=0)  tr.Set("leptonIso1",mllcomp.GetLeptonIsolation(1));
+    if (lepton2!=0)  tr.Set("leptonIso2",mllcomp.GetLeptonIsolation(2));
 
     //if reco leptons and Signal
     if (lepton1!=0 && lepton2!=0 && cross_section.GetProcess()==CrossSections::kSignal) {

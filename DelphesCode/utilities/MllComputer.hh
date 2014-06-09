@@ -23,6 +23,9 @@ public:
   bool isSF() {return isSF_;}
   TLorentzVector* GetLeptonP4(int index);
   int GetLeptonFlavor(int index);
+  float GetLeptonIsolation(int index);//absolute isolation!
+  int GetNExtraLeptons() {return extra_leptons_.size();}
+  TLorentzVector GetExtraLeptonP4(int index);
 
   float GetMee_Test() ;//special test
   float GetMll_random() ;
@@ -49,12 +52,16 @@ private:
   bool isSF_;
   TLorentzVector* p4_l1_;
   TLorentzVector* p4_l2_;
+  float l1_iso_;
+  float l2_iso_;
   int l1_flavor_;
   int l2_flavor_;
 
   // pair(pT, pair(flavor,index))
   std::set< std::pair<float, std::pair<LeptonFlavor,int> > > lep_pt_;
+  std::set< std::pair<float, std::pair<LeptonFlavor,int> > > extra_leptons_;
   int GetCharge( std::set< std::pair<float, std::pair<LeptonFlavor,int> > >::reverse_iterator & rit);
+  float GetIsolation( std::set< std::pair<float, std::pair<LeptonFlavor,int> > >::reverse_iterator & rit);
   TLorentzVector Get4Vector( std::set< std::pair<float, std::pair<LeptonFlavor,int> > >::reverse_iterator & rit) ;
 
 };
