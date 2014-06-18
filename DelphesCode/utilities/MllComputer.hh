@@ -34,6 +34,7 @@ public:
   float minpt_;
   float maxetacut_;//cut value
   bool removegap_;
+  float maxreliso_; //one value for e and mu for now
   //algorithm customizations
   bool randomizeLeptons_;
   int seed_;

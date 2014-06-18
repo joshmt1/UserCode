@@ -12,6 +12,7 @@ MllComputer::MllComputer(TClonesArray* el, TClonesArray* mu) :
   minpt_(20),
   maxetacut_(2.4),
   removegap_(true),
+  maxreliso_(0.15),
   randomizeLeptons_(false),
   seed_(1234),
   el_(el),
@@ -273,6 +274,7 @@ void MllComputer::findGoodLeptons() {
   for (int i = 0 ; i < el_->GetEntries() ; i++) {
     Electron *el = (Electron*) el_->At(i);
     if (el->PT < minpt_ ) continue;
+    if (el->IsolationVar >maxreliso_) continue;
     float abseta = std::abs(el->Eta);
     if ( abseta > maxetacut_) continue; 
     if ( removegap_ && abseta>1.4 && abseta<1.6) continue;//remove eta range of 1.4-1.6
@@ -283,6 +285,7 @@ void MllComputer::findGoodLeptons() {
   for (int i = 0 ; i < mu_->GetEntries() ; i++) {
     Muon *mu = (Muon*) mu_->At(i);
     if (mu->PT < minpt_ ) continue;
+    if (mu->IsolationVar >maxreliso_) continue;
     float abseta = std::abs(mu->Eta);
     if ( abseta > maxetacut_) continue; 
      if ( removegap_ && abseta>1.4 && abseta<1.6) continue;//remove eta range of 1.4-1.6

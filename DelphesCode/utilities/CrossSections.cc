@@ -80,6 +80,7 @@ void CrossSections::SetProc(TString name) {
   if (name.Contains("BB")) proc_ = kRare;
   else if (name.Contains("susy")) proc_=kSignal;
   else if (name.Contains("scenario")) proc_=kSignal;
+  else if (name.Contains("natural")) proc_=kSignal;
   else if (name.Contains("B-")) proc_=kBoson;
   else if (name.Contains("Bj")) proc_=kBoson;
   else if (name.Contains("LLB")) proc_=kRare;
