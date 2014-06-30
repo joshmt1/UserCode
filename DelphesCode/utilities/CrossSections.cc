@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cassert>
 
+#include "TRegexp.h"
 
 CrossSections::CrossSections(const TString samplename) :
   xs_(1),
@@ -63,7 +64,26 @@ CrossSections::CrossSections(const TString samplename) :
   else if (samplename.Contains("ttB-4p-1600-2500-v1510_14TEV")) xs_=0.023744100;
   else if (samplename.Contains("ttB-4p-2500-100000-v1510_14TEV")) xs_=0.002088160;
   else {
-    std::cout<<" WARNING -- this sample has no known cross-section. Using value of "<<xs_<<std::endl;
+    //try regexp for more complicated cases
+    /*
+in particular, the example use case is:
+
+./FlatTree "root://eoscms.cern.ch//eos/cms/store/group/phys_higgs/upgrade/PhaseII/Configuration4v2/SUSY_SIGNAL/140PileUp/naturalModel//1/wildcard.root" -O ${workdir}/${outfilename} -N 1 1
+
+so we're looking for naturalModel/digit but need to allow for extra / in between
+     */
+    TRegexp reg1("naturalModel/+[0-9]");
+    TString match = samplename(reg1);
+    if (match.Length()>0) { //look at the last digit
+      int lastdigit=TString(match(match.Length()-1)).Atoi();
+      if      (lastdigit==1) xs_=0.1547; //Natural Model 1 aka Scenario 1
+      else if (lastdigit==2) xs_=0.07015;//Natural Model 2
+      else if (lastdigit==3) xs_=1.098;  //Natural Model 3
+      else 
+	std::cout<<" WARNING -- this sample has no known cross-section. Using value of "<<xs_<<std::endl;
+    }
+    else
+      std::cout<<" WARNING -- this sample has no known cross-section. Using value of "<<xs_<<std::endl;
   }
 
   //now set proc
