@@ -66,6 +66,10 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddInt("ntFromSusy");
   tr.AddInt("nTrueElMu");
   tr.AddInt("nTrueTau");
+  tr.AddArray("genLepPt",2);
+  tr.AddArray("genLepEta",2);
+  tr.AddArray("genLepFlavor",2);
+  tr.AddArray("genLepRecoIso",2);
   tr.AddBool("leptonsMatchChi2ToChi1");
   tr.AddBool("leptonsMatchChi2ToChi1_veryloose");
   tr.AddBool("leptonsMatchChi2ToChi1_loose");
@@ -218,6 +222,14 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     }
     tr.SetInt("nTrueElMu",geninfo.countTrueLeptons(McTruthInfo::kElMu));
     tr.SetInt("nTrueTau", geninfo.countTrueLeptons(McTruthInfo::kTau));
+    for (unsigned int ilep = 0; ilep<geninfo.getGenLeptons().size();ilep++) {
+      if (ilep>=2) break;
+
+      tr.Set("genLepPt",(int)ilep,(float) geninfo.getGenLeptons().at(ilep)->PT);
+      tr.Set("genLepEta",(int)ilep,(float)geninfo.getGenLeptons().at(ilep)->Eta);
+      tr.Set("genLepFlavor",(int)ilep,std::abs(geninfo.getGenLeptons().at(ilep)->PID));
+      tr.Set("genLepRecoIso",(int)ilep, geninfo.getIsolationOfMatch(ilep,branchElectron,branchMuon));
+    }
 
     //DY truth
     if (cross_section.GetProcess()==CrossSections::kBoson) {

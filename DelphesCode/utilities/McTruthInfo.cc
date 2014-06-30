@@ -59,6 +59,12 @@ int McTruthInfo::findPinSusy(int pidToFind) {
 
 int McTruthInfo::countTrueLeptons(leptonType lt) {
 
+  //filling this lepton list was added after the fact
+  //would actually be more efficient to fill the lepton list once per event
+  //and use that list to do things like counting each lepton type
+  //but not important enough to worry about
+  leptons_.clear();
+
   int n=0;
   //easy as pie, except that depending on what is stored, we might actually
   //want to restrict ourselves to status 3 or the Pythia 8 equivalent
@@ -70,6 +76,8 @@ int McTruthInfo::countTrueLeptons(leptonType lt) {
     if (pid==11 && lt==kElMu) n++;
     else if (pid==13 && lt==kElMu) n++;
     else if (pid==15 && lt==kTau) n++;
+
+    if (pid==11||pid==13||pid==15) leptons_.push_back(c);
   }
 
   return n;
@@ -152,6 +160,34 @@ float McTruthInfo::getGenEdgeLeptonPt(int index) { //forget about the possibilit
   }
 
   return -1;
+}
+
+float McTruthInfo::getIsolationOfMatch(const unsigned int ilep,const TClonesArray* els,const TClonesArray* mus) {
+  const float dummy=-1e9;
+  if (ilep >= leptons_.size()) return dummy;
+
+  GenParticle * g = leptons_.at(ilep);
+  TLorentzVector genP4=g->P4();
+
+  int  flavor = std::abs(g->PID);
+  int nr=0;
+  if ( flavor==11) nr=els->GetEntries();
+  else if (flavor==13) nr=mus->GetEntries();
+  else     return dummy; //tau
+  
+  for (int ireco=0; ireco<nr;ireco++) {
+    TLorentzVector * recoP4=0;
+    if (flavor==11) recoP4 = new TLorentzVector( ((Electron*)els->At(ireco))->P4());
+    else if (flavor==13) recoP4 = new TLorentzVector( ((Muon*)mus->At(ireco))->P4());
+    double dr = Util::GetDeltaR(genP4.Eta(), recoP4->Eta(), genP4.Phi(), recoP4->Phi());
+    if (dr<0.03 && std::abs(1- genP4.Pt()/recoP4->Pt() )<0.3) {
+      delete recoP4;
+      float iso = (flavor==11) ?  ((Electron*)els->At(ireco))->IsolationVar :  ((Muon*)mus->At(ireco))->IsolationVar;
+      return iso;
+    }
+    delete recoP4; 
+  }
+  return dummy; //did not find a match
 }
 
 bool McTruthInfo::matchesChi2ToChi1Gen(const TLorentzVector & l1, const TLorentzVector & l2,int l1_flavor,int l2_flavor) {

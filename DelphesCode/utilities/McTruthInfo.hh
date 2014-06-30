@@ -31,6 +31,8 @@ public:
   //for anything
   void Set(TClonesArray* g) {genParticles_=g;}
   int countTrueLeptons(leptonType lt);
+  std::vector<GenParticle*> getGenLeptons() {return leptons_;}
+  float getIsolationOfMatch(const unsigned int ilep,const TClonesArray* els,const TClonesArray* mus);
   void Dump();
 
   //DY MC truth
@@ -43,6 +45,7 @@ private:
   TClonesArray * genParticles_;
   std::vector<GenParticle*> edge_l1_;
   std::vector<GenParticle*> edge_l2_;
+  std::vector<GenParticle*> leptons_;
   bool checkMom(int index, int PidToLookFor,int recursionsLeft=999);
 
   bool isSusy(int pid) ;
