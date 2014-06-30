@@ -134,10 +134,10 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
   const int MAX_njets=20;
   tr.AddArray("jetPt",MAX_njets); //could add eta, etc
   const int MAX_leptons=4;
-  tr.AddArray("electronIso",MAX_leptons); //*not* relative iso (why did I think this?)
-  tr.AddArray("muonIso",MAX_leptons); //*not* relative iso //FIXME forgot to actually store this
+  tr.AddArray("electronIso",MAX_leptons); //these *are* RelIso, I think
+  tr.AddArray("muonIso",MAX_leptons);
   tr.AddArray("electronPt",MAX_leptons); 
-  tr.AddArray("muonPt",MAX_leptons);//FIXME forgot to actually store this
+  tr.AddArray("muonPt",MAX_leptons);
   //no need for photons or tighter muons, probably
   //MC truth for DY events
   tr.AddVariable("DYgenPt1");
@@ -175,7 +175,15 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     if  (evt1) w=evt1->Weight;
     else if (evt2) w=evt2->Weight;
     else assert(0);
-    //    cout<<w<<endl;
+    //here's the story:
+    //for SM samples it is supposed to be important to use the evt->Weight
+    //then for signal I found that the underlying class is different, hence the
+    //dynamic cast above
+    //But then I discovered that for signal, the evt->Weight seems to be a bogus constant value
+    //so this if statement replaces it with 1.
+    //so obviously i could streamline this and get rid of the dynamic cast, but for now
+    //let's just leave this duplicate logic in place
+    if (cross_section.GetProcess()==CrossSections::kSignal) w = 1;
     tr.SetDouble("weight",w * cross_section.Get() / n_events_generated); //weight for 1 pb-1
     geninfo.Set(branchGenParticles);
     if (cross_section.GetProcess()==CrossSections::kTop)  tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode());
@@ -244,8 +252,8 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
 
       if (el->PT < 10 ) continue;
       if ( std::abs(el->Eta) > 2.4) continue; 
+      if (el->IsolationVar >0.2) continue; //add isolation cut
       //good electron
-      //store electron iso
       if ( tr.GetInt("nElectrons") < MAX_leptons) {
 	tr.Set("electronIso",tr.GetInt("nElectrons"),el->IsolationVar);
 	tr.Set("electronPt",tr.GetInt("nElectrons"),el->PT);
@@ -258,7 +266,12 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
       Muon *mu = (Muon*) branchMuon->At(i);
       if (mu->PT < 10 ) continue;
       if ( std::abs(mu->Eta) > 2.4) continue; 
+      if (mu->IsolationVar > 0.2) continue;
       //good muon
+      if ( tr.GetInt("nMuons") < MAX_leptons) {
+	tr.Set("muonIso",tr.GetInt("nMuons"),mu->IsolationVar);
+	tr.Set("muonPt",tr.GetInt("nMuons"),mu->PT);
+      }
       tr.SetInt("nMuons",1,true);
       MSTx -= mu->PT * cos(mu->Phi);
       MSTy -= mu->PT * sin(mu->Phi);
