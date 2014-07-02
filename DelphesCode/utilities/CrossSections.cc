@@ -76,8 +76,9 @@ so we're looking for naturalModel/digit but need to allow for extra / in between
     TString match = samplename(reg1);
     if (match.Length()>0) { //look at the last digit
       int lastdigit=TString(match(match.Length()-1)).Atoi();
-      if      (lastdigit==1) xs_=0.1547; //Natural Model 1 aka Scenario 1
-      else if (lastdigit==2) xs_=0.07015;//Natural Model 2
+      //cross-sections updated according to 2 July email from Karim
+      if      (lastdigit==1) xs_=0.07; //Natural Model 1 aka Scenario 1
+      else if (lastdigit==2) xs_=0.05; //Natural Model 2
       else if (lastdigit==3) xs_=1.098;  //Natural Model 3
       else 
 	std::cout<<" WARNING -- this sample has no known cross-section. Using value of "<<xs_<<std::endl;
