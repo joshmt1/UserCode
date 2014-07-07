@@ -54,6 +54,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
 
   //stuff to characterize the mc truth (mostly for signal)
   tr.AddInt("ttbarDecayCode");
+  tr.AddVariable("ttbarGenMll");
   tr.AddInt("SusyProductionMode");
   tr.AddInt("Chi2ToChi1Code");
   tr.AddVariable("genEdgeMll1");
@@ -190,7 +191,11 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     if (cross_section.GetProcess()==CrossSections::kSignal) w = 1;
     tr.SetDouble("weight",w * cross_section.Get() / n_events_generated); //weight for 1 pb-1
     geninfo.Set(branchGenParticles);
-    if (cross_section.GetProcess()==CrossSections::kTop)  tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode());
+    if (cross_section.GetProcess()==CrossSections::kTop) {
+      float ttgenmll;
+      tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode(ttgenmll));
+      tr.Set("ttbarGenMll",ttgenmll);
+    }
 
      //for debug
     //          geninfo.Dump();

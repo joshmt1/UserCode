@@ -319,9 +319,12 @@ bool McTruthInfo::checkMom(int index, int PidToLookFor, int recursionsLeft) {
 
 }
 
-int McTruthInfo::GetTtbarDecayCode() {
+int McTruthInfo::GetTtbarDecayCode(float & genmll) {
   //classify ttbar events using my old coding scheme
   
+  std::vector<GenParticle*> leptons; //was tempted to use the already defined global vector edge_l1_ for this
+  //but that seems sloppy
+
   int ne=0, nmu=0, ntau=0, nq=0,nb=0;
   //  cout<<" ~~~~~~~~~~~"<<endl;
   for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
@@ -333,8 +336,9 @@ int McTruthInfo::GetTtbarDecayCode() {
       bool      topIsUltimateMom = checkMom(k, 6);
 
       if (topIsUltimateMom) {
-	if      (pid ==11) ne++;
-	else if (pid ==13) nmu++;
+	//nb - using the edge_l1_
+	if      (pid ==11) {ne++;  leptons.push_back(c);}
+	else if (pid ==13) {nmu++; leptons.push_back(c);}
 	else if (pid ==15) ntau++;
 	else if (pid==5) nb++;
 	else  nq++;
@@ -344,12 +348,30 @@ int McTruthInfo::GetTtbarDecayCode() {
 
   nq/=2;
 
-  //  cout<<ne<<" "<<nmu<<" "<<ntau<<" "<<nq<<endl;
+  genmll=-1;
+  if (leptons.size()==2) {
+    TLorentzVector a=leptons[0]->P4();
+    TLorentzVector b=leptons[1]->P4();
+    genmll= (a+b).M();
+  }
 
-  //here's my old coding scheme -- guess i'll stick with it!
-  //  enum TopDecayCategory {kTTbarUnknown=0,kAllLeptons=1,kAllHadronic=2,kOneElectron=3,kOneMuon=4,kOneTauE=5,kOneTauMu=6,kOneTauHadronic=7,kAllTau=8,kTauPlusLepton=9, nTopCategories=10};
+  //updated coding scheme (a small perturbation on the old one)
+  /*
+0  = uncategorized
+11 = dilepton (ee)
+12 = dilepton (emu)
+13 = dilepton (mumu)
+2  = all-hadronic
+3  = semi-lep e
+4  = semi-lep mu
+5  = semi-lep tau
+8  = dilepton (tau tau)
+9  = dilepton (tau+e/mu)
+  */
 
-  if       ( ne+nmu==2 ) return 1;
+  if (ne==2) return 11;
+  else if (nmu==2) return 13;
+  else if (ne==1 && nmu==1) return 12;
   else if  ( nq == 2)    return 2;
   else if  ( ne==1 && (ne+nmu+ntau==1) ) return 3;
   else if  ( nmu==1 && (ne+nmu+ntau==1)) return 4;

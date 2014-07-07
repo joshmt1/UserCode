@@ -17,7 +17,7 @@ public:
 
   McTruthInfo();
   ~McTruthInfo();
-  int GetTtbarDecayCode(); //for ttbar
+  int GetTtbarDecayCode(float & genmll); //for ttbar
 
   //for SUSY
   std::vector<int> findSusyMoms();
