@@ -26,6 +26,8 @@
 #include "external/mt2analysis/CrossSections.hh"
 #include "external/mt2analysis/McTruthInfo.hh"
 #include "external/mt2analysis/MllComputer.hh"
+#include "external/mt2analysis/JetLeptonCleaner.hh"
+//#include "external/mt2analysis/DelWeight.h"
 
 #include "classes/DelphesClasses.h"
 

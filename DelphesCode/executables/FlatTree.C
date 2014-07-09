@@ -14,6 +14,8 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
 {
   //  gSystem->Load("libDelphes");
 
+  //  DelWeight khWeight;
+
   //inputFile can be something like:
   //"root://eoscms.cern.ch//eos/cms/store/group/phys_higgs/upgrade/PhaseI/Configuration0/NoPileUp/tt-4p-600-1100-v1510_14TEV/tt-4p-600-1100-v1510_14TEV*.root"
 
@@ -36,7 +38,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   TClonesArray *branchEvent = treeReader->UseBranch("Event");
   TClonesArray *branchElectron = treeReader->UseBranch("Electron");
   TClonesArray *branchMuon = treeReader->UseBranch("Muon");
-  //  TClonesArray *branchPhoton = treeReader->UseBranch("Photon");
+  TClonesArray *branchPhoton = treeReader->UseBranch("Photon");
 
   bool verbose =false;
   //  bool listJetTowers = false;
@@ -172,6 +174,9 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
   
     if (verbose||((entry-firstEvent)%5000==0 &&entry>0)) cout << "Event " << entry-firstEvent << " / " << lastEvent-firstEvent << endl;
 
+    //disambiguate leptons and jets
+    //    JetLeptonCleaner(branchJet,branchElectron,branchMuon,branchPhoton);
+
     assert(branchEvent->GetEntries()==1);
     //signal uses HepMCEvent; others use LHEFEvent
     HepMCEvent* evt1 = dynamic_cast<HepMCEvent*>( branchEvent->At(0));
@@ -266,7 +271,6 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     //count electrons, muons
     for (int i = 0 ; i < branchElectron->GetEntries() ; i++) {
       Electron *el = (Electron*) branchElectron->At(i);
-
       if (el->PT < 10 ) continue;
       if ( std::abs(el->Eta) > 2.4) continue; 
       if (el->IsolationVar >0.2) continue; //add isolation cut
