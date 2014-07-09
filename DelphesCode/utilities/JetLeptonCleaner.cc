@@ -57,8 +57,6 @@ template <class T> void JetLeptonCleaner::cleanJets(TClonesArray* jets,TClonesAr
     if (isgood) good.push_back(jet);
   }
 	 
-  cout<<nj<< " "<<good.size()<<endl;
-
   if (nj != (int)good.size()) { //if nothing has changed, no need to clear and refill
     jets->Clear();
     for (size_t k=0;k<good.size();k++) {
