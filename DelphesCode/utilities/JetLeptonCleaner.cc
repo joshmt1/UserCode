@@ -20,13 +20,13 @@ JetLeptonCleaner::JetLeptonCleaner(TClonesArray* jets,TClonesArray* els,TClonesA
 
   applyIsolation<Electron>(els);
   applyIsolation<Muon>(mus);
-  applyIsolation<Photon>(photons);
+  if (photons!=0) applyIsolation<Photon>(photons);
 
   //  cout<<jets->GetEntries()<<" " <<els->GetEntries()<<" "<<mus->GetEntries()<<" "      <<photons->GetEntries()<<" "<<endl;
 
   cleanJets<Electron>(jets,els);
   cleanJets<Muon>(jets,mus);
-  cleanJets<Photon>(jets,photons);
+  if (photons!=0) cleanJets<Photon>(jets,photons);
 
   //  cout<<jets->GetEntries()<<" " <<els->GetEntries()<<" "<<mus->GetEntries()<<" "      <<photons->GetEntries()<<" "<<endl;
   //  cout<<" ----- "<<endl;
