@@ -9,7 +9,8 @@
 using namespace std;
 
 McTruthInfo::McTruthInfo() :
-  genParticles_(0)
+  genParticles_(0),
+  nGenParticles_(0)
 {
 }
 
@@ -19,7 +20,7 @@ McTruthInfo::~McTruthInfo() {
 void McTruthInfo::Dump() {
 
   cout<<" ~~~~~~~~~~~"<<endl;
-  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+  for (int k = 0 ; k<nGenParticles_; k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue;
     cout<<k<<"\t"<<c->PID<<" "<<c->M1<<" "<<" "<<c->D1<<"\t"<<c->Mass<<endl;
@@ -43,7 +44,7 @@ int McTruthInfo::findPinSusy(int pidToFind) {
 
   int np=0;
 
-  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+  for (int k = 0 ; k< nGenParticles_; k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue; //try to prevent crashes....
     int pid = std::abs(c->PID);
@@ -68,7 +69,7 @@ int McTruthInfo::countTrueLeptons(leptonType lt) {
   int n=0;
   //easy as pie, except that depending on what is stored, we might actually
   //want to restrict ourselves to status 3 or the Pythia 8 equivalent
-  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+  for (int k = 0 ; k< nGenParticles_; k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue; //try to prevent crashes....
     int pid = std::abs(c->PID);
@@ -98,7 +99,7 @@ int McTruthInfo::findChi2ToChi1() {
 
   GenParticle * edge_l1 = 0;
 
-  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+  for (int k = 0 ; k< nGenParticles_; k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue; //try to prevent crashes....
     int pid = std::abs(c->PID);
@@ -274,7 +275,7 @@ vector<int> McTruthInfo::findSusyMoms() {
   //these are the produced particles in the hard-scatter
   vector<int> susyMoms;
 
-  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+  for (int k = 0 ; k< nGenParticles_; k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue; //try to prevent crashes....
     int pid = std::abs(c->PID);
@@ -303,9 +304,9 @@ bool McTruthInfo::checkMom(int index, int PidToLookFor, int recursionsLeft) {
   GenParticle * theCand =(GenParticle*) genParticles_->At(index);
   if (theCand==0) return false; //TClonesArray::At returns 0 if index is not found
   int momIndex1 = theCand->M1;
-  if (momIndex1 >=0 ) {
+  if (momIndex1 >=0 && momIndex1< nGenParticles_ ) { //sanity check on momIndex
     GenParticle * theMom = (GenParticle*)genParticles_->At(momIndex1);
-    if (theMom==0) return false; //TClonesArray::At returns 0 if index is not found
+    if (theMom==0)       return false; //TClonesArray::At returns 0 if index is not found
     if ( std::abs(theMom ->PID)==PidToLookFor) return true;
     else if (PidToLookFor==1000000 && isSusy(theMom->PID)) return true;
     else  {
@@ -327,7 +328,7 @@ int McTruthInfo::GetTtbarDecayCode(float & genmll) {
 
   int ne=0, nmu=0, ntau=0, nq=0,nb=0;
   //  cout<<" ~~~~~~~~~~~"<<endl;
-  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+  for (int k = 0 ; k< nGenParticles_; k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue; //try to prevent crashes....
     int pid = std::abs(c->PID);
@@ -395,7 +396,7 @@ vector< pair< TLorentzVector, int> > McTruthInfo::GetDYTruth() {
 
   int Zindex=-99;
   vector<  pair< TLorentzVector, int> > Zdaughters;
-  for (int k = 0 ; k<genParticles_->GetEntries(); k++) {
+  for (int k = 0 ; k< nGenParticles_; k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue;
     if ( c->PID ==23 ) {    //look for Z

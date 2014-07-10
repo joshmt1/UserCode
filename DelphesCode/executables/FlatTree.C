@@ -12,10 +12,11 @@ N.B. you must touch FlatTree.cpp in order to convince Make that there is anythin
 
 void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int nJobs)
 {
+  const bool debugWeights = false;
   //  gSystem->Load("libDelphes");
 
-  //  DelWeight khWeight;
-
+  DelWeight khWeight;
+  khWeight.initialize();
   //inputFile can be something like:
   //"root://eoscms.cern.ch//eos/cms/store/group/phys_higgs/upgrade/PhaseI/Configuration0/NoPileUp/tt-4p-600-1100-v1510_14TEV/tt-4p-600-1100-v1510_14TEV*.root"
 
@@ -175,16 +176,20 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     if (verbose||((entry-firstEvent)%5000==0 &&entry>0)) cout << "Event " << entry-firstEvent << " / " << lastEvent-firstEvent << endl;
 
     //disambiguate leptons and jets
-    //    JetLeptonCleaner(branchJet,branchElectron,branchMuon,branchPhoton);
+    JetLeptonCleaner(branchJet,branchElectron,branchMuon,branchPhoton);
 
-    assert(branchEvent->GetEntries()==1);
     //signal uses HepMCEvent; others use LHEFEvent
-    HepMCEvent* evt1 = dynamic_cast<HepMCEvent*>( branchEvent->At(0));
-    LHEFEvent* evt2 = dynamic_cast<LHEFEvent*>( branchEvent->At(0));
+    HepMCEvent* evt1=0; LHEFEvent* evt2=0;
     double w=0;
-    if  (evt1) w=evt1->Weight;
-    else if (evt2) w=evt2->Weight;
-    else assert(0);
+    if (branchEvent) {
+      evt1 = dynamic_cast<HepMCEvent*>( branchEvent->At(0));
+      evt2 = dynamic_cast<LHEFEvent*>( branchEvent->At(0));
+      if  (evt1) w=evt1->Weight;
+      else if (evt2) w=evt2->Weight;
+      else assert(0);
+      //      cout<<" w [ntuple] = "<<w<<endl;
+    }
+    else w=1;
     //here's the story:
     //for SM samples it is supposed to be important to use the evt->Weight
     //then for signal I found that the underlying class is different, hence the
@@ -193,7 +198,23 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     //so this if statement replaces it with 1.
     //so obviously i could streamline this and get rid of the dynamic cast, but for now
     //let's just leave this duplicate logic in place
+
+    //in case of signal, override the value from the ntuple no matter what
     if (cross_section.GetProcess()==CrossSections::kSignal) w = 1;
+
+    if ( (cross_section.GetProcess()==CrossSections::kTop || cross_section.GetProcess()==CrossSections::kBoson) && (branchEvent==0|| debugWeights)) {
+      int code = (cross_section.GetProcess()==CrossSections::kTop) ? 1 : 2;
+      //need  std::vector<GenParticle> GenParticles
+      vector<GenParticle> gparticles;
+      for (int k=0; k<branchGenParticles->GetEntries();++k) {
+	GenParticle * c =(GenParticle*) branchGenParticles->At(k);
+	if (c!=0) 	  gparticles.push_back( *c);
+      }
+      if (debugWeights) cout<<"w [ ntuple ] = "<<w<<endl;
+      w= khWeight.weight(code,gparticles);
+      if (debugWeights) cout<<"w [   ken  ] = "<<w<<endl;
+    }    //otherwise, keep the default value of 1 from the else block above
+
     tr.SetDouble("weight",w * cross_section.Get() / n_events_generated); //weight for 1 pb-1
     geninfo.Set(branchGenParticles);
     if (cross_section.GetProcess()==CrossSections::kTop) {
@@ -201,17 +222,6 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
       tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode(ttgenmll));
       tr.Set("ttbarGenMll",ttgenmll);
     }
-
-     //for debug
-    //          geninfo.Dump();
-    //    cout<<"nTrue e+mu tau "<<geninfo.countTrueLeptons(McTruthInfo::kElMu)<<" "<<geninfo.countTrueLeptons(McTruthInfo::kTau)<<endl;
-    /*
-       vector<int> susymoms=    geninfo.findSusyMoms();
-    for (size_t iiii=0;iiii<susymoms.size();iiii++) {
-      cout<<"SUSY mom = "<<susymoms[iiii]<<endl;
-    }
-    cout<<" Susy prod code = "<< geninfo.getSusyProductionProcess()<<" ; "<<endl;
-    */
 
     // production code
     if (cross_section.GetProcess()==CrossSections::kSignal) {
@@ -230,6 +240,7 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
       tr.SetInt("nbFromSusy",    geninfo.findPinSusy(5));
       tr.SetInt("ntFromSusy",    geninfo.findPinSusy(6));
     }
+
     tr.SetInt("nTrueElMu",geninfo.countTrueLeptons(McTruthInfo::kElMu));
     tr.SetInt("nTrueTau", geninfo.countTrueLeptons(McTruthInfo::kTau));
     for (unsigned int ilep = 0; ilep<geninfo.getGenLeptons().size();ilep++) {

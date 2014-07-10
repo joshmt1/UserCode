@@ -98,17 +98,21 @@ CrossSections::~CrossSections() {
 void CrossSections::SetProc(TString name) {
 
   //set proc_
-  if (name.Contains("BB")) proc_ = kRare;
-  else if (name.Contains("susy")) proc_=kSignal;
+  if (name.Contains("susy")) proc_=kSignal;
   else if (name.Contains("scenario")) proc_=kSignal;
   else if (name.Contains("natural")) proc_=kSignal;
-  else if (name.Contains("B-")) proc_=kBoson;
-  else if (name.Contains("Bj")) proc_=kBoson;
-  else if (name.Contains("LLB")) proc_=kRare;
-  else if (name.Contains("LL")) proc_=kBoson;
-  else if (name.Contains("ttB")) proc_=kRare;
+  else if (name.Contains("BBB-")) proc_ = kRare;
+  else if (name.Contains("Bjj-")) proc_=kBoson;
+  else if (name.Contains("ttB-")) proc_=kRare;
+  else if (name.Contains("LLB-")) proc_=kRare;
+  else if (name.Contains("LL-")) proc_=kBoson;
+  else if (name.Contains("Bj-")) proc_=kBoson;
+  else if (name.Contains("BB-")) proc_ = kRare;
+  else if (name.Contains("tB-")) proc_=kTop;
+  else if (name.Contains("tj-")) proc_=kTop;
+  else if (name.Contains("tt-")) proc_=kTop;
   else if (name.Contains("H-")) proc_=kRare;
-  else if (name.Contains("t")) proc_=kTop;
+  else if (name.Contains("B-")) proc_=kBoson;
   else proc_=kNone;
 
   std::cout<<"SetProc: "<<name<<" "<<proc_<<std::endl;

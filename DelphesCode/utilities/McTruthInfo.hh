@@ -29,7 +29,7 @@ public:
   int findPinSusy(int pidToFind);
 
   //for anything
-  void Set(TClonesArray* g) {genParticles_=g;}
+  void Set(TClonesArray* g) {genParticles_=g; nGenParticles_=g->GetEntries();}
   int countTrueLeptons(leptonType lt);
   std::vector<GenParticle*> getGenLeptons() {return leptons_;}
   float getIsolationOfMatch(const unsigned int ilep,const TClonesArray* els,const TClonesArray* mus);
@@ -43,6 +43,7 @@ public:
 
 private:
   TClonesArray * genParticles_;
+  int nGenParticles_;
   std::vector<GenParticle*> edge_l1_;
   std::vector<GenParticle*> edge_l2_;
   std::vector<GenParticle*> leptons_;
