@@ -15,6 +15,7 @@ JetLeptonCleaner::JetLeptonCleaner(TClonesArray* jets,TClonesArray* els,TClonesA
   drmin_(0.3) //or 0.5?
 {
 
+
   //  cout<<" ----- "<<endl;
   //  cout<<jets->GetEntries()<<" " <<els->GetEntries()<<" "<<mus->GetEntries()<<" "      <<photons->GetEntries()<<" "<<endl;
 
@@ -34,7 +35,7 @@ JetLeptonCleaner::JetLeptonCleaner(TClonesArray* jets,TClonesArray* els,TClonesA
 }
 
 JetLeptonCleaner::~JetLeptonCleaner() {
- 
+
 }
 
 template <class T> void JetLeptonCleaner::cleanJets(TClonesArray* jets,TClonesArray* leps) {
@@ -58,7 +59,7 @@ template <class T> void JetLeptonCleaner::cleanJets(TClonesArray* jets,TClonesAr
   }
 	 
   if (nj != (int)good.size()) { //if nothing has changed, no need to clear and refill
-    jets->Clear();
+    jets->Delete();//Clear() leads to huge memory leaks!
     for (size_t k=0;k<good.size();k++) {
       new( (*jets)[k]) Jet( *good.at(k)); //see http://root.cern.ch/root/html/TClonesArray.html
     }
@@ -77,7 +78,7 @@ template <class T> void JetLeptonCleaner::applyIsolation(TClonesArray* collectio
   }
 
   if (n != (int)good.size()) { //if nothing has changed, no need to clear and refill
-    collection->Clear();
+    collection->Delete(); //Clear() leads to huge memory leaks!
     for (size_t k=0;k<good.size();k++) {
       new( (*collection)[k]) T( *good.at(k)); //see http://root.cern.ch/root/html/TClonesArray.html
     }
