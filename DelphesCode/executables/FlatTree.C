@@ -10,7 +10,7 @@ N.B. you must touch FlatTree.cpp in order to convince Make that there is anythin
 
 //------------------------------------------------------------------------------
 
-void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int nJobs)
+void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int nJobs,const bool doJetLeptonCleaning)
 {
   const bool debugWeights = false;
   //  gSystem->Load("libDelphes");
@@ -22,6 +22,9 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
 
   cout<<" *** beginning of FlatTree ***"<<endl;
   cout<<"inputFile is: "<<inputFile<<endl;
+  cout<<"Jet/lepton disambiguation is ";
+  if (doJetLeptonCleaning) cout<<"enabled"<<endl;
+  else cout<<"disabled"<<endl;
 
   // Create chain of root trees
   TChain chain("Delphes");
@@ -176,7 +179,7 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     if (verbose||((entry-firstEvent)%5000==0 &&entry>0)) cout << "Event " << entry-firstEvent << " / " << lastEvent-firstEvent << endl;
 
     //disambiguate leptons and jets
-    JetLeptonCleaner(branchJet,branchElectron,branchMuon,branchPhoton);
+    if (doJetLeptonCleaning)    JetLeptonCleaner(branchJet,branchElectron,branchMuon,branchPhoton);
 
     //signal uses HepMCEvent; others use LHEFEvent
     HepMCEvent* evt1=0; LHEFEvent* evt2=0;
@@ -500,6 +503,7 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
       else {tr.Set("MT2", -99);}//tr.Set("MT2jmt", -1);}
 
       tr.Fill();
+
   } // event
 
   loopTimer.Stop();

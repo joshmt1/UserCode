@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
   TString outputFile = "simpleTree.root";
 
   int x=1,y=1;
+  bool docleaning=true;
   for (int iarg = 2; iarg<argc; ) {
 
     TString arg = argv[iarg];
@@ -82,6 +83,10 @@ int main(int argc, char *argv[])
       y = TString(argv[iarg+2]).Atoi();
       iarg+=3;
     }
+    else if (arg=="-nocleaning") {
+      docleaning=false;
+      iarg++;
+    }
     else {
       cout << " Usage: " << appName << " input_file [-O output_file] [-N x y]" << endl;
       assert(0);
@@ -93,7 +98,7 @@ int main(int argc, char *argv[])
 
 // Here you call your macro's main function 
 
-  FlatTree(inputFile,outputFile,x,y);
+  FlatTree(inputFile,outputFile,x,y,docleaning);
 
 //------------------------------------------------------------------------------
 
