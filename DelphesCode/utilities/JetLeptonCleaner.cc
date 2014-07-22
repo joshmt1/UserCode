@@ -11,7 +11,7 @@ using namespace std;
 #include <vector>
 
 JetLeptonCleaner::JetLeptonCleaner(TClonesArray* jets,TClonesArray* els,TClonesArray* mus,TClonesArray* photons) :
-  isolationCut_(0.2),
+  isolationCut_(0.2),//was 0.2
   drmin_(0.3) //or 0.5?
 {
 

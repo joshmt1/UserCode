@@ -31,6 +31,8 @@ public:
   //for anything
   void Set(TClonesArray* g) {genParticles_=g; nGenParticles_=g->GetEntries();}
   int countTrueLeptons(leptonType lt);
+  std::pair<float,float> getGenMet(); //return the |vector sum pt| of the status==3 neutrinos in the event (and phi)
+  int countNeutrinos() {return (int)neutrinos_.size();}
   std::vector<GenParticle*> getGenLeptons() {return leptons_;}
   float getIsolationOfMatch(const unsigned int ilep,const TClonesArray* els,const TClonesArray* mus);
   void Dump();
@@ -47,6 +49,7 @@ private:
   std::vector<GenParticle*> edge_l1_;
   std::vector<GenParticle*> edge_l2_;
   std::vector<GenParticle*> leptons_;
+  std::vector<GenParticle*> neutrinos_;
   bool checkMom(int index, int PidToLookFor,int recursionsLeft=999);
 
   bool isSusy(int pid) ;

@@ -61,6 +61,9 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   //stuff to characterize the mc truth (mostly for signal)
   tr.AddInt("ttbarDecayCode");
   tr.AddVariable("ttbarGenMll");
+  tr.AddVariable("genMet",-99);
+  tr.AddVariable("genMetPhi",-99);
+  tr.AddInt("genNneutrinos",-99);
   tr.AddInt("SusyProductionMode");
   tr.AddInt("Chi2ToChi1Code");
   tr.AddVariable("genEdgeMll1");
@@ -220,11 +223,15 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
 
     tr.SetDouble("weight",w * cross_section.Get() / n_events_generated); //weight for 1 pb-1
     geninfo.Set(branchGenParticles);
+    //geninfo.Dump();
     if (cross_section.GetProcess()==CrossSections::kTop) {
       float ttgenmll;
-      tr.SetInt("ttbarDecayCode", geninfo.GetTtbarDecayCode(ttgenmll));
+      const      int ttdc=geninfo.GetTtbarDecayCode(ttgenmll);
+      tr.SetInt("ttbarDecayCode", ttdc);
       tr.Set("ttbarGenMll",ttgenmll);
     }
+
+
 
     // production code
     if (cross_section.GetProcess()==CrossSections::kSignal) {
@@ -254,6 +261,10 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
       tr.Set("genLepFlavor",(int)ilep,std::abs(geninfo.getGenLeptons().at(ilep)->PID));
       tr.Set("genLepRecoIso",(int)ilep, geninfo.getIsolationOfMatch(ilep,branchElectron,branchMuon));
     }
+    std::pair<float,float> gmet = geninfo.getGenMet();
+    tr.Set("genMet",gmet.first);
+    tr.Set("genMetPhi",gmet.second);
+    tr.SetInt("genNneutrinos",geninfo.countNeutrinos());
 
     //DY truth
     if (cross_section.GetProcess()==CrossSections::kBoson) {

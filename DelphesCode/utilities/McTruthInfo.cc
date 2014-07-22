@@ -23,7 +23,9 @@ void McTruthInfo::Dump() {
   for (int k = 0 ; k<nGenParticles_; k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue;
-    cout<<k<<"\t"<<c->PID<<" "<<c->M1<<" "<<" "<<c->D1<<"\t"<<c->Mass<<endl;
+    TString out;
+    out.Form("%d  \t %d \t %d \t %d \t %.1f \t %d",k,c->PID,c->M1,c->D1,c->Mass,c->Status);
+    cout<<out<<endl;
   }
 
 }
@@ -65,6 +67,7 @@ int McTruthInfo::countTrueLeptons(leptonType lt) {
   //and use that list to do things like counting each lepton type
   //but not important enough to worry about
   leptons_.clear();
+  neutrinos_.clear();
 
   int n=0;
   //easy as pie, except that depending on what is stored, we might actually
@@ -72,6 +75,7 @@ int McTruthInfo::countTrueLeptons(leptonType lt) {
   for (int k = 0 ; k< nGenParticles_; k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue; //try to prevent crashes....
+    if (c->Status!=3) continue; //status 3 [pythia 6] particles only!
     int pid = std::abs(c->PID);
 
     if (pid==11 && lt==kElMu) n++;
@@ -79,11 +83,24 @@ int McTruthInfo::countTrueLeptons(leptonType lt) {
     else if (pid==15 && lt==kTau) n++;
 
     if (pid==11||pid==13||pid==15) leptons_.push_back(c);
+    else if (pid==12||pid==14||pid==16) neutrinos_.push_back(c);
   }
 
   return n;
 }
 
+std::pair<float,float> McTruthInfo::getGenMet() { //return the |vector sum pt| of the status==3 neutrinos in the event (and phi)
+  if (neutrinos_.size()==0) return make_pair(0,-99);
+  
+  TLorentzVector metvec; //init to 0 by default
+
+  for (size_t k=0;k<neutrinos_.size();++k) {
+    metvec += neutrinos_.at(k)->P4();
+  }
+
+  pair<float,float>  mymet = make_pair( metvec.Vect().Perp() , -(metvec.Vect().Phi() ) );
+  return mymet;
+}
 /*
 look for chi_20 -> slepton lepton -> lepton chi_10 lepton
 code is 10*nStaus + nSElectron+Smuon
@@ -303,7 +320,7 @@ bool McTruthInfo::checkMom(int index, int PidToLookFor, int recursionsLeft) {
   //get mom index
   GenParticle * theCand =(GenParticle*) genParticles_->At(index);
   if (theCand==0) return false; //TClonesArray::At returns 0 if index is not found
-  int momIndex1 = theCand->M1;
+  int momIndex1 = theCand->M1;// -3;// test OFFSET to compensate for a bug in sample. doesn't work anyway
   if (momIndex1 >=0 && momIndex1< nGenParticles_ ) { //sanity check on momIndex
     GenParticle * theMom = (GenParticle*)genParticles_->At(momIndex1);
     if (theMom==0)       return false; //TClonesArray::At returns 0 if index is not found
@@ -321,8 +338,8 @@ bool McTruthInfo::checkMom(int index, int PidToLookFor, int recursionsLeft) {
 }
 
 int McTruthInfo::GetTtbarDecayCode(float & genmll) {
-  //classify ttbar events using my old coding scheme
-  
+  //classify ttbar events using my old coding scheme (now modified a bit - see below)
+
   std::vector<GenParticle*> leptons; //was tempted to use the already defined global vector edge_l1_ for this
   //but that seems sloppy
 
@@ -331,6 +348,7 @@ int McTruthInfo::GetTtbarDecayCode(float & genmll) {
   for (int k = 0 ; k< nGenParticles_; k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue; //try to prevent crashes....
+    if (c->Status!=3) continue; //status 3 check
     int pid = std::abs(c->PID);
     //    cout<<c->PID<<" "<<c->M1<<endl;
     if (pid == 11 || pid == 13 || pid==15 || pid==1 ||pid==2 ||pid==3||pid==4 ||pid==5) { //find ultimate top->W decay product
