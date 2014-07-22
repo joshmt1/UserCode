@@ -130,6 +130,7 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
   tr.AddVariable("mll_maxEta_loose");//max eta of the OS dileptons
   tr.AddVariable("leptonIso1_loose");//relative isolation
   tr.AddVariable("leptonIso2_loose");
+  tr.AddVariable("MT_l3MET_loose",-99);
 
   //llq inv mass; minimized over the lead two jets
   tr.AddVariable("mllqmin");
@@ -365,6 +366,10 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     if (lepton1_loose!=0)  tr.Set("leptonIso1_loose",mllcomp_loose.GetLeptonIsolation(1));
     if (lepton2_loose!=0)  tr.Set("leptonIso2_loose",mllcomp_loose.GetLeptonIsolation(2));
     tr.Set("mll_maxEta_loose",mllcomp_loose.GetMaxEta()); //must be called after GetMll()
+    if ( mllcomp_loose.GetNExtraLeptons() >0) {
+      TLorentzVector pl = mllcomp_loose.GetExtraLeptonP4(0);
+      tr.Set("MT_l3MET_loose",sqrt(2*met->MET*pl.Pt()*(1-cos(Util::DeltaPhi(pl.Phi(),met->Phi)))));
+    }
 
     //back to the regular mll
     if (lepton1!=0)  tr.Set("leptonPt1",lepton1->Pt());
