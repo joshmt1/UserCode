@@ -12,6 +12,8 @@ McTruthInfo::McTruthInfo() :
   genParticles_(0),
   nGenParticles_(0)
 {
+  //  setNloKFactor(20000,1.7);
+  //can hard-code these here or let the user of the class set them
 }
 
 McTruthInfo::~McTruthInfo() {
@@ -27,6 +29,16 @@ void McTruthInfo::Dump() {
     out.Form("%d  \t %d \t %d \t %d \t %.1f \t %d",k,c->PID,c->M1,c->D1,c->Mass,c->Status);
     cout<<out<<endl;
   }
+
+}
+
+double McTruthInfo::getNloKFactor(int code) {
+
+  //need to return kfactors_[code] but more efficiently
+  map<int,double>::iterator it = kfactors_.find(code);
+  if ( it != kfactors_.end()) return it->second;
+
+  return 1;
 
 }
 

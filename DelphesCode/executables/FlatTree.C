@@ -236,7 +236,9 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
 
     // production code
     if (cross_section.GetProcess()==CrossSections::kSignal) {
-      tr.SetInt("SusyProductionMode",   geninfo.getSusyProductionProcess());
+      int prodcode=geninfo.getSusyProductionProcess();
+      //cout<<geninfo.getNloKFactor(prodcode)<<endl;
+      tr.SetInt("SusyProductionMode", prodcode);
       int code =  geninfo.findChi2ToChi1();
       tr.SetInt("Chi2ToChi1Code",  code);
       if (code==1 || code==2) {

@@ -9,6 +9,7 @@
 #include <vector>
 #include <utility>
 #include "classes/DelphesClasses.h"
+#include <map>
 
 class McTruthInfo {
 
@@ -22,6 +23,8 @@ public:
   //for SUSY
   std::vector<int> findSusyMoms();
   int getSusyProductionProcess();
+  void setNloKFactor(int code,double k) {kfactors_[code]=k;}
+  double getNloKFactor(int code);
   int findChi2ToChi1(); //return 10*nStaus + nSElectron+Smuon
   float getGenMll(int index); //index is which edge decay (in rare case of 2)
   float getGenEdgeLeptonPt(int index); //index is which lepton; only supports first edge decay in the event 
@@ -50,6 +53,7 @@ private:
   std::vector<GenParticle*> edge_l2_;
   std::vector<GenParticle*> leptons_;
   std::vector<GenParticle*> neutrinos_;
+  std::map<int,double> kfactors_;  
   bool checkMom(int index, int PidToLookFor,int recursionsLeft=999);
 
   bool isSusy(int pid) ;
