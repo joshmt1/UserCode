@@ -3,7 +3,7 @@
 #include <iostream>
 #include <cassert>
 
-#include "external/mt2analysis/Utilities.hh"
+//#include "external/mt2analysis/Utilities.hh"
 
 
 using namespace std;
@@ -37,10 +37,70 @@ double McTruthInfo::getNloKFactor(int code) {
   //need to return kfactors_[code] but more efficiently
   map<int,double>::iterator it = kfactors_.find(code);
   if ( it != kfactors_.end()) return it->second;
-
   return 1;
-
 }
+
+
+
+
+void McTruthInfo::setNloKFactor_NM1(){
+  // the actual vaules should match with https://twiki.cern.ch/twiki/bin/viewauth/CMS/SUSYSignalSamplesForFutureStudies
+  setNloKFactor(2000000,1.17);//  2000000 == slepton pair production
+  // common for all 
+  setNloKFactor(200000,1.20); //  200000  == EWKino production
+  // split the ewkino process
+  setNloKFactor(200002,1.20); //  200002  == N1N1 production
+  setNloKFactor(200004,1.20); //  200004  == C1N1 production
+  setNloKFactor(200006,1.19); //  200004  == C1C1 production
+  setNloKFactor(200010,1.1); //  200010  == N2N1 production
+  setNloKFactor(200012,1.20); //  200012  == N2C1 production
+  //from here only default values
+  setNloKFactor(200018,1.20); //  200018  == N2N2 production
+  setNloKFactor(200028,1.20); //  200028  == N3N1 production
+  setNloKFactor(200030,1.20); //  200030  == N3C1 production
+  setNloKFactor(200036,1.20); //  200036  == N3N2 production
+  setNloKFactor(200054,1.20); //  200054  == N3N3 production
+  setNloKFactor(200082,1.20); //  200082  == N4N1 production
+  setNloKFactor(200084,1.20); //  200084  == N4C1 production
+  setNloKFactor(200090,1.20); //  200090  == N4N2 production
+  setNloKFactor(200108,1.20); //  200108  == N4N3 production
+  setNloKFactor(200162,1.20); //  200162  == N4N4 production
+  setNloKFactor(200244,1.20); //  200244  == C2N1 production
+  setNloKFactor(200246,1.20); //  200246  == C2C1 production
+  setNloKFactor(200252,1.20); //  200252  == C2N2 production
+  setNloKFactor(200270,1.20); //  200270  == C2N3 production
+  setNloKFactor(200324,1.20); //  200324  == C2N4 production
+  setNloKFactor(200486,1.20); //  200486  == C2C2 production
+  /// end of ewkino block
+  setNloKFactor(20000,2.80);  //  20000   == gluino pair production
+  setNloKFactor(2000,1.77);   //  2000    == stop pair production
+  setNloKFactor(200,1.84);    //  200     == sbottom pair production
+  setNloKFactor(10010,2.03);  //  10010   == gluino-squark production
+  //setNloKFactor(20,);     //  20      == squark-squark production 
+}
+
+void McTruthInfo::setNloKFactor_NM2(){
+  // to be filled 
+}
+
+
+void McTruthInfo::setNloKFactor_NM3(){
+  // to be filled 
+}
+
+
+void McTruthInfo::setNloKFactor_STC(){
+  // to be filled 
+}
+
+
+void McTruthInfo::setNloKFactor_STOC(){
+  // to be filled 
+}
+
+
+
+
 
 bool McTruthInfo::isSusy(int pid) {
   //is this particle a SUSY particle or not?
@@ -209,7 +269,11 @@ float McTruthInfo::getIsolationOfMatch(const unsigned int ilep,const TClonesArra
     TLorentzVector * recoP4=0;
     if (flavor==11) recoP4 = new TLorentzVector( ((Electron*)els->At(ireco))->P4());
     else if (flavor==13) recoP4 = new TLorentzVector( ((Muon*)mus->At(ireco))->P4());
-    double dr = Util::GetDeltaR(genP4.Eta(), recoP4->Eta(), genP4.Phi(), recoP4->Phi());
+    //    double dr = Util::GetDeltaR(genP4.Eta(), recoP4->Eta(), genP4.Phi(), recoP4->Phi());
+    double dr = recoP4->DeltaR(genP4);
+
+
+
     if (dr<0.03 && std::abs(1- genP4.Pt()/recoP4->Pt() )<0.3) {
       delete recoP4;
       float iso = (flavor==11) ?  ((Electron*)els->At(ireco))->IsolationVar :  ((Muon*)mus->At(ireco))->IsolationVar;
@@ -251,8 +315,14 @@ bool McTruthInfo::matchesChi2ToChi1Gen(const TLorentzVector & l1, const TLorentz
     //    l2.Print();
     //    g_l2.Print();
 
-    double dr1 =  Util::GetDeltaR(l1.Eta(),g_l1.Eta(),l1.Phi(), g_l1.Phi());
-    double dr2 =  Util::GetDeltaR(l2.Eta(),g_l2.Eta(),l2.Phi(), g_l2.Phi());
+    //    double dr1 =  Util::GetDeltaR(l1.Eta(),g_l1.Eta(),l1.Phi(), g_l1.Phi());
+    double dr1 = l1.DeltaR(g_l1);  
+
+    //    double dr2 =  Util::GetDeltaR(l2.Eta(),g_l2.Eta(),l2.Phi(), g_l2.Phi());
+    double dr2 =  l2.DeltaR(g_l2);
+
+
+
 
     if (dr1 < max && dr2<max) {
       //      cout<<"Is match"<<endl;
@@ -270,6 +340,14 @@ int McTruthInfo::getSusyProductionProcess() {
 
   int n_slepton = 0;
   int n_ewkino = 0;
+  // in order to distinguish ewkino
+  int n_ewkino_c1 = 0;
+  int n_ewkino_c2 = 0;
+  int n_ewkino_n1 = 0;
+  int n_ewkino_n2 = 0;
+  int n_ewkino_n3 = 0;
+  int n_ewkino_n4 = 0;
+
   int n_gluino=0;
   int n_stop = 0;
   int n_sbottom = 0;
@@ -285,18 +363,25 @@ int McTruthInfo::getSusyProductionProcess() {
     else if ( pid >= 2000011 && pid <= 2000016) n_slepton++;
     else if ( pid >= 2000001 && pid <= 2000004) n_squark++;
     else if ( pid==1000021) n_gluino++;
-    else if ( pid>=1000012 && pid <= 1000037) n_ewkino++;
+    else if ( pid>=1000012 && pid <= 1000037) {
+      // distinguish individual ewkinos 
+      n_ewkino++;
+      if (pid==1000022) n_ewkino_n1++;
+      else if (pid==1000023) n_ewkino_n2++;
+      else if (pid==1000024) n_ewkino_c1++;
+      else if (pid==1000025) n_ewkino_n3++;
+      else if (pid==1000035) n_ewkino_n4++;
+      else if (pid==1000037) n_ewkino_c2++;
+    }
     else n_other++;
   }
-
   return   n_slepton*1000000
-    +    n_ewkino*100000
+    +    n_ewkino*100000 + (n_ewkino_n1 + 3*(n_ewkino_n2 + 3*(n_ewkino_c1 + 3*(n_ewkino_n3 + 3*(n_ewkino_n4 + 3*(n_ewkino_c2))))))
     +    n_gluino*10000
     +    n_stop *1000
     +    n_sbottom*100
     +    n_squark *10
     +    n_other*1;
-  
 }
 
 vector<int> McTruthInfo::findSusyMoms() {
@@ -304,11 +389,11 @@ vector<int> McTruthInfo::findSusyMoms() {
   //these are the produced particles in the hard-scatter
   vector<int> susyMoms;
 
+
   for (int k = 0 ; k< nGenParticles_; k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue; //try to prevent crashes....
     int pid = std::abs(c->PID);
-
     int momIndex1 = c->M1;
     if (momIndex1<0) continue;
     GenParticle * theMom = (GenParticle*)genParticles_->At(momIndex1);
@@ -473,7 +558,9 @@ vector<int> McTruthInfo::MatchDYRecoGen(const vector< pair< TLorentzVector, int>
       if (flavor==11) recoP4 = new TLorentzVector( ((Electron*)els->At(ireco))->P4());
       else if (flavor==13) recoP4 = new TLorentzVector( ((Muon*)mus->At(ireco))->P4());
 
-      double dr = Util::GetDeltaR(genP4.Eta(), recoP4->Eta(), genP4.Phi(), recoP4->Phi());
+      //      double dr = Util::GetDeltaR(genP4.Eta(), recoP4->Eta(), genP4.Phi(), recoP4->Phi());
+      double dr = recoP4->DeltaR(genP4);
+
       //it appears that there is ~no resolution smearing in Delphes for
       //phi and eta, so dr match is sufficient, and can be very tight
       //leave loose pt match, but not really necessary
@@ -496,4 +583,3 @@ vector<int> McTruthInfo::MatchDYRecoGen(const vector< pair< TLorentzVector, int>
   return recomatches;
 
 }
-
