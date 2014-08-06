@@ -24,6 +24,7 @@ public:
   std::vector<int> findSusyMoms();
   int getSusyProductionProcess();
   void setNloKFactor(int code,double k) {kfactors_[code]=k;}
+  void setNloKFactor_fromfileName(TString fname);
   void setNloKFactor_NM1();
   void setNloKFactor_NM2();
   void setNloKFactor_NM3();

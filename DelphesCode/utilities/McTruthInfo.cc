@@ -41,20 +41,30 @@ double McTruthInfo::getNloKFactor(int code) {
 }
 
 
+void McTruthInfo::setNloKFactor_fromfileName(TString fname){
+
+  if(fname.Contains("naturalModel1")) setNloKFactor_NM1();
+  else if(fname.Contains("naturalModel2")) setNloKFactor_NM2();
+  else if(fname.Contains("naturalModel3")) setNloKFactor_NM3();
+  else if(fname.Contains("stc")) setNloKFactor_STC();
+  else if(fname.Contains("stoc")) setNloKFactor_STOC();
+
+}
+
 
 
 void McTruthInfo::setNloKFactor_NM1(){
   // the actual vaules should match with https://twiki.cern.ch/twiki/bin/viewauth/CMS/SUSYSignalSamplesForFutureStudies
   setNloKFactor(2000000,1.17);//  2000000 == slepton pair production
-  // common for all 
-  setNloKFactor(200000,1.20); //  200000  == EWKino production
-  // split the ewkino process
+  setNloKFactor(2000001,1.19);//  2000001 == slepton sneutrino production
+  setNloKFactor(2000002,1.17);//  2000002 == sneutrino pair production
+    // split the ewkino process
   setNloKFactor(200002,1.20); //  200002  == N1N1 production
   setNloKFactor(200004,1.20); //  200004  == C1N1 production
   setNloKFactor(200006,1.19); //  200004  == C1C1 production
   setNloKFactor(200010,1.1); //  200010  == N2N1 production
   setNloKFactor(200012,1.20); //  200012  == N2C1 production
-  //from here only default values
+  //from here only default values will be updated
   setNloKFactor(200018,1.20); //  200018  == N2N2 production
   setNloKFactor(200028,1.20); //  200028  == N3N1 production
   setNloKFactor(200030,1.20); //  200030  == N3C1 production
@@ -75,27 +85,151 @@ void McTruthInfo::setNloKFactor_NM1(){
   setNloKFactor(20000,2.80);  //  20000   == gluino pair production
   setNloKFactor(2000,1.77);   //  2000    == stop pair production
   setNloKFactor(200,1.84);    //  200     == sbottom pair production
-  setNloKFactor(10010,2.03);  //  10010   == gluino-squark production
+  setNloKFactor(10010,2.0);  //  10010   == gluino-squark production
   //setNloKFactor(20,);     //  20      == squark-squark production 
 }
 
 void McTruthInfo::setNloKFactor_NM2(){
-  // to be filled 
+  // setNloKFactor(2000000,);//  2000000 == slepton pair production
+  //setNloKFactor(2000001,);//  2000001 == slepton sneutrino production
+  //setNloKFactor(2000002,);//  2000002 == sneutrino pair production
+    // split the ewkino process
+  setNloKFactor(200002,1.2); //  200002  == N1N1 production
+  setNloKFactor(200004,1.23); //  200004  == C1N1 production
+  setNloKFactor(200006,1.21); //  200004  == C1C1 production
+  setNloKFactor(200010,1.15); //  200010  == N2N1 production
+  setNloKFactor(200012,1.21); //  200012  == N2C1 production
+  //from here only default values will be updated
+  setNloKFactor(200018,1.2); //  200018  == N2N2 production
+  setNloKFactor(200028,1.2); //  200028  == N3N1 production
+  setNloKFactor(200030,1.2); //  200030  == N3C1 production
+  setNloKFactor(200036,1.2); //  200036  == N3N2 production
+  setNloKFactor(200054,1.2); //  200054  == N3N3 production
+  setNloKFactor(200082,1.2); //  200082  == N4N1 production
+  setNloKFactor(200084,1.2); //  200084  == N4C1 production
+  setNloKFactor(200090,1.2); //  200090  == N4N2 production
+  setNloKFactor(200108,1.2); //  200108  == N4N3 production
+  setNloKFactor(200162,1.2); //  200162  == N4N4 production
+  setNloKFactor(200244,1.2); //  200244  == C2N1 production
+  setNloKFactor(200246,1.2); //  200246  == C2C1 production
+  setNloKFactor(200252,1.2); //  200252  == C2N2 production
+  setNloKFactor(200270,1.2); //  200270  == C2N3 production
+  setNloKFactor(200324,1.2); //  200324  == C2N4 production
+  setNloKFactor(200486,1.2); //  200486  == C2C2 production
+  /// end of ewkino block
+  setNloKFactor(20000,2.8);  //  20000   == gluino pair production
+  setNloKFactor(2000,1.77);   //  2000    == stop pair production
+  setNloKFactor(200,1.84);    //  200     == sbottom pair production
+  setNloKFactor(10010,2.0);  //  10010   == gluino-squark production
+  //setNloKFactor(20,);     //  20      == squark-squark production 
 }
 
 
 void McTruthInfo::setNloKFactor_NM3(){
-  // to be filled 
+  // setNloKFactor(2000000,);//  2000000 == slepton pair production
+  //setNloKFactor(2000001,);//  2000001 == slepton sneutrino production
+  //setNloKFactor(2000002,);//  2000002 == sneutrino pair production
+    // split the ewkino process
+  setNloKFactor(200002,1.2); //  200002  == N1N1 production
+  setNloKFactor(200004,1.28); //  200004  == C1N1 production
+  setNloKFactor(200006,1.27); //  200004  == C1C1 production
+  setNloKFactor(200010,1.28); //  200010  == N2N1 production
+  setNloKFactor(200012,1.28); //  200012  == N2C1 production
+  //from here only default values will be updated
+  setNloKFactor(200018,1.2); //  200018  == N2N2 production
+  setNloKFactor(200028,1.2); //  200028  == N3N1 production
+  setNloKFactor(200030,1.2); //  200030  == N3C1 production
+  setNloKFactor(200036,1.2); //  200036  == N3N2 production
+  setNloKFactor(200054,1.2); //  200054  == N3N3 production
+  setNloKFactor(200082,1.2); //  200082  == N4N1 production
+  setNloKFactor(200084,1.2); //  200084  == N4C1 production
+  setNloKFactor(200090,1.2); //  200090  == N4N2 production
+  setNloKFactor(200108,1.2); //  200108  == N4N3 production
+  setNloKFactor(200162,1.2); //  200162  == N4N4 production
+  setNloKFactor(200244,1.2); //  200244  == C2N1 production
+  setNloKFactor(200246,1.2); //  200246  == C2C1 production
+  setNloKFactor(200252,1.2); //  200252  == C2N2 production
+  setNloKFactor(200270,1.2); //  200270  == C2N3 production
+  setNloKFactor(200324,1.2); //  200324  == C2N4 production
+  setNloKFactor(200486,1.2); //  200486  == C2C2 production
+  /// end of ewkino block
+  setNloKFactor(20000,2.8);  //  20000   == gluino pair production
+  setNloKFactor(2000,1.8);   //  2000    == stop pair production
+  setNloKFactor(200,1.84);    //  200     == sbottom pair production
+  setNloKFactor(10010,2.0);  //  10010   == gluino-squark production
+  //setNloKFactor(20,);     //  20      == squark-squark production 
 }
 
 
 void McTruthInfo::setNloKFactor_STC(){
-  // to be filled 
+  setNloKFactor(2000000,1.2);//  2000000 == slepton pair production
+  setNloKFactor(2000001,1.22);//  2000001 == slepton sneutrino production
+  setNloKFactor(2000002,1.21);//  2000002 == sneutrino pair production
+    // split the ewkino process
+  setNloKFactor(200002,1.2); //  200002  == N1N1 production
+  setNloKFactor(200004,1.27); //  200004  == C1N1 production
+  setNloKFactor(200006,1.27); //  200004  == C1C1 production
+  setNloKFactor(200010,1.21); //  200010  == N2N1 production
+  setNloKFactor(200012,1.27); //  200012  == N2C1 production
+  //from here only default values will be updated
+  setNloKFactor(200018,1.2); //  200018  == N2N2 production
+  setNloKFactor(200028,1.2); //  200028  == N3N1 production
+  setNloKFactor(200030,1.2); //  200030  == N3C1 production
+  setNloKFactor(200036,1.2); //  200036  == N3N2 production
+  setNloKFactor(200054,1.2); //  200054  == N3N3 production
+  setNloKFactor(200082,1.2); //  200082  == N4N1 production
+  setNloKFactor(200084,1.2); //  200084  == N4C1 production
+  setNloKFactor(200090,1.2); //  200090  == N4N2 production
+  setNloKFactor(200108,1.2); //  200108  == N4N3 production
+  setNloKFactor(200162,1.2); //  200162  == N4N4 production
+  setNloKFactor(200244,1.2); //  200244  == C2N1 production
+  setNloKFactor(200246,1.2); //  200246  == C2C1 production
+  setNloKFactor(200252,1.2); //  200252  == C2N2 production
+  setNloKFactor(200270,1.2); //  200270  == C2N3 production
+  setNloKFactor(200324,1.2); //  200324  == C2N4 production
+  setNloKFactor(200486,1.2); //  200486  == C2C2 production
+  /// end of ewkino block
+  setNloKFactor(20000,5.9);  //  20000   == gluino pair production
+  setNloKFactor(2000,1.7);   //  2000    == stop pair production
+  setNloKFactor(200,1.75);    //  200     == sbottom pair production
+  setNloKFactor(10010,2.24);  //  10010   == gluino-squark production
+  //setNloKFactor(20,);     //  20      == squark-squark production 
 }
 
 
 void McTruthInfo::setNloKFactor_STOC(){
-  // to be filled 
+  //setNloKFactor(2000000,);//  2000000 == slepton pair production
+  //setNloKFactor(2000001,);//  2000001 == slepton sneutrino production
+  //setNloKFactor(2000002,);//  2000002 == sneutrino pair production
+    // split the ewkino process
+  setNloKFactor(200002,1.2); //  200002  == N1N1 production
+  setNloKFactor(200004,1.22); //  200004  == C1N1 production
+  setNloKFactor(200006,1.17); //  200004  == C1C1 production
+  setNloKFactor(200010,1.16); //  200010  == N2N1 production
+  setNloKFactor(200012,1.15); //  200012  == N2C1 production
+  //from here only default values will be updated
+  setNloKFactor(200018,1.2); //  200018  == N2N2 production
+  setNloKFactor(200028,1.2); //  200028  == N3N1 production
+  setNloKFactor(200030,1.2); //  200030  == N3C1 production
+  setNloKFactor(200036,1.2); //  200036  == N3N2 production
+  setNloKFactor(200054,1.2); //  200054  == N3N3 production
+  setNloKFactor(200082,1.2); //  200082  == N4N1 production
+  setNloKFactor(200084,1.2); //  200084  == N4C1 production
+  setNloKFactor(200090,1.2); //  200090  == N4N2 production
+  setNloKFactor(200108,1.2); //  200108  == N4N3 production
+  setNloKFactor(200162,1.2); //  200162  == N4N4 production
+  setNloKFactor(200244,1.2); //  200244  == C2N1 production
+  setNloKFactor(200246,1.2); //  200246  == C2C1 production
+  setNloKFactor(200252,1.2); //  200252  == C2N2 production
+  setNloKFactor(200270,1.2); //  200270  == C2N3 production
+  setNloKFactor(200324,1.2); //  200324  == C2N4 production
+  setNloKFactor(200486,1.2); //  200486  == C2C2 production
+  /// end of ewkino block
+  setNloKFactor(20000,3.66);  //  20000   == gluino pair production
+  setNloKFactor(2000,1.55);   //  2000    == stop pair production
+  setNloKFactor(200,2.43);    //  200     == sbottom pair production
+  setNloKFactor(10010,2.64);  //  10010   == gluino-squark production
+  //setNloKFactor(20,);     //  20      == squark-squark production 
 }
 
 
@@ -339,6 +473,9 @@ int McTruthInfo::getSusyProductionProcess() {
   vector<int> susyMoms = findSusyMoms();
 
   int n_slepton = 0;
+  // distinguish snu and slep
+  int n_sneutrino = 0;
+
   int n_ewkino = 0;
   // in order to distinguish ewkino
   int n_ewkino_c1 = 0;
@@ -359,8 +496,14 @@ int McTruthInfo::getSusyProductionProcess() {
     if ( pid >= 1000001 && pid <= 1000004) n_squark++;
     else if ( pid == 1000005 || pid==2000005) n_sbottom++;
     else if ( pid == 1000006 || pid==2000006) n_stop++;
-    else if ( pid >= 1000011 && pid <= 1000016) n_slepton++;
-    else if ( pid >= 2000011 && pid <= 2000016) n_slepton++;
+    else if ( pid >= 1000011 && pid <= 1000016){
+      n_slepton++;   
+      if(pid%2==0) n_sneutrino++;
+	}
+    else if ( pid >= 2000011 && pid <= 2000016){
+      n_slepton++;
+      if(pid%2==0) n_sneutrino++;
+	}
     else if ( pid >= 2000001 && pid <= 2000004) n_squark++;
     else if ( pid==1000021) n_gluino++;
     else if ( pid>=1000012 && pid <= 1000037) {
@@ -375,7 +518,7 @@ int McTruthInfo::getSusyProductionProcess() {
     }
     else n_other++;
   }
-  return   n_slepton*1000000
+  return   n_slepton*1000000 + n_sneutrino
     +    n_ewkino*100000 + (n_ewkino_n1 + 3*(n_ewkino_n2 + 3*(n_ewkino_c1 + 3*(n_ewkino_n3 + 3*(n_ewkino_n4 + 3*(n_ewkino_c2))))))
     +    n_gluino*10000
     +    n_stop *1000
@@ -583,3 +726,5 @@ vector<int> McTruthInfo::MatchDYRecoGen(const vector< pair< TLorentzVector, int>
   return recomatches;
 
 }
+
+//  LocalWords:  setNloKFactor
