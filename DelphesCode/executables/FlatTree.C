@@ -34,7 +34,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   // Create object of class ExRootTreeReader
   ExRootTreeReader *treeReader = new ExRootTreeReader(&chain);
   Long64_t numberOfEntries = treeReader->GetEntries();
-  
+
   // Get pointers to branches used in this analysis
   TClonesArray *branchGenParticles = treeReader->UseBranch("Particle");
   TClonesArray *branchJet = treeReader->UseBranch("Jet");
@@ -57,6 +57,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   SimpleTree tr(outputFile);
   //bookkeeping
   tr.AddDouble("weight");
+  tr.AddVariable("kfactor",1); //already included in 'weight' but keep it just for completeness
 
   //stuff to characterize the mc truth (mostly for signal)
   tr.AddInt("ttbarDecayCode");
@@ -170,6 +171,14 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
   TStopwatch loopTimer; //automatically starts the timer
 
   McTruthInfo geninfo;
+  //set k-factors for signal
+  //code from stefan depends on seeing the full path (or really the file name) of the sample
+  //so make sure to pass a full path including file name instead of path/*.root
+  if (cross_section.GetProcess()==CrossSections::kSignal) {
+    geninfo.setNloKFactor_fromfileName( chain.GetListOfFiles()->At(0)->GetTitle());
+  
+  }
+
 
   // Loop over selected events
   Long64_t nperjob = numberOfEntries/nJobs;
@@ -184,6 +193,30 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
 
     //disambiguate leptons and jets
     if (doJetLeptonCleaning)    JetLeptonCleaner(branchJet,branchElectron,branchMuon,branchPhoton);
+
+    //MC truth stuff for signal
+    double kfactor=1;
+    geninfo.Set(branchGenParticles);
+    if (cross_section.GetProcess()==CrossSections::kSignal) {
+      int prodcode=geninfo.getSusyProductionProcess();
+      kfactor=geninfo.getNloKFactor(prodcode);
+      tr.Set("kfactor",(float)kfactor);
+      tr.SetInt("SusyProductionMode", prodcode);
+      int code =  geninfo.findChi2ToChi1();
+      tr.SetInt("Chi2ToChi1Code",  code);
+      if (code==1 || code==2) {
+	tr.Set("genEdgeMll1",geninfo.getGenMll(1));
+	tr.Set("genEdgeMll2",geninfo.getGenMll(2));
+	tr.Set("genEdgeLepPt1",geninfo.getGenEdgeLeptonPt(1));
+	tr.Set("genEdgeLepPt2",geninfo.getGenEdgeLeptonPt(2));
+      }
+      //    cout<<"Chi2ToChi1Code = "<<geninfo.findChi2ToChi1()<<endl;
+      //cout<<"nZ = "<< geninfo.findZinSusy()<<endl;
+      tr.SetInt("nZFromSusy",    geninfo.findPinSusy(23));
+      tr.SetInt("nbFromSusy",    geninfo.findPinSusy(5));
+      tr.SetInt("ntFromSusy",    geninfo.findPinSusy(6));
+    }
+
 
     //signal uses HepMCEvent; others use LHEFEvent
     HepMCEvent* evt1=0; LHEFEvent* evt2=0;
@@ -222,8 +255,7 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
       if (debugWeights) cout<<"w [   ken  ] = "<<w<<endl;
     }    //otherwise, keep the default value of 1 from the else block above
 
-    tr.SetDouble("weight",w * cross_section.Get() / n_events_generated); //weight for 1 pb-1
-    geninfo.Set(branchGenParticles);
+    tr.SetDouble("weight",w * kfactor * cross_section.Get() / n_events_generated); //weight for 1 pb-1
     //geninfo.Dump();
     if (cross_section.GetProcess()==CrossSections::kTop) {
       float ttgenmll;
@@ -233,27 +265,7 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     }
 
 
-
-    // production code
-    if (cross_section.GetProcess()==CrossSections::kSignal) {
-      int prodcode=geninfo.getSusyProductionProcess();
-      //cout<<geninfo.getNloKFactor(prodcode)<<endl;
-      tr.SetInt("SusyProductionMode", prodcode);
-      int code =  geninfo.findChi2ToChi1();
-      tr.SetInt("Chi2ToChi1Code",  code);
-      if (code==1 || code==2) {
-	tr.Set("genEdgeMll1",geninfo.getGenMll(1));
-	tr.Set("genEdgeMll2",geninfo.getGenMll(2));
-	tr.Set("genEdgeLepPt1",geninfo.getGenEdgeLeptonPt(1));
-	tr.Set("genEdgeLepPt2",geninfo.getGenEdgeLeptonPt(2));
-      }
-      //    cout<<"Chi2ToChi1Code = "<<geninfo.findChi2ToChi1()<<endl;
-      //cout<<"nZ = "<< geninfo.findZinSusy()<<endl;
-      tr.SetInt("nZFromSusy",    geninfo.findPinSusy(23));
-      tr.SetInt("nbFromSusy",    geninfo.findPinSusy(5));
-      tr.SetInt("ntFromSusy",    geninfo.findPinSusy(6));
-    }
-
+    //more MC truth
     tr.SetInt("nTrueElMu",geninfo.countTrueLeptons(McTruthInfo::kElMu));
     tr.SetInt("nTrueTau", geninfo.countTrueLeptons(McTruthInfo::kTau));
     for (unsigned int ilep = 0; ilep<geninfo.getGenLeptons().size();ilep++) {

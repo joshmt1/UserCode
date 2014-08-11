@@ -54,6 +54,9 @@ void McTruthInfo::setNloKFactor_fromfileName(TString fname){
 
 
 void McTruthInfo::setNloKFactor_NM1(){
+
+  cout<<" Setting k-factors for NM1"<<endl;
+
   // the actual vaules should match with https://twiki.cern.ch/twiki/bin/viewauth/CMS/SUSYSignalSamplesForFutureStudies
   setNloKFactor(2000000,1.17);//  2000000 == slepton pair production
   setNloKFactor(2000001,1.19);//  2000001 == slepton sneutrino production
@@ -82,7 +85,7 @@ void McTruthInfo::setNloKFactor_NM1(){
   setNloKFactor(200324,1.20); //  200324  == C2N4 production
   setNloKFactor(200486,1.20); //  200486  == C2C2 production
   /// end of ewkino block
-  setNloKFactor(20000,2.80);  //  20000   == gluino pair production
+  setNloKFactor(20000,1.6);  //  20000   == gluino pair production
   setNloKFactor(2000,1.77);   //  2000    == stop pair production
   setNloKFactor(200,1.84);    //  200     == sbottom pair production
   setNloKFactor(10010,2.0);  //  10010   == gluino-squark production
@@ -90,6 +93,8 @@ void McTruthInfo::setNloKFactor_NM1(){
 }
 
 void McTruthInfo::setNloKFactor_NM2(){
+  cout<<" Setting k-factors for NM2"<<endl;
+
   // setNloKFactor(2000000,);//  2000000 == slepton pair production
   //setNloKFactor(2000001,);//  2000001 == slepton sneutrino production
   //setNloKFactor(2000002,);//  2000002 == sneutrino pair production
@@ -117,7 +122,7 @@ void McTruthInfo::setNloKFactor_NM2(){
   setNloKFactor(200324,1.2); //  200324  == C2N4 production
   setNloKFactor(200486,1.2); //  200486  == C2C2 production
   /// end of ewkino block
-  setNloKFactor(20000,2.8);  //  20000   == gluino pair production
+  setNloKFactor(20000,1.6);  //  20000   == gluino pair production
   setNloKFactor(2000,1.77);   //  2000    == stop pair production
   setNloKFactor(200,1.84);    //  200     == sbottom pair production
   setNloKFactor(10010,2.0);  //  10010   == gluino-squark production
@@ -126,6 +131,8 @@ void McTruthInfo::setNloKFactor_NM2(){
 
 
 void McTruthInfo::setNloKFactor_NM3(){
+  cout<<" Setting k-factors for NM3"<<endl;
+
   // setNloKFactor(2000000,);//  2000000 == slepton pair production
   //setNloKFactor(2000001,);//  2000001 == slepton sneutrino production
   //setNloKFactor(2000002,);//  2000002 == sneutrino pair production
@@ -153,7 +160,7 @@ void McTruthInfo::setNloKFactor_NM3(){
   setNloKFactor(200324,1.2); //  200324  == C2N4 production
   setNloKFactor(200486,1.2); //  200486  == C2C2 production
   /// end of ewkino block
-  setNloKFactor(20000,2.8);  //  20000   == gluino pair production
+  setNloKFactor(20000,1.6);  //  20000   == gluino pair production
   setNloKFactor(2000,1.8);   //  2000    == stop pair production
   setNloKFactor(200,1.84);    //  200     == sbottom pair production
   setNloKFactor(10010,2.0);  //  10010   == gluino-squark production
@@ -162,6 +169,8 @@ void McTruthInfo::setNloKFactor_NM3(){
 
 
 void McTruthInfo::setNloKFactor_STC(){
+  cout<<" Setting k-factors for STC"<<endl;
+
   setNloKFactor(2000000,1.2);//  2000000 == slepton pair production
   setNloKFactor(2000001,1.22);//  2000001 == slepton sneutrino production
   setNloKFactor(2000002,1.21);//  2000002 == sneutrino pair production
@@ -189,7 +198,7 @@ void McTruthInfo::setNloKFactor_STC(){
   setNloKFactor(200324,1.2); //  200324  == C2N4 production
   setNloKFactor(200486,1.2); //  200486  == C2C2 production
   /// end of ewkino block
-  setNloKFactor(20000,5.9);  //  20000   == gluino pair production
+  setNloKFactor(20000,1.3);  //  20000   == gluino pair production
   setNloKFactor(2000,1.7);   //  2000    == stop pair production
   setNloKFactor(200,1.75);    //  200     == sbottom pair production
   setNloKFactor(10010,2.24);  //  10010   == gluino-squark production
@@ -198,6 +207,8 @@ void McTruthInfo::setNloKFactor_STC(){
 
 
 void McTruthInfo::setNloKFactor_STOC(){
+  cout<<" Setting k-factors for STOC"<<endl;
+
   //setNloKFactor(2000000,);//  2000000 == slepton pair production
   //setNloKFactor(2000001,);//  2000001 == slepton sneutrino production
   //setNloKFactor(2000002,);//  2000002 == sneutrino pair production
@@ -225,7 +236,7 @@ void McTruthInfo::setNloKFactor_STOC(){
   setNloKFactor(200324,1.2); //  200324  == C2N4 production
   setNloKFactor(200486,1.2); //  200486  == C2C2 production
   /// end of ewkino block
-  setNloKFactor(20000,3.66);  //  20000   == gluino pair production
+  setNloKFactor(20000,1.5);  //  20000   == gluino pair production
   setNloKFactor(2000,1.55);   //  2000    == stop pair production
   setNloKFactor(200,2.43);    //  200     == sbottom pair production
   setNloKFactor(10010,2.64);  //  10010   == gluino-squark production
@@ -538,7 +549,7 @@ vector<int> McTruthInfo::findSusyMoms() {
     if (c==0) continue; //try to prevent crashes....
     int pid = std::abs(c->PID);
     int momIndex1 = c->M1;
-    if (momIndex1<0) continue;
+    if (momIndex1<0 || momIndex1>=nGenParticles_) continue;
     GenParticle * theMom = (GenParticle*)genParticles_->At(momIndex1);
     if (theMom==0) continue; //saw momIndex1 be invalid once
     int momPid = std::abs(theMom->PID);
