@@ -142,6 +142,7 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
   tr.AddInt("njets40",0);
   tr.AddInt("njets40eta3p0",0);
   tr.AddInt("nbjets40loose",0);
+  tr.AddInt("nbjets40medium",0);
   tr.AddInt("nbjets40tight",0);
   //leptons for MT2
   tr.AddInt("nElectrons",0);
@@ -482,9 +483,10 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
 	  if ( tr.GetInt("njets40")<MAX_njets) tr.Set("jetPt",tr.GetInt("njets40"),jet->PT);
 	  tr.SetInt("njets40",1,true);
 
-	  //empiracally determined that this is correct (more loose tags than tight)
-	  if ( jet->BTag&2) tr.SetInt("nbjets40loose",1,true);
-	  if ( jet->BTag&1) tr.SetInt("nbjets40tight",1,true);
+	  //in Jul28 production, switch to loose/medium/tight
+	  if ( jet->BTag&1) tr.SetInt("nbjets40loose",1,true);
+	  if ( jet->BTag&2) tr.SetInt("nbjets40medium",1,true);
+	  if ( jet->BTag&4) tr.SetInt("nbjets40tight",1,true);
 
 	  //use lead 4 jets for mindeltaphi
 	  if (tr.GetInt("njets40") <=4 && Util::DeltaPhi(jet->Phi,met->Phi) < minDeltaPhi) minDeltaPhi = Util::DeltaPhi(jet->Phi,met->Phi);
