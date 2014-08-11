@@ -63,6 +63,7 @@ CrossSections::CrossSections(const TString samplename) :
   else if (samplename.Contains("ttB-4p-900-1600-v1510_14TEV")) xs_=0.250469000;
   else if (samplename.Contains("ttB-4p-1600-2500-v1510_14TEV")) xs_=0.023744100;
   else if (samplename.Contains("ttB-4p-2500-100000-v1510_14TEV")) xs_=0.002088160;
+  else if (samplename.Contains("stoc")) xs_=0.009635;
   else {
     //try regexp for more complicated cases
     /*
@@ -100,6 +101,7 @@ void CrossSections::SetProc(TString name) {
   //set proc_
   if (name.Contains("susy")) proc_=kSignal;
   else if (name.Contains("scenario")) proc_=kSignal;
+  else if (name.Contains("stoc")) proc_=kSignal;
   else if (name.Contains("natural")) proc_=kSignal;
   else if (name.Contains("BBB-")) proc_ = kRare;
   else if (name.Contains("Bjj-")) proc_=kBoson;
