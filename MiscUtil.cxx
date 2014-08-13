@@ -79,7 +79,9 @@ namespace jmt {
     double tau      = mu_b_hat / (sigma_b*sigma_b); // scale factor to corresp. Noff/Non              
     double n_off    = tau*mu_b_hat;
     double P_Bi     = TMath::BetaIncomplete(1./(1.+tau), n_on, n_off+1);
-    double Z_Bi     = sqrt(2.)*TMath::ErfInverse(1 - 2.*P_Bi);           
+    double Z_Bi=0;
+    if (P_Bi >0 && log10(P_Bi)<-15) Z_Bi = 8;
+    else                            Z_Bi     = sqrt(2.)*TMath::ErfInverse(1 - 2.*P_Bi);           
    
     if (verbose) {
       cout  <<"  total events in signal region (S+B)               - n_on     " <<n_on      <<endl
