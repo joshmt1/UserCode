@@ -10,7 +10,52 @@ N.B. you must touch FlatTree.cpp in order to convince Make that there is anythin
 
 //------------------------------------------------------------------------------
 
-void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int nJobs,const bool doJetLeptonCleaning)
+bool isPuJet(Jet * jet,const bool isPhaseII) {
+  /* (Dominick)
+     It's not in the AN, though I should put it there. Here's the code I use.  The cut values come from:
+     https://github.com/sethzenz/Delphes/blob/master/Cards/JetStudies_Phase_II_140PileUp_conf4.tcl
+     
+     I'm not sure if the values are recommended for general use, but I looked at a few distributions and they seem reasonable.
+  */
+  // bar: |eta| < 1.5
+  // ec: 1.5 <= |eta| < 2.4
+  // fwd: 2.4 <= |eta| < 4.0
+  // vfwd: |eta| >= 4.0
+  
+  // values from Jul31
+  float cut_beta_bar = 0.13;
+  float cut_beta_ec = 0.15;
+  float cut_beta_fwd = 0.0;
+  float cut_meansqdr_bar = 0.07;
+  float cut_meansqdr_ec = 0.07;
+  float cut_meansqdr_fwd = 0.07;
+  float cut_meansqdr_vfwd = 0.01;
+  // apply this only for PhaseII scenario
+  if (isPhaseII) {
+    cut_beta_fwd = 0.15;
+  }
+
+  float eta = jet->Eta;
+  float beta = jet->Beta;
+  float meansqdr = jet->MeanSqDeltaR;
+  if (fabs(eta) < 1.5) {
+    if (beta <= cut_beta_bar) return true;
+    if (meansqdr >= cut_meansqdr_bar) return true;
+  } else if (fabs(eta) < 2.4) {
+    if (beta <= cut_beta_ec) return true;
+    if (meansqdr >= cut_meansqdr_ec) return true;
+  } else if (fabs(eta) < 4.0) {
+    if (beta <= cut_beta_fwd) return true;
+    if (meansqdr >= cut_meansqdr_fwd) return true;
+  } else {
+    if (meansqdr >= cut_meansqdr_vfwd) return true;
+  }
+
+  return false;
+
+}
+
+void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int nJobs,const bool doJetLeptonCleaning,const bool usePuJetId)
 {
   const bool debugWeights = false;
   //  gSystem->Load("libDelphes");
@@ -38,7 +83,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   // Get pointers to branches used in this analysis
   TClonesArray *branchGenParticles = treeReader->UseBranch("Particle");
   TClonesArray *branchJet = treeReader->UseBranch("Jet");
-  TClonesArray *branchMet = treeReader->UseBranch("MissingET");
+  TClonesArray *branchMet = usePuJetId ? treeReader->UseBranch("PileUpJetIDMissingET") : treeReader->UseBranch("MissingET");
   TClonesArray *branchEvent = treeReader->UseBranch("Event");
   TClonesArray *branchElectron = treeReader->UseBranch("Electron");
   TClonesArray *branchMuon = treeReader->UseBranch("Muon");
@@ -137,6 +182,7 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
   tr.AddVariable("mllqmin");
   //lq invariant masses (using two leading jets)
   tr.AddArray("mlq",4);
+  tr.AddInt("nPUjets30",0);
   tr.AddInt("njets30",0);
   tr.AddInt("njets30eta3p0",0);
   tr.AddInt("njets40",0);
@@ -425,7 +471,14 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
       for (int i = 0 ; i < branchJet->GetEntries() ; i++) {
 	Jet *jet = (Jet*) branchJet->At(i);
 
-	if (jet->PT>30 && jet->Mass < 0) {
+	if (jet->PT<30) continue;//do not use jets with pt<30 for anything
+
+	if ( usePuJetId && isPuJet(jet,true) ) { //2nd argument is whether or not the sample is phase II or not
+	  tr.SetInt("nPUjets30",1,true);
+	  continue;
+	}
+
+	if ( jet->Mass < 0) {
 	  //	  cout<<" ** Bad jet **, fixing it by setting mass to 0"<<endl;
 	  jet->Mass = 0;
 	  nbadjets++;
@@ -433,7 +486,7 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
 	  //	    cout<<jet->PT<<" "<<jet->Eta<<" "<<jet->Mass<<endl;	    
 	}
 
-	if (jet->PT>30 && std::abs(jet->Eta)<2.4) { //mt2 and MHT jets 
+	if (std::abs(jet->Eta)<2.4) { //mt2 and MHT jets  (pt>30)
 
 	  TLorentzVector jjj = jet->P4();
 	  mt2jets_px.push_back( jjj.Px());
@@ -453,7 +506,7 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
 
 
 	//eta 3.0 jets: used for edge analysis and for HT calculation in MT2 analysis
-	if (jet->PT>30 && std::abs(jet->Eta)<3) { 
+	if (std::abs(jet->Eta)<3) {  //pt>30
 	  tr.SetInt("njets30eta3p0",1,true);
 
 	  if (lepton1!=0 && lepton2!=0) {
@@ -547,3 +600,4 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     (lastEvent-firstEvent)/loopTimer.CpuTime()<<" ("<<(lastEvent-firstEvent)/loopTimer.RealTime()<<") Hz"<<endl;
 
 }
+

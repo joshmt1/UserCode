@@ -71,6 +71,7 @@ int main(int argc, char *argv[])
 
   int x=1,y=1;
   bool docleaning=true;
+  bool usepujetid=false;
   for (int iarg = 2; iarg<argc; ) {
 
     TString arg = argv[iarg];
@@ -87,6 +88,10 @@ int main(int argc, char *argv[])
       docleaning=false;
       iarg++;
     }
+    else if (arg=="-pujetid") {
+      usepujetid=true;
+      iarg++;
+    }
     else {
       cout << " Usage: " << appName << " input_file [-O output_file] [-N x y]" << endl;
       assert(0);
@@ -98,7 +103,7 @@ int main(int argc, char *argv[])
 
 // Here you call your macro's main function 
 
-  FlatTree(inputFile,outputFile,x,y,docleaning);
+  FlatTree(inputFile,outputFile,x,y,docleaning,usepujetid);
 
 //------------------------------------------------------------------------------
 
