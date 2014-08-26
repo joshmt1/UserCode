@@ -112,6 +112,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddInt("genNneutrinos",-99);
   tr.AddInt("SusyProductionMode");
   tr.AddInt("Chi2ToChi1Code");
+  tr.AddInt("Chi4ToChi1Code");
   tr.AddVariable("genEdgeMll1");
   tr.AddVariable("genEdgeMll2");
   tr.AddVariable("genEdgeLepPt1");
@@ -129,6 +130,7 @@ void FlatTree(TString inputFile,TString outputFile,const int jobIndex, const int
   tr.AddBool("leptonsMatchChi2ToChi1");
   tr.AddBool("leptonsMatchChi2ToChi1_veryloose");
   tr.AddBool("leptonsMatchChi2ToChi1_loose");
+  tr.AddBool("leptonsMatchChi4ToChi1_loose");
 
   //jet observables
   tr.AddVariable("HT",0);
@@ -257,7 +259,8 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
 	tr.Set("genEdgeLepPt1",geninfo.getGenEdgeLeptonPt(1));
 	tr.Set("genEdgeLepPt2",geninfo.getGenEdgeLeptonPt(2));
       }
-      //    cout<<"Chi2ToChi1Code = "<<geninfo.findChi2ToChi1()<<endl;
+      int code4 =  geninfo.findChi2ToChi1(4);//finds chi4->chi1
+      tr.SetInt("Chi4ToChi1Code",  code4);
       //cout<<"nZ = "<< geninfo.findZinSusy()<<endl;
       tr.SetInt("nZFromSusy",    geninfo.findPinSusy(23));
       tr.SetInt("nbFromSusy",    geninfo.findPinSusy(5));
@@ -456,6 +459,8 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     if (lepton1_loose!=0 && lepton2_loose!=0 && cross_section.GetProcess()==CrossSections::kSignal) {
       //do these match the leptons from N2->l~ l->N1 
       tr.SetBool("leptonsMatchChi2ToChi1_loose", geninfo.matchesChi2ToChi1Gen(*lepton1_loose,*lepton2_loose,mllcomp_loose.GetLeptonFlavor(1),mllcomp_loose.GetLeptonFlavor(2)));
+      //do these match the leptons from N4      ->N1
+      tr.SetBool("leptonsMatchChi4ToChi1_loose",geninfo.matchesChi2ToChi1Gen(*lepton1_loose,*lepton2_loose,mllcomp_loose.GetLeptonFlavor(1),mllcomp_loose.GetLeptonFlavor(2),4) );
     }
 
     //jets to go into the MT2 calculation

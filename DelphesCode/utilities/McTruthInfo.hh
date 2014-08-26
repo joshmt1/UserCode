@@ -31,10 +31,10 @@ public:
   void setNloKFactor_STC();
   void setNloKFactor_STOC();
   double getNloKFactor(int code);
-  int findChi2ToChi1(); //return 10*nStaus + nSElectron+Smuon
+  int findChi2ToChi1(int chiToFind=2); //return 10*nStaus + nSElectron+Smuon
   float getGenMll(int index); //index is which edge decay (in rare case of 2)
   float getGenEdgeLeptonPt(int index); //index is which lepton; only supports first edge decay in the event 
-  bool matchesChi2ToChi1Gen(const TLorentzVector & l1, const TLorentzVector & l2,int l1_flavor,int l2_flavor);
+  bool matchesChi2ToChi1Gen(const TLorentzVector & l1, const TLorentzVector & l2,int l1_flavor,int l2_flavor,int chiToMatch=2);
   int findPinSusy(int pidToFind);
 
   //for anything
@@ -55,8 +55,10 @@ public:
 private:
   TClonesArray * genParticles_;
   int nGenParticles_;
-  std::vector<GenParticle*> edge_l1_;
+  std::vector<GenParticle*> edge_l1_; //leptons from chi2->chi1
   std::vector<GenParticle*> edge_l2_;
+  std::vector<GenParticle*> edge4_l1_;//leptons from chi4->chi1
+  std::vector<GenParticle*> edge4_l2_;
   std::vector<GenParticle*> leptons_;
   std::vector<GenParticle*> neutrinos_;
   std::map<int,double> kfactors_;  

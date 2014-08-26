@@ -266,6 +266,7 @@ int McTruthInfo::findPinSusy(int pidToFind) {
   for (int k = 0 ; k< nGenParticles_; k++) {
     GenParticle * c =(GenParticle*) genParticles_->At(k);
     if (c==0) continue; //try to prevent crashes....
+    if (c->Status!=3) continue; //status 3 [pythia 6] particles only!
     int pid = std::abs(c->PID);
 
     if (pid==pidToFind) { 
@@ -323,13 +324,31 @@ look for chi_20 -> slepton lepton -> lepton chi_10 lepton
 code is 10*nStaus + nSElectron+Smuon
 should allow for a simple cut that removes events with taus or
 multiple edge decays while still retaining that info in case it is of interest
- */
-int McTruthInfo::findChi2ToChi1() {
 
-  edge_l1_.clear();
-  edge_l2_.clear();
+name of the function is now a misnomer as it works for chi2 or chi4
+ */
+int McTruthInfo::findChi2ToChi1(int chiToFind) {
+
+  vector<GenParticle*> * my_edge_lep1;
+  vector<GenParticle*> * my_edge_lep2;
+
+  if (chiToFind==2) {
+    my_edge_lep1 = &edge_l1_;
+    my_edge_lep2 = &edge_l2_;
+  }
+  else if (chiToFind==4) {
+    my_edge_lep1 = &edge4_l1_;
+    my_edge_lep2 = &edge4_l2_;
+  }
+  else assert(0);
+
+  my_edge_lep1->clear();
+  my_edge_lep2->clear();
 
   int code = 0;
+
+  int grandParentPid = 1000023;
+  if (chiToFind==4) grandParentPid=1000035;
 
   GenParticle * edge_l1 = 0;
 
@@ -339,13 +358,13 @@ int McTruthInfo::findChi2ToChi1() {
     int pid = std::abs(c->PID);
 
     if (pid==1000022) { //chi10
-      //if the mom a slepton?
+      //is the mom a slepton?
       bool el = checkMom(k,1000011,0);
       bool mu=checkMom(k,1000013,0);
       bool tau = checkMom(k,1000015,0);
       if (el||mu||tau ) {
 	//is the grandmom a chi_20?
-	if (checkMom(k,1000023,1) ) {
+	if (checkMom(k,grandParentPid,1) ) {
 	  if (el) ++code;
 	  else if (mu) ++code;
 	  else if (tau) code += 10;
@@ -356,20 +375,21 @@ int McTruthInfo::findChi2ToChi1() {
     //not needed for primary logic of finding decay chain, but i also want to find leptons themselves
     else if (pid==11 || pid==13) {
       //look for lepton from slepton, with gmom of chi20
-      if ( checkMom(k,pid+1000000,0) && checkMom(k,1000023,1) ) {
-	edge_l2_.push_back( c);
+      if ( checkMom(k,pid+1000000,0) && checkMom(k,grandParentPid,1) ) {
+	my_edge_lep2->push_back( c);
 	assert(edge_l1);
-	edge_l1_.push_back( edge_l1);
+	my_edge_lep1->push_back( edge_l1);
       }
       //look for lepton from chi20
-      else if (checkMom(k,1000023,0)) edge_l1 = c;
+      else if (checkMom(k,grandParentPid,0)) edge_l1 = c;
 	// edge_l1_.push_back( c);
       //vector structure only needed for the case where there are 2 N2->N1 decays
     }
 
   }
 
-  //  cout<<"[code] "<<code<<"\t"<<edge_l1_.size()<<" "<<edge_l2_.size()<<endl;
+  //  if (chiToFind==2 && code!=0) cout<<"[code] "<<chiToFind<<" "<<code<<"\t"<<edge_l1_.size()<<" "<<edge_l2_.size()<<endl;
+  //if (chiToFind==4 && code!=0) cout<<"[code] "<<chiToFind<<" "<<code<<"\t"<<edge4_l1_.size()<<" "<<edge4_l2_.size()<<endl;
 
   return code;
 }
@@ -429,30 +449,41 @@ float McTruthInfo::getIsolationOfMatch(const unsigned int ilep,const TClonesArra
   return dummy; //did not find a match
 }
 
-bool McTruthInfo::matchesChi2ToChi1Gen(const TLorentzVector & l1, const TLorentzVector & l2,int l1_flavor,int l2_flavor) {
-  //check if l1 and l2 are DR matches to the gen-level edge lepton
+bool McTruthInfo::matchesChi2ToChi1Gen(const TLorentzVector & l1, const TLorentzVector & l2,int l1_flavor,int l2_flavor,int chiToMatch) {
+  //check if l1 and l2 are DR matches to the gen-level edge leptons
+  vector<GenParticle*> * edge_l1;
+  vector<GenParticle*> * edge_l2;
+  if (chiToMatch==2) {
+    edge_l1 = &edge_l1_;
+    edge_l2 = &edge_l2_;
+  }
+  else if (chiToMatch==4) {
+    edge_l1 = &edge4_l1_;
+    edge_l2 = &edge4_l2_;
+  }
+  else assert(0);
 
   const double max = 0.05;
 
   bool match=false;
 
-  if (!(edge_l2_.size() == edge_l1_.size())) {
-    cout<<"bad! "<<edge_l2_.size()<<" "<<edge_l1_.size()<<endl;
+  if (!(edge_l2->size() == edge_l1->size())) {
+    cout<<"bad! "<<edge_l2->size()<<" "<<edge_l1->size()<<endl;
     assert(0);
   }
-  //cout<<"~~ "<<edge_l2_.size()<<endl;
-  for (size_t j = 0; j<edge_l2_.size() ; j++) {
+  //cout<<"~~ "<<edge_l2->size()<<endl;
+  for (size_t j = 0; j<edge_l2->size() ; j++) {
 
     //check flavor
     //    cout<<"flavors "<<l1_flavor<<" "<<edge_l1_[j]->PID<<endl;
-    if (std::abs(l1_flavor)!= std::abs(edge_l1_[j]->PID)) continue;
+    if (std::abs(l1_flavor)!= std::abs( (*edge_l1)[j]->PID)) continue;
 
-    TLorentzVector g_l1 = edge_l1_[j]->P4();
-    TLorentzVector g_l2 = edge_l2_[j]->P4();
+    TLorentzVector g_l1 = (*edge_l1)[j]->P4();
+    TLorentzVector g_l2 = (*edge_l2)[j]->P4();
     //associate via charge
-    if (l1_flavor == -edge_l2_[j]->PID) { //tricky! in l1_flavor I used e- is negative. PID uses e- is positive
-      g_l1 = edge_l2_[j]->P4();
-      g_l2 = edge_l1_[j]->P4();
+    if (l1_flavor == - (*edge_l2)[j]->PID) { //tricky! in l1_flavor I used e- is negative. PID uses e- is positive
+      g_l1 = (*edge_l2)[j]->P4();
+      g_l2 = (*edge_l1)[j]->P4();
     }
 
     //    l1.Print();
