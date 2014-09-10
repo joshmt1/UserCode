@@ -211,8 +211,12 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
   tr.AddBool("DYgenRecoMatch1");
   tr.AddBool("DYgenRecoMatch2");
 
-  CrossSections cross_section(inputFile);
-  const Long64_t n_events_generated = numberOfEntries; //for now, enforce that the whole sample is run over in one job!
+  //get a full file name instead of just path/*.root
+  TString a_full_file_name =  chain.GetListOfFiles()->At(0)->GetTitle();
+
+  CrossSections cross_section(a_full_file_name);
+  //whole chain needs to be available in order to get the normalization right
+  const Long64_t n_events_generated = numberOfEntries; 
 
   //count number of 'bad jets' and number of events with bad jets
   Long64_t nbadjets=0,neventsWithBadjets=0;
@@ -224,8 +228,7 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
   //code from stefan depends on seeing the full path (or really the file name) of the sample
   //so make sure to pass a full path including file name instead of path/*.root
   if (cross_section.GetProcess()==CrossSections::kSignal) {
-    geninfo.setNloKFactor_fromfileName( chain.GetListOfFiles()->At(0)->GetTitle());
-  
+    geninfo.setNloKFactor_fromfileName(a_full_file_name);
   }
 
 
@@ -288,11 +291,13 @@ Also, prob need to store the flavor and charge of this lepton if we're really go
     //so this if statement replaces it with 1.
     //so obviously i could streamline this and get rid of the dynamic cast, but for now
     //let's just leave this duplicate logic in place
-
     //in case of signal, override the value from the ntuple no matter what
     if (cross_section.GetProcess()==CrossSections::kSignal) w = 1;
 
     if ( (cross_section.GetProcess()==CrossSections::kTop || cross_section.GetProcess()==CrossSections::kBoson) && (branchEvent==0|| debugWeights)) {
+      //this if block is only here for the buggy samples with no branchEvent. keep it for posterity but let's make sure it does not run
+      assert(0);
+
       int code = (cross_section.GetProcess()==CrossSections::kTop) ? 1 : 2;
       //need  std::vector<GenParticle> GenParticles
       vector<GenParticle> gparticles;

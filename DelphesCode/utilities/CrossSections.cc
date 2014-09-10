@@ -65,7 +65,14 @@ CrossSections::CrossSections(const TString samplename) :
   else if (samplename.Contains("ttB-4p-2500-100000-v1510_14TEV")) xs_=0.002088160;
   else if (samplename.Contains("stoc")) xs_=0.009635;
   else if (samplename.Contains("stauCoannihilation")) xs_ = 1.58;
+  else if (samplename.Contains("naturalModel1")) xs_=0.07;
+  else if (samplename.Contains("naturalModel2")) xs_=0.05;
+  else if (samplename.Contains("naturalModel3")) xs_=1.098;
   else {
+    //update (3Sep) -- now passing the full file name instead of just the path
+    //this makes NMn easier to parse and this block of code is not needed.
+    assert(0);
+
     //try regexp for more complicated cases
     /*
 in particular, the example use case is:
